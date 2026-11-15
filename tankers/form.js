@@ -40,7 +40,7 @@ const wardText = (w) => w ? `${w.name} ward${w.zone ? ', ' + w.zone + ' zone' : 
 const round500 = (lat, lng) => ({ lat: +(Math.round(lat / .0045) * .0045).toFixed(4), lng: +(Math.round(lng / .0047) * .0047).toFixed(4) });
 
 // ── state and steps ──
-const S = { mode: null, loc: null, acc: null, ward: null, pick: null, prec: null, g: {}, source: null, size: null, came: null, season: null, why: [], n7: 1 };
+const S = { mode: null, loc: null, acc: null, ward: null, pick: null, prec: null, g: {}, source: null, size: null, came: null, season: null, why: [], nw: 1 };
 let cur = 'start';
 function steps() {
   const l = ['start'];
@@ -53,7 +53,7 @@ const today = () => { const n = new Date(), p = (x) => String(x).padStart(2, '0'
 const future = () => $('odate').value > today();
 function ready(s) {
   return ({ place: !!S.pick, map: !!S.loc, precision: !!S.prec, who: !!S.g.for && !!S.g.building, source: !!S.source, size: S.size != null,
-    paid: $('free').checked || num('price') > 0, ordered: !!$('odate').value && !future() && !!S.g.tod, came: !!S.came, review: !sending })[s] ?? true;
+    paid: $('free').checked || $('pdk').checked || num('price') > 0, ordered: !!$('odate').value && !future() && !!S.g.tod, came: !!S.came, review: !sending })[s] ?? true;
 }
 function show(s, push = true) {
   cur = s;
@@ -161,12 +161,19 @@ $('prec').addEventListener('click', (e) => {
 
 // ── paid, ordered, often ──
 ['price', 'extra'].forEach(id => $(id).addEventListener('input', () => { $(id).value = $(id).value.replace(/[^0-9]/g, ''); updateNext(); }));
-$('free').addEventListener('change', () => { $('price').disabled = $('free').checked; if ($('free').checked) $('price').value = ''; updateNext(); });
+// "free" and "don't know" exclude each other and the price
+['free', 'pdk'].forEach(id => $(id).addEventListener('change', () => {
+  if ($(id).checked) $(id === 'free' ? 'pdk' : 'free').checked = false;
+  const off = $('free').checked || $('pdk').checked;
+  $('price').disabled = off; if (off) $('price').value = '';
+  updateNext();
+}));
+const paidKind = () => $('free').checked ? 'free' : $('pdk').checked ? 'dk' : 'paid';
 $('odate').value = $('odate').max = today();
 $('odate').min = (() => { const d = new Date(); d.setDate(d.getDate() - 365); return d.toISOString().slice(0, 10); })();
 $('odate').addEventListener('input', () => { $('odate-msg').hidden = !future(); updateNext(); });
-const setN = (n) => { S.n7 = Math.max(1, Math.min(30, n)); $('count7').textContent = S.n7 >= 30 ? '30+' : S.n7; };
-$('minus').onclick = () => setN(S.n7 - 1); $('plus').onclick = () => setN(S.n7 + 1);
+const setN = (n) => { S.nw = Math.max(0, Math.min(30, n)); $('countw').textContent = S.nw >= 30 ? '30+' : S.nw; };
+$('minus').onclick = () => setN(S.nw - 1); $('plus').onclick = () => setN(S.nw + 1);
 $('note').addEventListener('input', updateNext);
 
 // ── review ──
@@ -179,13 +186,13 @@ function placeText() {
 let lastRows = [];
 function drawReview() {
   const sz = SIZES.find(x => x.v === S.size);
-  const price = $('free').checked ? "Didn't pay" : `₹${(num('price') || 0).toLocaleString('en-IN')}` + (num('extra') ? ` + ₹${num('extra').toLocaleString('en-IN')} to the driver` : '');
+  const price = paidKind() === 'free' ? "Didn't pay (free)" : paidKind() === 'dk' ? "Don't know the price" : `₹${(num('price') || 0).toLocaleString('en-IN')}` + (num('extra') ? ` + ₹${num('extra').toLocaleString('en-IN')} to the driver` : '');
   const d = new Date($('odate').value + 'T12:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
   const rows = [['Where', placeText(), S.mode === 'gps' ? 'precision' : S.mode],
     ['For', esc(`${lab('[data-g=for]', S.g.for).replace(/I look.*/, '')} · ${lab('[data-g=building]', S.g.building)}${S.g.households ? ' · ' + lab('[data-g=households]', S.g.households) + ' households' : ''}`), 'who'],
     ['From', esc(lab('[data-field=source]', S.source).split(/Booked/)[0]), 'source'], ['Size', esc(sz ? sz.label : ''), 'size'],
     ['Paid', esc(price), 'paid'], ['Ordered', esc(`${d}, ${S.g.tod}`), 'ordered'], ['Came', esc(lab('[data-field=came]', S.came)), 'came'],
-    ['Last 7 days', esc(`${S.n7 >= 30 ? '30+' : S.n7} tanker${S.n7 > 1 ? 's' : ''}`), 'often'],
+    ['Usual week', esc(S.nw === 0 ? 'Less than one tanker' : `${S.nw >= 30 ? '30+' : S.nw} tanker${S.nw > 1 ? 's' : ''}`), 'often'],
     ['Usually', esc(S.season ? lab('[data-field=season]', S.season) : 'Skipped'), 'season'],
     ['Why', esc(S.why.map(v => lab('#why', v)).join(', ') || 'Skipped'), 'why'], ['Note', esc($('note').value.trim() || 'None'), 'note']];
   lastRows = rows.map(([k, v]) => [k, v.replace(/<small>/g, ' · ').replace(/<[^>]+>/g, '')]);
@@ -196,8 +203,8 @@ function drawReview() {
 // ── send: only as much place as the person chose; answers kept on the phone until the server accepts them ──
 function payload() {
   const b = { place_type: S.mode, place_detail: S.prec, for: S.g.for, building: S.g.building, households: S.g.households || null, supplier: S.source,
-    size_l: S.size, price: $('free').checked ? 0 : num('price'), extra: num('extra'), ordered_on: $('odate').value, ordered_tod: S.g.tod,
-    came: S.came, tankers_7d: S.n7, season: S.season, why: S.why.length ? S.why : null, note: $('note').value.trim() || null };
+    size_l: S.size, paid: paidKind(), price: paidKind() === 'paid' ? num('price') : null, extra: num('extra'), ordered_on: $('odate').value, ordered_tod: S.g.tod,
+    came: S.came, tankers_week: S.nw, season: S.season, why: S.why.length ? S.why : null, note: $('note').value.trim() || null };
   if (S.prec === 'exact') Object.assign(b, { lat: +S.loc.lat.toFixed(6), lng: +S.loc.lng.toFixed(6), accuracy_m: S.mode === 'gps' && S.acc != null ? Math.round(S.acc) : null });
   else if (S.prec === '500m') Object.assign(b, round500(S.loc.lat, S.loc.lng));
   else if (S.prec === 'area') Object.assign(b, { lat: +S.loc.lat.toFixed(5), lng: +S.loc.lng.toFixed(5), place: S.pick.name });

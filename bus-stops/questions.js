@@ -10,7 +10,7 @@ export const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;
 export const TOPICS = [
   { id: 'shelter', title: 'Shelter and seating', qs: [
     { id: 'shelter', s: 'Shelter', q: 'Is there a shelter?', opts: [['yes', 'Yes', 1], ['no', 'No', 0]] },
-    { id: 'shelter_state', s: 'Shelter state', q: 'What state is the shelter in?', if: a => a.shelter === 'yes', opts: [['good', 'Good', 1], ['worn', 'Worn', .5], ['broken', 'Dirty or broken', 0]] },
+    { id: 'shelter_state', s: 'Shelter state', q: 'What state is the shelter in?', if: a => a.shelter === 'yes', opts: [['good', 'Good', 1], ['broken', 'Broken', 0]] },
     { id: 'shelter_protects', s: 'Protects from sun and rain', q: 'Does it protect from sun and rain?', if: a => a.shelter === 'yes', opts: [['yes', 'Yes', 1], ['partly', 'Partly', .5], ['no', 'No', 0]] },
     { id: 'shade', s: 'Shade', q: 'Is there shade from trees or buildings?', if: a => a.shelter === 'no', opts: [['yes', 'Yes', 1], ['partly', 'Partly', .5], ['no', 'No', 0]] },
     { id: 'seats', s: 'Seating', q: 'Is there seating?', opts: [['yes', 'Yes', 1], ['no', 'No', 0]] },
@@ -20,24 +20,25 @@ export const TOPICS = [
     { id: 'footpath', s: 'Footpath', q: 'Is there a footpath at the stop?', opts: [['yes', 'Yes', 1], ['no', 'No', 0]] },
     { id: 'blocked', s: 'Footpath blocked', q: 'Is the footpath blocked?', hint: 'By parked vehicles, vendors, debris', if: a => a.footpath === 'yes', opts: [['no', 'No', 1], ['partly', 'Partly', .5], ['badly', 'Badly', 0]] },
     { id: 'pass', s: 'Walk past', q: 'Can you walk or wheel past the stop without stepping onto the road?', if: a => a.footpath === 'yes', opts: [['yes', 'Yes', 1], ['no', 'No', 0]] },
-    { id: 'access', s: 'Access', q: 'Which of these are there?', hint: 'Tick all you see', multi: true, opts: [['footpath_both', 'Footpath on both sides'], ['ramp', 'A working ramp'], ['tactile', 'Tactile paving'], ['none', 'None of these']] },
+    { id: 'access', s: 'Access', q: 'Which of these are there?', hint: 'Tick all you see', multi: true, opts: [['ramp', 'A working ramp'], ['tactile', 'Tactile paving'], ['none', 'None of these']] },
     { id: 'crossing', s: 'Crossing', q: 'Is there a pedestrian crossing near the stop?', hint: 'A zebra, a signal, a foot overbridge or a subway', opts: [['yes', 'Yes', 1], ['no', 'No', 0]] },
     { id: 'crossing_safe', s: 'Safe to cross', q: 'Does it feel safe to cross?', if: a => a.crossing === 'yes', opts: [['yes', 'Yes', 1], ['somewhat', 'Somewhat', .5], ['no', 'No', 0]] },
   ] },
   { id: 'buses', title: 'Buses', qs: [
     { id: 'bus_stops_at', s: 'Buses stop', q: 'Where do buses usually stop?', opts: [['kerb', 'At the kerb', 1], ['step', 'One step out', .6], ['lane', 'In the traffic lane', .2], ['away', 'Away from the stop', 0]] },
     { id: 'view', s: 'View blocked', q: 'Do ads or structures block the view of buses or stop information?', opts: [['yes', 'Yes', 0], ['no', 'No', 1]] },
-    { id: 'crowded', s: 'Overcrowded', q: 'Is it overcrowded at busy times?', opts: [['yes', 'Yes', 0], ['no', 'No', 1]] },
+    { id: 'room', s: 'Room at busy times', q: 'Is there enough room to wait at busy times?', opts: [['yes', 'Yes', 1], ['no', 'No', 0]] },
   ] },
   { id: 'safety', title: 'Comfort and safety', qs: [
     { id: 'light', s: 'Lighting at night', q: 'Is there lighting at night?', opts: [['yes', 'Yes', 1], ['no', 'No', 0], ['dk', "Don't know"]] },
     { id: 'light_state', s: 'Lighting', q: 'How is the lighting?', if: a => a.light === 'yes', opts: [['good', 'Good', 1], ['poor', 'Poor', .4]] },
-    { id: 'safe', s: 'Feels', q: 'How safe does it feel?', opts: [['safe', 'Safe', 1], ['somewhat', 'Somewhat', .5], ['unsafe', 'Unsafe', 0]] },
+    { id: 'safe_day', s: 'Feels by day', q: 'How safe does it feel to wait here during the day?', opts: [['safe', 'Safe', 1], ['somewhat', 'Somewhat', .5], ['unsafe', 'Unsafe', 0]] },
+    { id: 'safe_night', s: 'Feels after dark', q: 'How safe does it feel to wait here after dark?', hint: "Skip if you haven't been here after dark", opts: [['safe', 'Safe', 1], ['somewhat', 'Somewhat', .5], ['unsafe', 'Unsafe', 0]] },
     { id: 'floods', s: 'Floods', q: 'Does it flood or water-log when it rains?', opts: [['yes', 'Yes', 0], ['no', 'No', 1]] },
   ] },
   { id: 'signs', title: 'Signs', qs: [
     { id: 'name_sign', s: 'Name sign', q: 'Is the stop name shown on a sign?', opts: [['yes', 'Yes', 1], ['no', 'No', 0]] },
-    { id: 'name_state', s: 'Name sign state', q: 'Is it clear?', if: a => a.name_sign === 'yes', opts: [['clear', 'Clear', 1], ['faded', 'Faded', .5]] },
+    { id: 'name_state', s: 'Name sign', q: 'Is it easy to read?', if: a => a.name_sign === 'yes', opts: [['clear', 'Easy to read', 1], ['faded', 'Faded', .5]] },
     { id: 'route_info', s: 'Route information', q: 'Is there route information?', opts: [['yes', 'Yes', 1], ['no', 'No', 0]] },
     { id: 'route_state', s: 'Route information state', q: 'Is it up to date?', if: a => a.route_info === 'yes', opts: [['current', 'Current', 1], ['outdated', 'Outdated', .4]] },
   ] },

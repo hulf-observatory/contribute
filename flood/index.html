@@ -294,6 +294,7 @@
         <button type="button" class="answer check" role="checkbox" aria-checked="false" data-val="murky"><span>Muddy</span><i class="tick"></i></button>
         <button type="button" class="answer check" role="checkbox" aria-checked="false" data-val="contaminated"><span>Full of garbage</span><i class="tick"></i></button>
         <button type="button" class="answer check" role="checkbox" aria-checked="false" data-val="sewage"><span>Sewage<small>Dark, smells of drains</small></span><i class="tick"></i></button>
+        <button type="button" class="answer check" role="checkbox" aria-checked="false" data-val="cant_say"><span>Can't say</span><i class="tick"></i></button>
       </div>
     </section>
 
@@ -539,7 +540,10 @@ document.querySelectorAll('[data-field]').forEach(g => g.addEventListener('click
 // multi-select: water condition
 $('quality').addEventListener('click', (e) => {
   const b = e.target.closest('[role=checkbox]'); if (!b) return;
-  b.setAttribute('aria-checked', b.getAttribute('aria-checked') !== 'true');
+  const on = b.getAttribute('aria-checked') !== 'true';
+  b.setAttribute('aria-checked', on);
+  // "Can't say" stands alone: picking it clears the others, picking another clears it
+  if (on) $('quality').querySelectorAll('[role=checkbox]').forEach(x => { if (x !== b && (x.dataset.val === 'cant_say') !== (b.dataset.val === 'cant_say')) x.setAttribute('aria-checked', 'false'); });
   S.quality = [...$('quality').querySelectorAll('[aria-checked="true"]')].map(x => x.dataset.val);
   if (!S.quality.length) S.quality = null;
   updateNext();

@@ -16,7 +16,7 @@ const wards = areas.wards || [];
 const orders = (data ? data.features : []).map(f => {
   const p = f.properties;
   return { id: p.id, ward: p.ward, point: f.geometry ? f.geometry.coordinates : null, detail: p.place_detail, place: p.place, src: p.supplier,
-    size: p.size_l === 'dk' ? null : +p.size_l, price: p.price, came: p.came, at: Date.parse(p.observed_at) };
+    size: p.size_l === 'dk' ? null : +p.size_l, price: p.price, paid: p.paid, came: p.came, at: Date.parse(p.observed_at) };
 }).sort((a, b) => b.at - a.at);
 const now = Date.now();
 
@@ -46,7 +46,7 @@ function draw() {
     return { w, n: l.length, p5: p5.length >= MIN_PRICES ? median(p5) : null, wt: median(l.filter(o => o.came in WAIT).map(o => WAIT[o.came])) }; }).sort((a, b) => b.n - a.n);
   $('wards').innerHTML = rows.slice(0, 30).map(r => `<tr data-w="${esc(r.w)}"><td>${esc(r.w)}</td><td class="n">${r.n}</td><td class="n">${r.p5 ? inr(r.p5) : '–'}</td><td class="n">${r.wt == null ? '–' : WAIT_TXT[Math.round(r.wt)]}</td></tr>`).join('')
     || '<tr><td colspan="4" class="empty">No orders in this period yet.</td></tr>';
-  $('orders').innerHTML = os.slice(0, 20).map(o => `<div class="order"><b>${o.size ? o.size.toLocaleString('en-IN') + ' L' : 'Size not known'} · ${o.price ? inr(o.price) : 'not paid'} · ${srcName(o.src)}</b>
+  $('orders').innerHTML = os.slice(0, 20).map(o => `<div class="order"><b>${o.size ? o.size.toLocaleString('en-IN') + ' L' : 'Size not known'} · ${o.paid === 'free' || o.price === 0 ? 'free' : o.paid === 'dk' ? 'price not known' : o.price ? inr(o.price) : 'price not known'} · ${srcName(o.src)}</b>
     <span>${esc(o.ward || 'outside the corporation wards')}${o.detail === 'area' && o.place && o.place !== o.ward ? ' (' + esc(o.place) + ')' : ''} · ordered ${new Date(o.at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} · came ${o.came === 'never' ? 'never' : o.came === 'not_yet' ? 'not yet' : WAIT_TXT[WAIT[o.came]]}</span>
     <button type="button" class="fb" data-id="${esc(o.id)}">Give feedback</button></div>`).join('')
     || '<p class="empty">No orders yet. <a href="../">Be the first to tell us about a tanker</a>.</p>';

@@ -242,7 +242,8 @@
       <div class="field">
         <label class="field-label" for="price">Price of the tanker</label>
         <div class="money"><span>₹</span><input class="inp" id="price" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="0"></div>
-        <label class="inline-check"><input type="checkbox" id="free"> We didn't pay for it (free, or paid by someone else)</label>
+        <label class="inline-check"><input type="checkbox" id="free"> We didn't pay for it (it was free)</label>
+        <label class="inline-check"><input type="checkbox" id="pdk"> Don't know the price (the association or someone else paid)</label>
       </div>
       <div class="field">
         <label class="field-label" for="extra">Anything extra to the driver? <span class="opt-word">(optional)</span></label>
@@ -273,9 +274,9 @@
     </section>
 
     <section class="step" data-step="often">
-      <h2 class="qt">How many tankers in the last 7 days?</h2>
-      <p class="hint">For the same home or building, including this one.</p>
-      <div class="stepper"><button type="button" id="minus" aria-label="Fewer">−</button><output id="count7" aria-live="polite">1</output><button type="button" id="plus" aria-label="More">+</button></div>
+      <h2 class="qt">In a usual week, how many tankers do you order?</h2>
+      <p class="hint">For the same home or building. Choose 0 if it's less than once a week.</p>
+      <div class="stepper"><button type="button" id="minus" aria-label="Fewer">−</button><output id="countw" aria-live="polite">1</output><button type="button" id="plus" aria-label="More">+</button></div>
     </section>
 
     <section class="step" data-step="season">
