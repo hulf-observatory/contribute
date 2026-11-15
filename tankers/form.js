@@ -7,25 +7,14 @@ const $ = (id) => document.getElementById(id);
 const esc = Contribute.esc;
 const inHmda = (lng, lat) => lng >= C.HMDA[0] && lng <= C.HMDA[2] && lat >= C.HMDA[1] && lat <= C.HMDA[3];
 
-// ── tanker pictures: a lorry with its tank drawn to scale ──
+// ── tanker sizes, as text (Teja, 15 Nov 2026: no pictures) ──
 const SIZES = [
-  { v: '5000', label: '5,000 litres', small: 'Small tanker, usual HMWSSB size', len: 46, h: 22 },
-  { v: '10000', label: '10,000 litres', small: 'Medium', len: 72, h: 26 },
-  { v: '20000', label: '20,000 litres or more', small: 'Large lorry', len: 104, h: 30 },
-  { v: 'dk', label: "Don't know", small: '' },
+  { v: '5000', label: '5,000 litres', small: "HMWSSB's usual tanker" },
+  { v: '10000', label: '10,000 litres' },
+  { v: '20000', label: '20,000 litres or more' },
+  { v: 'dk', label: "Don't know" },
 ];
-function lorry(len, h) {
-  const G = 78, x0 = 12, cabW = 26, tx = x0 + cabW + 4, ty = G - 12 - h;
-  return `<svg viewBox="0 0 160 90" aria-hidden="true"><line x1="0" y1="${G}" x2="160" y2="${G}" stroke="#9CA3AF"/>
-    <path d="M${x0} ${G - 12} V${G - 34} Q${x0} ${G - 38} ${x0 + 4} ${G - 38} H${x0 + 18} L${x0 + cabW} ${G - 26} V${G - 12} Z" fill="#E5E7EB" stroke="#9CA3AF"/>
-    <path d="M${x0 + 5} ${G - 34} H${x0 + 16} L${x0 + 21} ${G - 27} H${x0 + 5} Z" fill="#fff" stroke="#9CA3AF" stroke-width=".8"/>
-    <rect x="${x0}" y="${G - 14}" width="${tx - x0 + len}" height="3" fill="#9CA3AF"/>
-    <rect x="${tx}" y="${ty}" width="${len}" height="${h}" rx="${h / 2}" fill="#7FA6CE" stroke="#3F76B0"/>
-    <line x1="${tx + len * .25}" y1="${ty}" x2="${tx + len * .25}" y2="${ty + h}" stroke="#3F76B0" stroke-width=".8" opacity=".6"/>
-    <line x1="${tx + len * .75}" y1="${ty}" x2="${tx + len * .75}" y2="${ty + h}" stroke="#3F76B0" stroke-width=".8" opacity=".6"/>
-    <circle cx="${x0 + 12}" cy="${G - 6}" r="6" fill="#6B7280"/><circle cx="${tx + len - 10}" cy="${G - 6}" r="6" fill="#6B7280"/>${len > 80 ? `<circle cx="${tx + len - 26}" cy="${G - 6}" r="6" fill="#6B7280"/>` : ''}</svg>`;
-}
-$('sizes').innerHTML = SIZES.map(s => `<button type="button" class="answer size" role="radio" aria-checked="false" data-val="${s.v}">${s.len ? lorry(s.len, s.h) : '<svg viewBox="0 0 160 90" aria-hidden="true"><text x="80" y="56" text-anchor="middle" font-size="34" fill="#9CA3AF" font-family="Lato">?</text></svg>'}<span>${s.label}${s.small ? `<small>${s.small}</small>` : ''}</span><i class="tick"></i></button>`).join('');
+$('sizes').innerHTML = SIZES.map(s => `<button type="button" class="answer" role="radio" aria-checked="false" data-val="${s.v}"><span>${s.label}${s.small ? `<small>${s.small}</small>` : ''}</span><i class="tick"></i></button>`).join('');
 
 // ── wards from coordinates (worked out on the phone; with "ward only" nothing finer leaves it) ──
 let AREAS = null; const LOCAL = [];
@@ -51,12 +40,12 @@ const wardText = (w) => w ? `${w.name} ward${w.zone ? ', ' + w.zone + ' zone' : 
 const round500 = (lat, lng) => ({ lat: +(Math.round(lat / .0045) * .0045).toFixed(4), lng: +(Math.round(lng / .0047) * .0047).toFixed(4) });
 
 // ── state and steps ──
-const S = { mode: null, loc: null, acc: null, ward: null, pick: null, prec: null, g: {}, source: null, size: null, came: null, why: [], n30: 1 };
+const S = { mode: null, loc: null, acc: null, ward: null, pick: null, prec: null, g: {}, source: null, size: null, came: null, season: null, why: [], n7: 1 };
 let cur = 'start';
 function steps() {
   const l = ['start'];
   if (S.mode === 'gps') l.push('locate'); else if (S.mode === 'search') l.push('place'); else if (S.mode === 'map') l.push('map');
-  l.push('precision', 'who', 'source', 'size', 'paid', 'ordered', 'came', 'often', 'why', 'note', 'review', 'thanks');
+  l.push('precision', 'who', 'source', 'size', 'paid', 'ordered', 'came', 'often', 'season', 'why', 'note', 'review', 'thanks');
   return l;
 }
 const num = (id) => { const v = $(id).value.replace(/[^0-9]/g, ''); return v ? +v : null; };
@@ -85,7 +74,7 @@ function show(s, push = true) {
 function updateNext() {
   const n = $('next'); n.disabled = !ready(cur);
   if (cur === 'review' && sending) return;
-  n.textContent = cur === 'review' ? 'Send' : (cur === 'why' && !S.why.length) || (cur === 'note' && !$('note').value.trim()) ? 'Skip' : 'Next';
+  n.textContent = cur === 'review' ? 'Send' : (cur === 'why' && !S.why.length) || (cur === 'season' && !S.season) || (cur === 'note' && !$('note').value.trim()) ? 'Skip' : 'Next';
 }
 const go = (d) => { const l = steps(); show(l[Math.max(0, l.indexOf(cur) + d)]); };
 $('next').onclick = () => { if (cur === 'review') return send(); go(1); };
@@ -176,8 +165,8 @@ $('free').addEventListener('change', () => { $('price').disabled = $('free').che
 $('odate').value = $('odate').max = today();
 $('odate').min = (() => { const d = new Date(); d.setDate(d.getDate() - 365); return d.toISOString().slice(0, 10); })();
 $('odate').addEventListener('input', () => { $('odate-msg').hidden = !future(); updateNext(); });
-const setN = (n) => { S.n30 = Math.max(1, Math.min(60, n)); $('count30').textContent = S.n30 >= 60 ? '60+' : S.n30; };
-$('minus').onclick = () => setN(S.n30 - 1); $('plus').onclick = () => setN(S.n30 + 1);
+const setN = (n) => { S.n7 = Math.max(1, Math.min(30, n)); $('count7').textContent = S.n7 >= 30 ? '30+' : S.n7; };
+$('minus').onclick = () => setN(S.n7 - 1); $('plus').onclick = () => setN(S.n7 + 1);
 $('note').addEventListener('input', updateNext);
 
 // ── review ──
@@ -196,7 +185,8 @@ function drawReview() {
     ['For', esc(`${lab('[data-g=for]', S.g.for).replace(/I look.*/, '')} · ${lab('[data-g=building]', S.g.building)}${S.g.households ? ' · ' + lab('[data-g=households]', S.g.households) + ' households' : ''}`), 'who'],
     ['From', esc(lab('[data-field=source]', S.source).split(/Booked/)[0]), 'source'], ['Size', esc(sz ? sz.label : ''), 'size'],
     ['Paid', esc(price), 'paid'], ['Ordered', esc(`${d}, ${S.g.tod}`), 'ordered'], ['Came', esc(lab('[data-field=came]', S.came)), 'came'],
-    ['Last 30 days', esc(`${S.n30 >= 60 ? '60+' : S.n30} tanker${S.n30 > 1 ? 's' : ''}`), 'often'],
+    ['Last 7 days', esc(`${S.n7 >= 30 ? '30+' : S.n7} tanker${S.n7 > 1 ? 's' : ''}`), 'often'],
+    ['Usually', esc(S.season ? lab('[data-field=season]', S.season) : 'Skipped'), 'season'],
     ['Why', esc(S.why.map(v => lab('#why', v)).join(', ') || 'Skipped'), 'why'], ['Note', esc($('note').value.trim() || 'None'), 'note']];
   lastRows = rows.map(([k, v]) => [k, v.replace(/<small>/g, ' · ').replace(/<[^>]+>/g, '')]);
   $('review').innerHTML = rows.map(([k, v, s]) => `<div><dt>${k}</dt><dd>${v}</dd><button type="button" data-go="${s}">Change</button></div>`).join('');
@@ -207,7 +197,7 @@ function drawReview() {
 function payload() {
   const b = { place_type: S.mode, place_detail: S.prec, for: S.g.for, building: S.g.building, households: S.g.households || null, supplier: S.source,
     size_l: S.size, price: $('free').checked ? 0 : num('price'), extra: num('extra'), ordered_on: $('odate').value, ordered_tod: S.g.tod,
-    came: S.came, tankers_30d: S.n30, why: S.why.length ? S.why : null, note: $('note').value.trim() || null };
+    came: S.came, tankers_7d: S.n7, season: S.season, why: S.why.length ? S.why : null, note: $('note').value.trim() || null };
   if (S.prec === 'exact') Object.assign(b, { lat: +S.loc.lat.toFixed(6), lng: +S.loc.lng.toFixed(6), accuracy_m: S.mode === 'gps' && S.acc != null ? Math.round(S.acc) : null });
   else if (S.prec === '500m') Object.assign(b, round500(S.loc.lat, S.loc.lng));
   else if (S.prec === 'area') Object.assign(b, { lat: +S.loc.lat.toFixed(5), lng: +S.loc.lng.toFixed(5), place: S.pick.name });

@@ -233,7 +233,7 @@
     <section class="step" data-step="size">
       <h2 class="qt" id="size-q">How big was the tanker?</h2>
       <p class="hint">Pick the closest. HMWSSB's usual tanker is 5,000 litres.</p>
-      <div class="sizes" role="radiogroup" aria-labelledby="size-q" data-field="size" id="sizes"></div>
+      <div class="answers" role="radiogroup" aria-labelledby="size-q" data-field="size" id="sizes"></div>
     </section>
 
     <section class="step" data-step="paid">
@@ -273,9 +273,20 @@
     </section>
 
     <section class="step" data-step="often">
-      <h2 class="qt">How many tankers in the last 30 days?</h2>
+      <h2 class="qt">How many tankers in the last 7 days?</h2>
       <p class="hint">For the same home or building, including this one.</p>
-      <div class="stepper"><button type="button" id="minus" aria-label="Fewer">−</button><output id="count30" aria-live="polite">1</output><button type="button" id="plus" aria-label="More">+</button></div>
+      <div class="stepper"><button type="button" id="minus" aria-label="Fewer">−</button><output id="count7" aria-live="polite">1</output><button type="button" id="plus" aria-label="More">+</button></div>
+    </section>
+
+    <section class="step" data-step="season">
+      <h2 class="qt" id="season-q">When do you usually need tankers?</h2>
+      <p class="hint">&nbsp;</p>
+      <div class="answers" role="radiogroup" aria-labelledby="season-q" data-field="season">
+        <button type="button" class="answer" role="radio" aria-checked="false" data-val="summer"><span>Only in summer<small>March to June</small></span><i class="tick"></i></button>
+        <button type="button" class="answer" role="radio" aria-checked="false" data-val="summer_and_more"><span>In summer and some other months</span><i class="tick"></i></button>
+        <button type="button" class="answer" role="radio" aria-checked="false" data-val="all_year"><span>All year round</span><i class="tick"></i></button>
+        <button type="button" class="answer" role="radio" aria-checked="false" data-val="first_time"><span>This is the first time</span><i class="tick"></i></button>
+      </div>
     </section>
 
     <section class="step" data-step="why">
