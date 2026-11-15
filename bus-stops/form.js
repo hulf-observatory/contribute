@@ -176,14 +176,14 @@ const search = createPlaceSearch({
   onSelect: (p) => {
     $('find-msg').hidden = true;
     if (p.kind === 'Bus stop') {
-      S.stop = STOP_AT.get(KEY(p.center)); $('inarea').hidden = false;
+      S.stop = STOP_AT.get(KEY(p.center)); $('inarea').hidden = false; lastArea = { center: p.center };
       const twins = STOPS.filter(s => s.name === S.stop.name && metres(s, S.stop) < 400).sort((a, b) => (a.id === S.stop.id ? -1 : b.id === S.stop.id ? 1 : 0));
       $('inarea-h').textContent = twins.length > 1 ? 'Which side of the road?' : 'Is this the one?';
       $('inarea-list').innerHTML = twins.map(s => stopButton(s)).join('');
       updateNext(); return;
     }
-    // an area: list its stops, nearest the middle first
-    S.stop = null;
+    // an area: list its stops, nearest the middle first (and the map, if opened, starts there)
+    S.stop = null; lastArea = p;
     const ward = p.kind.startsWith('Ward') && AREAS ? AREAS.wards.find(w => w.name === p.name) : null;
     const box = p.bbox || [p.center[0] - .006, p.center[1] - .006, p.center[0] + .006, p.center[1] + .006];
     let list = STOPS.filter(s => s.lng >= box[0] && s.lng <= box[2] && s.lat >= box[1] && s.lat <= box[3]);
@@ -198,6 +198,51 @@ const search = createPlaceSearch({
   },
 });
 $('ps-input').addEventListener('input', () => { if (!$('ps-input').value) { $('inarea').hidden = true; S.stop = null; updateNext(); } });
+
+// ── or pick the stop on a map: every stop a dot; tap one (a finger-sized area around the tap counts) ──
+let pickMap = null, lastArea = null;
+function setPickMap(on) {
+  $('search-field').hidden = on; $('pickmap-field').hidden = !on;
+  $('find-hint').textContent = on ? 'Find your stop on the map and tap it.' : "Search for the stop's name, or for the area it is in.";
+  if (on) openPickMap();
+}
+$('to-pickmap').onclick = (e) => { e.preventDefault(); setPickMap(true); };
+$('to-search').onclick = (e) => { e.preventDefault(); setPickMap(false); };
+function pickedStop(s) {
+  S.stop = s; S.missing = null;
+  $('picked-stop').hidden = false;
+  $('picked-stop').innerHTML = `<b>${esc(s.name)}</b><span>${s.towards ? 'towards ' + esc(s.towards) + ' · ' : ''}${esc(routeText(s))}</span>`;
+  $('pickmap-hint').classList.add('off');
+  if (pickMap && pickMap.getLayer('chosen')) pickMap.setFilter('chosen', ['==', ['get', 'id'], s.id]);
+  updateNext();
+}
+async function openPickMap() {
+  try { await loadMapLib(); } catch { $('pickmap-msg').textContent = "The map couldn't load. Check your connection, or use the search."; $('pickmap-msg').hidden = false; return; }
+  const fit = () => { if (lastArea?.bbox) pickMap.fitBounds(lastArea.bbox, { padding: 30, maxZoom: 16, duration: 0 }); else if (lastArea) pickMap.jumpTo({ center: lastArea.center, zoom: 15 }); };
+  if (pickMap) { pickMap.resize(); fit(); return; }
+  pickMap = new maplibregl.Map({ container: 'pickmap', style: 'https://tiles.openfreemap.org/styles/positron', center: [78.475, 17.405], zoom: 11, minZoom: 9, maxZoom: 18,
+    maxBounds: [77.6, 16.6, 79.5, 18.3], attributionControl: { compact: true } });
+  pickMap.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+  fit();
+  pickMap.on('load', () => {
+    document.querySelectorAll('.maplibregl-compact-show').forEach(x => x.classList.remove('maplibregl-compact-show'));
+    pickMap.addSource('pstops', { type: 'geojson', data: { type: 'FeatureCollection', features: STOPS.map(s => ({ type: 'Feature', properties: { id: s.id }, geometry: { type: 'Point', coordinates: [s.lng, s.lat] } })) } });
+    pickMap.addLayer({ id: 'pstops', type: 'circle', source: 'pstops', paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 2, 14, 5, 17, 9],
+      'circle-color': '#3F76B0', 'circle-stroke-color': '#fff', 'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 12, 0, 15, 1.5] } });
+    pickMap.addLayer({ id: 'chosen', type: 'circle', source: 'pstops', filter: ['==', ['get', 'id'], S.stop?.id || ''],
+      paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 6, 17, 13], 'circle-color': '#111827', 'circle-stroke-color': '#fff', 'circle-stroke-width': 3 } });
+  });
+  pickMap.on('click', (e) => {
+    const p = e.point, near = pickMap.queryRenderedFeatures([[p.x - 14, p.y - 14], [p.x + 14, p.y + 14]], { layers: ['pstops'] });
+    if (!near.length) { $('pickmap-msg').textContent = pickMap.getZoom() < 14 ? 'Zoom in and tap a dot: each dot is a bus stop.' : 'No stop there. Tap a dot, or add a missing stop.'; $('pickmap-msg').hidden = false; return; }
+    $('pickmap-msg').hidden = true;
+    const gap = (f) => { const q = pickMap.project(f.geometry.coordinates); return Math.hypot(q.x - p.x, q.y - p.y); };
+    const best = near.reduce((a, b) => (gap(b) < gap(a) ? b : a));
+    pickedStop(BY_ID.get(best.properties.id));
+  });
+  pickMap.on('mouseenter', 'pstops', () => { pickMap.getCanvas().style.cursor = 'pointer'; });
+  pickMap.on('mouseleave', 'pstops', () => { pickMap.getCanvas().style.cursor = ''; });
+}
 
 // ── missing stop: a pin on a map, known stops as grey dots ──
 let map = null, pin = null;

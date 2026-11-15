@@ -100,7 +100,11 @@
   .inarea .answers { max-height: 420px; overflow-y: auto; padding: 2px; }
 
   .map-box { position: relative; height: 46vh; min-height: 280px; max-height: 420px; border: 1px solid var(--border); border-radius: var(--r-card); overflow: hidden; }
-  #map { position: absolute; inset: 0; }
+  #map, .mapdiv { position: absolute; inset: 0; }
+  .picked-stop { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--ink); border-radius: var(--r-card); background: var(--band); }
+  .picked-stop[hidden] { display: none; }
+  .picked-stop b { display: block; font-size: 16px; }
+  .picked-stop span { display: block; font-size: 14px; color: var(--muted); }
   .map-hint { position: absolute; left: 0; right: 0; top: 12px; text-align: center; font: 700 15px/1.3 var(--font-ui); pointer-events: none; z-index: 2; transition: opacity .2s ease; }
   .map-hint.off { opacity: 0; }
   .pin { width: 20px; height: 20px; border-radius: 50%; background: var(--ink); border: 3px solid #fff; box-shadow: 0 0 0 1px var(--ink); cursor: grab; }
@@ -216,8 +220,8 @@
 
     <section class="step" data-step="find">
       <h2 class="qt">Which bus stop?</h2>
-      <p class="hint">Search for the stop's name, or for the area it is in.</p>
-      <div class="field">
+      <p class="hint" id="find-hint">Search for the stop's name, or for the area it is in.</p>
+      <div class="field" id="search-field">
         <label class="field-label" for="ps-input">Bus stop or area</label>
         <div class="search">
           <input class="inp" type="search" id="ps-input" placeholder="For example Mehdipatnam, Ameerpet, Koti">
@@ -228,7 +232,16 @@
           <div class="answers" role="radiogroup" aria-labelledby="inarea-h" id="inarea-list"></div>
         </div>
         <p class="msg" id="find-msg" hidden></p>
+        <p class="alt-link"><a href="#" id="to-pickmap">Prefer a map? Pick the stop on the map</a></p>
         <p class="alt-link"><a href="#" class="to-missing">The stop isn't in the list? Add it on a map</a></p>
+      </div>
+      <div class="field" id="pickmap-field" hidden>
+        <span class="field-label">Tap your bus stop</span>
+        <span class="field-hint">Zoom in until you can tell the two sides of the road apart, then tap the dot.</span>
+        <div class="map-box"><div id="pickmap" class="mapdiv"></div><div class="map-hint halo" id="pickmap-hint">Zoom in and tap a stop</div></div>
+        <div class="picked-stop" id="picked-stop" hidden></div>
+        <p class="msg" id="pickmap-msg" hidden></p>
+        <p class="alt-link"><a href="#" id="to-search">Use the search instead</a> · <a href="#" class="to-missing">Not on the map? Add a missing stop</a></p>
       </div>
     </section>
 
