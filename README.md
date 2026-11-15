@@ -25,4 +25,4 @@ Every page loads `https://api.urbanobservatory.in/visits.js`. Local preview: the
 `.claude/launch.json` (port 8132); add `?api=local` to a page's address to send to a `contribute-api` running on
 the same machine (`contribute-api` entry, port 8091, test mode without the spam check).
 
-Live since 15 Nov 2026 (flood) and 15 Nov 2026 (bus stops). Still to do: the Turnstile site key in `assets/config.js` (`TURNSTILE_SITEKEY`).
+Live since 15 Nov 2026 (flood) and 15 Nov 2026 (bus stops). Cloudflare Turnstile on since 15 Nov 2026 (site key in `assets/config.js`; off with `?api=local`).
