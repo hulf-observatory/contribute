@@ -1,0 +1,820 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Report flooding · Hyderabad Urban Observatory</title>
+<meta name="description" content="Report flooding on a road in Hyderabad: where, how deep, and a photo if you have one. Anonymous, no sign-in.">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../vendor/fonts/lato.css">
+<link rel="stylesheet" href="../vendor/fonts/outfit.css">
+<link rel="stylesheet" href="../assets/contribute.css">
+<!-- visit counter: page, referring site, country; no cookies, no IP addresses (live-feed/visits.js) -->
+<script src="https://api.urbanobservatory.in/visits.js" defer></script>
+<script src="../assets/config.js"></script>
+<style>
+  /* one question per screen */
+  .steps { max-width: var(--measure); margin: 0 auto; }
+  .progress { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; min-height: 20px; }
+  .progress[hidden] { display: none; }
+  .bar { flex: 1; height: 3px; background: var(--surface-2); border-radius: 2px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--ink); width: 0; transition: width .2s ease; }
+  .progress span { font-size: 13px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+  .step { display: none; }
+  .step.on { display: block; }
+  .step h1, .step h2.qt { font: 700 30px/1.2 var(--font-ui); letter-spacing: -.005em; margin: 0 0 8px; }
+  @media (max-width: 767px) { .step h1, .step h2.qt { font-size: 26px; } }
+  .hint { font-size: 16px; color: var(--text-2); margin: 0 0 24px; }
+
+  /* big answer buttons */
+  .answers { display: grid; gap: 10px; }
+  .answer { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 56px; padding: 14px 18px; text-align: left;
+    background: #fff; border: 1px solid var(--border-2); border-radius: var(--r-card); cursor: pointer; font: 700 17px/1.3 var(--font-ui);
+    transition: background .2s ease, border-color .2s ease; }
+  .answer:hover { background: var(--band); }
+  .answer[aria-checked="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); background: var(--band); }
+  .answer small { display: block; font: 400 14px/1.4 var(--font-ui); color: var(--muted); margin-top: 2px; }
+  .answer .tick { margin-left: auto; width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--border-2); flex: none; }
+  .answer[aria-checked="true"] .tick { border: 6px solid var(--ink); }
+
+  /* depth: picture answers */
+  .depths { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  @media (min-width: 640px) { .depths { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  .depth { display: block; padding: 10px 10px 12px; text-align: center; }
+  .depth svg { display: block; width: 100%; height: auto; margin: 0 0 8px; }
+  .depth .tick { display: none; }
+  .step h1:focus, .step .qt:focus { outline: none; }   /* focus moves to the question for screen readers; no ring */
+  .wave { animation: drift var(--t) linear infinite; }
+  .wave.back { animation-direction: reverse; }
+  @keyframes drift { to { transform: translateX(calc(-1 * var(--wl))); } }
+  @media (prefers-reduced-motion: reduce) { .wave { animation: none; } }
+
+  /* exact height: its own screen, picture with a slider at the side */
+  .exact-read { margin: 0 0 10px; font-size: 15px; color: var(--text-2); min-height: 34px; }
+  .exact-read b { font-size: 26px; color: var(--ink); margin-right: 6px; font-variant-numeric: tabular-nums; }
+  .exact-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 96px; gap: 6px; align-items: stretch; max-width: 520px; }
+  .exact-pic { border: 1px solid var(--border); border-radius: var(--r-card); overflow: hidden; }
+  .exact-pic svg { display: block; width: 100%; height: 100%; }
+  .vslider { position: relative; touch-action: none; cursor: ns-resize; user-select: none; outline: none; }
+  .vs-track { position: absolute; left: 18px; top: 0; bottom: 0; width: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+  .vs-fill { position: absolute; left: 0; right: 0; bottom: 0; background: #7FA6CE; }
+  .vs-thumb { position: absolute; left: 7px; width: 28px; height: 28px; margin-top: -14px; border-radius: 50%; background: #fff; border: 2px solid var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.15); }
+  .vs-thumb::before, .vs-thumb::after { content: ''; position: absolute; left: 50%; margin-left: -4px; border: 4px solid transparent; }
+  .vs-thumb::before { top: 3px; border-bottom-color: var(--muted); border-top: 0; }
+  .vs-thumb::after { bottom: 3px; border-top-color: var(--muted); border-bottom: 0; }
+  .vslider:focus-visible .vs-thumb { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .vs-tick { position: absolute; left: 30px; transform: translateY(-50%); font-size: 12px; color: var(--muted); white-space: nowrap; padding-left: 12px; pointer-events: none; }
+  .vs-tick::before { content: ''; position: absolute; left: 0; top: 50%; width: 8px; border-top: 1px solid var(--border-2); }
+
+  /* multi-select: square ticks */
+  .answer.check .tick { border-radius: 4px; }
+  .answer.check[aria-checked="true"] .tick { border: 0; background: var(--ink) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5 10.5l3.2 3.2L15 7' fill='none' stroke='%23fff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/16px no-repeat; }
+
+  .safety { font-size: 14px; font-weight: 700; color: var(--ink); margin: 14px 0 0; }
+  .draft { margin-top: 24px; padding: 16px 0 0; border-top: 1px solid var(--border-2); }
+  .draft #draft-text { margin: 0 0 8px; color: var(--text-2); }
+  .row-btns { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+
+  .ts { margin: 12px 0 0; }
+  .ts:empty { display: none; }
+  .trap { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+
+  /* WhatsApp community */
+  .join { margin-top: 32px; padding: 20px 0 0; border-top: 1px solid var(--border); }
+  .join h3 { font: 700 19px/1.3 var(--font-ui); margin: 0 0 6px; }
+  .join p:not(.eyebrow) { color: var(--text-2); margin: 0 0 16px; font-size: 15px; }
+
+  /* location permission */
+  .promise { list-style: none; margin: 0 0 28px; padding: 0; border-top: 1px solid var(--border); }
+  .promise li { padding: 12px 0 12px 28px; border-bottom: 1px solid var(--border); position: relative; color: var(--text-2); }
+  .promise li::before { content: ''; position: absolute; left: 4px; top: 19px; width: 10px; height: 6px; border-left: 2px solid var(--ink); border-bottom: 2px solid var(--ink); transform: rotate(-45deg); }
+  .promise b { color: var(--ink); }
+  .stack { display: grid; gap: 10px; }
+  .stack .btn { width: 100%; }
+  .msg { margin: 16px 0 0; padding: 12px 0; border-top: 1px solid var(--border-2); border-bottom: 1px solid var(--border-2); color: var(--text-2); }
+  .msg[hidden] { display: none; }
+
+  /* place search (the maps viewer's module; ps-* styled with house tokens) */
+  .field { margin-bottom: 24px; }
+  .field-label { display: block; font: 700 16px/1.3 var(--font-ui); margin-bottom: 4px; }
+  .req { color: #C2413B; font-weight: 700; margin-left: 2px; }
+  .req-word { font: 400 13px var(--font-ui); color: #C2413B; margin-left: 8px; }
+  .req-note { font-size: 13px; color: var(--muted); margin: -12px 0 20px; }
+  .field-hint { display: block; font-size: 14px; color: var(--muted); margin-bottom: 8px; }
+  .search { position: relative; }
+  .inp { width: 100%; height: 48px; padding: 0 14px; border: 1px solid var(--border-2); border-radius: var(--r-ctl); background: #fff; font: 400 16px var(--font-ui); color: var(--ink); }
+  textarea.inp { height: auto; min-height: 96px; padding: 12px 14px; line-height: 1.5; resize: vertical; }
+  .inp::placeholder { color: var(--disabled); }
+  .ps-results { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 10; background: #fff; border: 1px solid var(--border); border-radius: var(--r-card);
+    padding: 6px; max-height: min(360px, 50vh); overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,.08); }
+  .ps-results[hidden] { display: none; }
+  .ps-list { list-style: none; margin: 0; padding: 0; }
+  .ps-item { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 10px; border-radius: 3px; cursor: pointer; }
+  .ps-item.ps-active { background: var(--surface-2); }
+  .ps-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+  .ps-name, .ps-ctx { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ps-name { font-size: 15px; line-height: 1.3; }
+  .ps-ctx { font-size: 13px; color: var(--muted); line-height: 1.3; }
+  .ps-kind { flex: none; font: 900 10.5px/1 var(--font-ui); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .ps-status { margin: 6px 10px; font-size: 13px; color: var(--muted); }
+  .ps-credit { margin: 6px 4px 0; padding: 6px 6px 0; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+  .alt-link { margin: 10px 0 0; font-size: 14px; }
+  .alt-link a { color: var(--ink); }
+  .map-box { position: relative; height: 52vh; min-height: 300px; max-height: 460px; border: 1px solid var(--border); border-radius: var(--r-card); overflow: hidden; }
+  #map { position: absolute; inset: 0; }
+  .map-hint { position: absolute; left: 0; right: 0; top: 12px; text-align: center; font: 700 15px/1.3 var(--font-ui); pointer-events: none; z-index: 2; transition: opacity .2s ease; }
+  .map-hint.off { opacity: 0; }
+  .halo { text-shadow: 0 0 4px #fff, 0 0 8px #fff, 0 0 8px #fff; }
+  .pin { width: 20px; height: 20px; border-radius: 50%; background: var(--ink); border: 3px solid #fff; box-shadow: 0 0 0 1px var(--ink); cursor: grab; }
+  .maplibregl-ctrl-group { border-radius: var(--r-ctl) !important; box-shadow: none !important; border: 1px solid var(--border-2); }
+  .picked { display: flex; align-items: baseline; gap: 10px; margin-top: 10px; font-size: 15px; }
+  .picked[hidden] { display: none; }
+  .picked b { font-weight: 700; }
+  .picked span { color: var(--muted); }
+
+  .when { display: flex; gap: 10px; flex-wrap: wrap; }
+  .when .inp { width: auto; }
+  .answer:focus-visible, .btn:focus-visible, .inp:focus { outline: 2px solid var(--ink); outline-offset: 1px; }
+
+  .photo input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+  .photo img { display: none; width: 100%; max-height: 300px; object-fit: cover; border: 1px solid var(--border); border-radius: var(--r-card); margin: 0 0 12px; }
+  .fine { font-size: 13px; color: var(--muted); margin: 12px 0 0; }
+
+  /* review */
+  .review { margin: 0 0 8px; border-top: 1px solid var(--border); }
+  .review > div { display: grid; grid-template-columns: 88px 1fr auto; gap: 12px; align-items: baseline; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .review dt { color: var(--muted); font-size: 14px; }
+  .review dd { margin: 0; font-weight: 700; overflow-wrap: anywhere; }
+  .review dd small { display: block; font-weight: 400; font-size: 13px; color: var(--muted); }
+  .review button { background: none; border: 0; padding: 0; font: 400 14px var(--font-ui); color: var(--ink); text-decoration: underline; text-decoration-color: var(--border-2); text-underline-offset: 3px; cursor: pointer; }
+
+  /* nav: Back / Next; on phones it sits at the bottom of the screen */
+  .nav { display: flex; align-items: center; gap: 10px; margin-top: 28px; }
+  .nav[hidden] { display: none; }
+  .nav .next { margin-left: auto; min-width: 120px; }
+  .nav .next[hidden] { display: none; }
+  @media (max-width: 767px) {
+    .nav { position: sticky; bottom: 0; z-index: 5; background: #fff; border-top: 1px solid var(--border); margin: 28px -24px 0;
+      padding: 12px 24px calc(12px + env(safe-area-inset-bottom)); }
+  }
+
+  .intro-link { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border); display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+  .intro-link .meta { font-size: 13px; color: var(--muted); }
+  .anon { font-size: 13px; color: var(--muted); margin: 16px 0 0; }
+</style>
+</head>
+<body>
+<header class="obs-header">
+  <a class="obs-brand" href="/" aria-label="Hyderabad Urban Observatory, home"><span class="obs-logo"><svg viewBox="0 0 100 100" aria-hidden="true"><defs><rect id="bH1" x="2" y="26" width="96" height="16" rx="6"/><rect id="bH2" x="2" y="58" width="96" height="16" rx="6"/><rect id="bV1" x="28" y="2" width="16" height="96" rx="6" transform="rotate(18 36 50)"/><rect id="bV2" x="56" y="2" width="16" height="96" rx="6" transform="rotate(18 64 50)"/><mask id="cH1"><rect width="100" height="100" fill="white"/><use href="#bV1" fill="black" stroke="black" stroke-width="4"/></mask><mask id="cV2"><rect width="100" height="100" fill="white"/><use href="#bH1" fill="black" stroke="black" stroke-width="4"/></mask><mask id="cH2"><rect width="100" height="100" fill="white"/><use href="#bV2" fill="black" stroke="black" stroke-width="4"/></mask><mask id="cV1"><rect width="100" height="100" fill="white"/><use href="#bH2" fill="black" stroke="black" stroke-width="4"/></mask></defs><g fill="#FFFFFF" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#bH1" mask="url(#cH1)"/><use href="#bV2" mask="url(#cV2)"/><use href="#bH2" mask="url(#cH2)"/><use href="#bV1" mask="url(#cV1)"/></g></svg></span><span class="obs-word">Hyderabad Urban Observatory</span></a>
+  <nav class="obs-nav" aria-label="Observatory"><a href="/live/" class="obs-live"><i class="obs-live-dot" aria-hidden="true"></i>Live</a><a href="/maps/">Layers</a><a href="/tools/">Tools</a><a href="/stories/">Stories</a><a href="/data/">Data sources</a><a href="/about">About</a></nav>
+  <a href="/live/" class="obs-live obs-live-bar"><i class="obs-live-dot" aria-hidden="true"></i>Live</a>
+  <button type="button" class="obs-burger" aria-label="Menu" aria-expanded="false" aria-controls="obs-menu"><span></span></button>
+  <nav class="obs-menu" id="obs-menu" aria-label="Observatory" hidden><a href="/live/" class="obs-live"><i class="obs-live-dot" aria-hidden="true"></i>Live</a><a href="/maps/">Layers</a><a href="/tools/">Tools</a><a href="/stories/">Stories</a><a href="/data/">Data sources</a><a href="/about">About</a></nav>
+</header>
+
+<main class="wrap">
+  <div class="steps">
+    <div class="progress" id="progress" hidden><div class="bar"><i id="bar"></i></div><span id="count"></span></div>
+
+    <!-- start -->
+    <section class="step on" data-step="start">
+      <p class="eyebrow">Contribute · Flooding</p>
+      <h1>Report flooding</h1>
+      <p class="hint">Seen water standing or running on a road? Tell us where and how deep. It takes about a minute, and you don't need to sign in.</p>
+      <h2 class="qt" style="font-size:20px;margin-top:8px" id="q-here">Are you at the flooded place now?</h2>
+      <div class="answers" role="radiogroup" aria-labelledby="q-here" data-field="here">
+        <button type="button" class="answer" role="radio" aria-checked="false" data-val="yes"><span>Yes, I'm there now<small>Your phone can tell us where you are</small></span><i class="tick"></i></button>
+        <button type="button" class="answer" role="radio" aria-checked="false" data-val="no"><span>No, I'm reporting it from elsewhere<small>Flooding you saw earlier, or heard about from family, friends or neighbours</small></span><i class="tick"></i></button>
+      </div>
+      <p class="anon">Reports are anonymous: no names, no sign-in, and we don't keep IP addresses.</p>
+      <div class="draft" id="draft" hidden>
+        <p class="eyebrow">Not sent yet</p>
+        <p id="draft-text"></p>
+        <dl class="review" id="draft-rows"></dl>
+        <div class="row-btns"><button type="button" class="btn btn-primary btn-lg" id="draft-send">Send it now</button><button type="button" class="btn btn-secondary btn-lg" id="draft-drop">Discard it</button></div>
+        <p class="msg" id="draft-msg" hidden></p>
+      </div>
+      <div class="intro-link">
+        <a class="btn btn-secondary" href="reports/" id="see-reports">See reports so far <span class="arr">→</span></a>
+        <span class="meta" id="reports-meta"></span>
+      </div>
+    </section>
+
+    <!-- locate: explain before the phone asks -->
+    <section class="step" data-step="locate">
+      <h2 class="qt">Share your location?</h2>
+      <p class="hint">Your phone will ask whether this page may use your location. We use it only to put this report in the right place.</p>
+      <ul class="promise">
+        <li><b>Nothing is saved until you press Send</b> at the end, after you have checked your answers.</li>
+        <li>We save only the report's location, <b>not your name, phone number or IP address</b>.</li>
+        <li>Location is used only while you fill in this form. While you answer the next questions, your phone sharpens it.</li>
+      </ul>
+      <div class="stack">
+        <button type="button" class="btn btn-primary btn-lg" id="gps-go">Share my location</button>
+        <button type="button" class="btn btn-secondary btn-lg" id="gps-search">Search for the place instead</button>
+      </div>
+      <p class="msg" id="gps-msg" hidden></p>
+    </section>
+
+    <!-- place: search, then landmark -->
+    <section class="step" data-step="place">
+      <h2 class="qt" id="place-q">Where is the water?</h2>
+      <p class="hint" id="place-hint">Search for the area, then tell us the road and a landmark so we can find the exact spot.</p>
+      <p class="req-note"><span class="req" aria-hidden="true">*</span> Required</p>
+      <div class="field" id="search-field">
+        <label class="field-label" for="ps-input">Area or place <span class="req" aria-hidden="true">*</span><span class="req-word">Required</span></label>
+        <span class="field-hint">A ward, colony, road or well-known place</span>
+        <div class="search">
+          <input class="inp" type="search" id="ps-input" required aria-required="true" placeholder="For example Malakpet, Tolichowki, Hitech City">
+          <div class="ps-results" id="ps-results" hidden></div>
+        </div>
+        <div class="picked" id="picked" hidden><b id="picked-name"></b><span id="picked-ctx"></span></div>
+        <p class="alt-link"><a href="#" id="to-map">Prefer a map? Mark it on a map instead</a></p>
+      </div>
+      <div class="field" id="map-field" hidden>
+        <span class="field-label">Spot on the map <span class="req" aria-hidden="true">*</span><span class="req-word">Required</span></span>
+        <span class="field-hint">Tap where the water is. Drag the pin to adjust.</span>
+        <div class="map-box"><div id="map"></div><div class="map-hint halo" id="map-hint">Tap where the water is</div></div>
+        <div class="picked" id="pin-info" hidden><b id="pin-ward"></b><span id="pin-xy"></span></div>
+        <p class="msg" id="pin-msg" hidden></p>
+        <p class="alt-link"><a href="#" id="to-search">Use the search instead</a></p>
+      </div>
+      <div class="field">
+        <label class="field-label" for="street">Street or road name <span class="if-req"><span class="req" aria-hidden="true">*</span><span class="req-word">Required</span></span><span class="if-opt" hidden style="font-weight:400;color:var(--muted)">(optional)</span></label>
+        <span class="field-hint">The road where the water is</span>
+        <input class="inp spot" id="street" required aria-required="true" maxlength="120" autocomplete="off" placeholder="For example Malakpet Main Road">
+      </div>
+      <div class="field">
+        <label class="field-label" for="landmark">Nearest landmark <span class="req" aria-hidden="true">*</span><span class="req-word">Required</span></label>
+        <span class="field-hint">Something people know: a temple, school, bus stop, shop, bridge</span>
+        <input class="inp spot" id="landmark" required aria-required="true" maxlength="120" autocomplete="off" placeholder="For example under the railway bridge">
+      </div>
+      <div class="field">
+        <label class="field-label" for="spot">Other address details <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+        <span class="field-hint">Lane, colony, building, PIN code</span>
+        <textarea class="inp spot" id="spot" maxlength="300" style="min-height:72px"></textarea>
+      </div>
+    </section>
+
+    <!-- depth -->
+    <section class="step" data-step="depth">
+      <h2 class="qt" id="depth-q">How deep is the water?</h2>
+      <p class="hint">Pick the picture closest to what you see.</p>
+      <div class="depths" role="radiogroup" aria-labelledby="depth-q" data-field="depth" id="depths"></div>
+</section>
+
+    <section class="step" data-step="exact">
+      <h2 class="qt">How high is the water?</h2>
+      <p class="hint">Slide the handle on the side up or down until the water matches what you see.</p>
+      <p class="exact-read" aria-live="polite"><b id="exact-cm"></b><span id="exact-ref">Move the slider</span></p>
+      <div class="exact-wrap">
+        <div class="exact-pic" id="exact-pic"></div>
+        <div class="vslider" id="vslider" role="slider" tabindex="0" aria-label="Water height" aria-valuemin="5" aria-valuemax="240" aria-valuenow="120">
+          <div class="vs-track"><div class="vs-fill" id="vs-fill"></div></div>
+          <div id="vs-ticks"></div>
+          <div class="vs-thumb" id="vs-thumb"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="step" data-step="flow">
+      <h2 class="qt" id="flow-q">Is the water moving?</h2>
+      <p class="hint">&nbsp;</p>
+      <div class="answers" role="radiogroup" aria-labelledby="flow-q" data-field="flow">
+        <button type="button" class="answer" role="radio" aria-checked="false" data-val="flowing"><span>Flowing</span><i class="tick"></i></button>
+        <button type="button" class="answer" role="radio" aria-checked="false" data-val="stagnant"><span>Standing still</span><i class="tick"></i></button>
+      </div>
+    </section>
+
+    <section class="step" data-step="quality">
+      <h2 class="qt" id="quality-q">What does the water look like?</h2>
+      <p class="hint">Pick all that apply.</p>
+      <div class="answers" role="group" aria-labelledby="quality-q" id="quality">
+        <button type="button" class="answer check" role="checkbox" aria-checked="false" data-val="murky"><span>Muddy</span><i class="tick"></i></button>
+        <button type="button" class="answer check" role="checkbox" aria-checked="false" data-val="contaminated"><span>Full of garbage</span><i class="tick"></i></button>
+        <button type="button" class="answer check" role="checkbox" aria-checked="false" data-val="sewage"><span>Sewage<small>Dark, smells of drains</small></span><i class="tick"></i></button>
+      </div>
+    </section>
+
+    <section class="step" data-step="when">
+      <h2 class="qt">When was it flooded?</h2>
+      <p class="hint">Roughly is fine. If someone told you, give the time it happened, not when you heard.</p>
+      <div class="when">
+        <input class="inp" type="date" id="date" aria-label="Date">
+        <input class="inp" type="time" id="time" aria-label="Time">
+      </div>
+      <p class="msg" id="when-msg" hidden>That time hasn't come yet. Pick a time up to now.</p>
+    </section>
+
+    <section class="step photo" data-step="photo">
+      <h2 class="qt">Add a photo?</h2>
+      <p class="hint" id="photo-hint">Optional. A photo helps others see how bad it is.</p>
+      <img id="photo-prev" alt="Your photo">
+      <label class="btn btn-secondary btn-lg" for="photo-in" id="photo-btn">Take or choose a photo</label>
+      <input type="file" accept="image/*" id="photo-in">
+      <p class="fine" id="photo-info" hidden></p>
+      <p class="safety">Stay safe: don't step into flood water to take a photo.</p>
+      <p class="fine">Shown with your report. Before sending, your phone makes the photo smaller and removes the location and camera details stored inside it.</p>
+    </section>
+
+    <section class="step" data-step="note">
+      <h2 class="qt"><label for="note">Anything else?</label></h2>
+      <p class="hint">Optional. For example how long it has been flooded, or if traffic is stuck.</p>
+      <textarea class="inp" id="note" maxlength="500"></textarea>
+    </section>
+
+    <section class="step" data-step="gpsspot">
+      <h2 class="qt">Help us find the spot</h2>
+      <p class="hint" id="gpsspot-hint">Your phone's location is rough. Tell us the road and a landmark so we can find the exact place.</p>
+      <p class="req-note"><span class="req" aria-hidden="true">*</span> Required</p>
+      <div class="field">
+        <label class="field-label" for="g-street">Street or road name <span class="req" aria-hidden="true">*</span><span class="req-word">Required</span></label>
+        <span class="field-hint">The road where the water is</span>
+        <input class="inp gspot" id="g-street" maxlength="120" autocomplete="off" required aria-required="true">
+      </div>
+      <div class="field">
+        <label class="field-label" for="g-landmark">Nearest landmark <span class="req" aria-hidden="true">*</span><span class="req-word">Required</span></label>
+        <span class="field-hint">Something people know: a temple, school, bus stop, shop, bridge</span>
+        <input class="inp gspot" id="g-landmark" maxlength="120" autocomplete="off" required aria-required="true">
+      </div>
+      <div class="field">
+        <label class="field-label" for="g-spot">Other address details <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+        <span class="field-hint">Lane, colony, building, PIN code</span>
+        <textarea class="inp gspot" id="g-spot" maxlength="300" style="min-height:72px"></textarea>
+      </div>
+    </section>
+
+    <section class="step" data-step="review">
+      <h2 class="qt">Check and send</h2>
+      <p class="hint">Tap "Change" to fix anything. Nothing has been saved yet.</p>
+      <dl class="review" id="review"></dl>
+      <div class="ts" id="ts-review"></div>
+      <input type="text" name="website" id="trap" tabindex="-1" autocomplete="off" aria-hidden="true" class="trap">
+      <p class="msg" id="send-msg" hidden></p>
+      <p class="anon">Your report will be shown publicly with the other flood reports. Your answers, without the photo, are shared as open data under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>. No names, no sign-in, no IP addresses.</p>
+    </section>
+
+    <section class="step" data-step="thanks">
+      <p class="eyebrow">Report received</p>
+      <h2 class="qt">Thank you</h2>
+      <p class="hint">Your report is now with the others. Reports like yours show where the city floods, and how often.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:10px">
+        <a class="btn btn-primary btn-lg" href="reports/">See all reports <span class="arr">→</span></a>
+        <button type="button" class="btn btn-secondary btn-lg" id="again">Report another place</button>
+      </div>
+      <div class="join">
+        <p class="eyebrow">Stay in touch</p>
+        <h3>Get updates on WhatsApp</h3>
+        <p>If you haven't joined yet, join the Observatory's WhatsApp community for news of new reports, maps and surveys. Joining shares your phone number with the group's admins, not with this report.</p>
+        <a class="btn btn-secondary btn-lg" href="https://chat.whatsapp.com/GJUFWd2UJyEImsmgxbEKlg" target="_blank" rel="noopener" id="wa">Join the WhatsApp community <span class="arr">→</span></a>
+      </div>
+    </section>
+
+    <div class="nav" id="nav" hidden>
+      <button type="button" class="btn btn-secondary btn-lg" id="back">Back</button>
+      <button type="button" class="btn btn-primary btn-lg next" id="next">Next</button>
+    </div>
+  </div>
+</main>
+
+<footer class="obs-footer">
+  <div class="obs-footer-fine">
+    <span>This website is under continuous development; you may find errors or incomplete content.
+      Feedback: <a href="mailto:hulf.observatory@gmail.com">hulf.observatory@gmail.com</a> · Reports are published as community data.</span>
+    <a class="obs-footer-disclaimer" href="/disclaimer">Disclaimer</a>
+  </div>
+</footer>
+
+<script src="../assets/common.js"></script>
+<script type="module">
+import { createPlaceSearch } from '../assets/place-search.js';   // the maps viewer's place search, unchanged
+
+const $ = (id) => document.getElementById(id);
+
+// ── depth pictures: a house door, a person and a car to one scale (1 px = 3 cm, ground at y = 82);
+//    the water is the reservoir pages' two drifting wave layers (stills under reduced motion) ──
+const G = 82, cmToY = (cm) => G - cm / 3;
+const DEPTHS = [
+  { cm: 30,  label: 'Half the tyre or less', person: 'Ankle to shin' },
+  { cm: 60,  label: 'Over the tyres',        person: 'Knee' },
+  { cm: 90,  label: 'Door handles',          person: 'Waist' },
+  { cm: 140, label: 'Over the car roof',     person: 'Chest' },
+  { cm: 200, label: 'Door height',           person: 'Over a person' },
+];
+const DRAW_CM = { 30: 30, 60: 72, 90: 90, 140: 153, 200: 216 };   // where each picture draws the water (just over the thing named)
+function wavePath(x0, w, y, amp, wl, phase, close, H) {
+  let d = close ? `M${x0},${H} L${x0},${y}` : `M${x0},${y}`;
+  for (let x = 0; x <= w; x += 2) d += ` L${x0 + x},${(y + amp * Math.sin((x / wl + phase) * 2 * Math.PI)).toFixed(1)}`;
+  return close ? `${d} L${x0 + w},${H} Z` : d;
+}
+let pid = 0;
+function picture(cm, vb = '0 0 160 90') {
+  const id = 'pc' + (++pid), wl = 40, y = cmToY(cm);
+  return `<svg viewBox="${vb}" aria-hidden="true" data-pic>
+    <defs><clipPath id="${id}"><rect x="0" y="0" width="160" height="90"/></clipPath></defs>
+    <rect x="6" y="${G - 70}" width="26" height="70" fill="#fff" stroke="#9CA3AF"/>
+    <rect x="10" y="${G - 66}" width="18" height="28" fill="none" stroke="#D1D5DB" stroke-width=".8"/>
+    <rect x="10" y="${G - 34}" width="18" height="28" fill="none" stroke="#D1D5DB" stroke-width=".8"/>
+    <circle cx="27" cy="${G - 35}" r="1.4" fill="#9CA3AF"/>
+    <g fill="#9CA3AF"><circle cx="47" cy="${G - 51}" r="4.5"/>
+      <path d="M41.5 ${G - 45} h11 a2 2 0 0 1 2 2 v19 h-3 v-15 h-1 v37 h-3.6 v-22 h-.8 v22 h-3.6 v-37 h-1 v15 h-3 v-19 a2 2 0 0 1 2 -2z"/></g>
+    <path d="M64 ${G - 12} V${G - 26} Q64 ${G - 29} 67 ${G - 29} H76 L86 ${G - 46} Q88 ${G - 48} 91 ${G - 48} H124 Q127 ${G - 48} 129 ${G - 46} L139 ${G - 29} H151 Q154 ${G - 29} 154 ${G - 26} V${G - 12} Z" fill="#E5E7EB" stroke="#9CA3AF"/>
+    <path d="M89 ${G - 45} H105 V${G - 31} H80Z M109 ${G - 45} H125 L134 ${G - 31} H109Z" fill="#fff" stroke="#9CA3AF" stroke-width=".8"/>
+    <rect x="98" y="${G - 27}" width="6" height="1.6" rx=".8" fill="#9CA3AF"/><rect x="120" y="${G - 27}" width="6" height="1.6" rx=".8" fill="#9CA3AF"/>
+    <circle cx="82" cy="${G - 11}" r="11" fill="#6B7280"/><circle cx="82" cy="${G - 11}" r="4" fill="#E5E7EB"/>
+    <circle cx="137" cy="${G - 11}" r="11" fill="#6B7280"/><circle cx="137" cy="${G - 11}" r="4" fill="#E5E7EB"/>
+    <line x1="0" y1="${G}" x2="160" y2="${G}" stroke="#9CA3AF"/>
+    <g clip-path="url(#${id})"><g class="water" transform="translate(0 ${y.toFixed(1)})">
+      <path class="wave back" style="--wl:${wl}px;--t:${(wl / 6).toFixed(1)}s" d="${wavePath(-wl, 160 + wl * 2, -1.5, 1.6, wl, 0.5, true, 100)}" fill="#B7CDE4" opacity=".75"/>
+      <path class="wave" style="--wl:${wl}px;--t:${(wl / 9).toFixed(1)}s" d="${wavePath(-wl, 160 + wl * 2, 1, 1.3, wl, 0, true, 100)}" fill="#7FA6CE" opacity=".6"/>
+      <path class="wave" style="--wl:${wl}px;--t:${(wl / 9).toFixed(1)}s" d="${wavePath(-wl, 160 + wl * 2, 1, 1.3, wl, 0, false)}" fill="none" stroke="#3F76B0" stroke-width="1"/>
+    </g></g>
+  </svg>`;
+}
+$('depths').innerHTML = DEPTHS.map(d =>
+  `<button type="button" class="answer depth" role="radio" aria-checked="false" data-val="${d.cm}">${picture(DRAW_CM[d.cm])}<span>${d.label}<small>${d.person} · about ${d.cm === 30 ? '30 cm or less' : d.cm === 200 ? '2 m' : d.cm + ' cm'}</small></span><i class="tick"></i></button>`).join('')
+  + `<button type="button" class="answer depth exact" role="radio" aria-checked="false" data-val="exact" >
+      <svg viewBox="0 0 160 90" aria-hidden="true"><rect x="0" y="0" width="160" height="90" fill="#FAFAFB"/>
+        <line x1="80" y1="14" x2="80" y2="76" stroke="#D1D5DB" stroke-width="2" stroke-linecap="round"/>
+        <line x1="80" y1="44" x2="80" y2="76" stroke="#3F76B0" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="80" cy="44" r="7" fill="#fff" stroke="#111827" stroke-width="1.5"/>
+        <path d="M80 6 l-5 5 h10z M80 84 l-5 -5 h10z" fill="#9CA3AF"/></svg>
+      <span>Set the exact height<small>Slide the water up or down</small></span><i class="tick"></i></button>`;
+
+// ── areas: wards, zones, corporations (the maps viewer's nav/areas.json) ──
+let AREAS = null, LOCAL = [];
+fetch(window.CONTRIBUTE.AREAS_URL).then(r => r.json()).then(a => {
+  AREAS = a;
+  const corps = a.corporations || [], zones = a.zones || [];
+  for (const c of corps) LOCAL.push({ name: c.name, kind: 'Corporation', bbox: c.bounds });
+  for (const z of zones) LOCAL.push({ name: z.name, kind: 'Zone', context: (corps[z.corp] || {}).name, bbox: z.bounds });
+  for (const w of a.wards || []) { const z = zones[w.zone]; LOCAL.push({ name: w.name, kind: 'Ward' + (w.no != null ? ' ' + w.no : ''), context: z ? z.name + ' zone' : '', bbox: w.bounds }); }
+  if (S.loc) S.ward = wardAt(S.loc.lng, S.loc.lat);
+});
+function inRing(x, y, r) {   // r = [x0, y0, x1, y1, ...]
+  let inside = false;
+  for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) {
+    const xi = r[i], yi = r[i + 1], xj = r[j], yj = r[j + 1];
+    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+function wardAt(x, y) {
+  if (!AREAS) return null;
+  for (const w of AREAS.wards) {
+    const b = w.bounds; if (x < b[0] || x > b[2] || y < b[1] || y > b[3]) continue;
+    if ((w.poly || []).reduce((acc, r) => acc !== inRing(x, y, r), false)) return { name: w.name, no: w.no, zone: (AREAS.zones[w.zone] || {}).name };
+  }
+  return null;
+}
+const wardText = (w) => w ? `${w.name} ward${w.zone ? ', ' + w.zone + ' zone' : ''}` : 'Outside the corporation wards';
+
+// ── state and steps ──
+const S = { here: null, mode: null, loc: null, acc: null, ward: null, pick: null, depth: null, flow: null, quality: null, photo: null };
+let cur = 'start', watchId = null, gotFirst = false;
+function steps() {
+  const l = ['start'];
+  if (S.here === 'yes') { l.push('locate'); if (S.mode === 'search') l.push('place'); } else l.push('place');
+  l.push('depth'); if (S.exact) l.push('exact');
+  l.push('flow', 'quality');
+  if (S.here === 'no') l.push('when');
+  l.push('photo', 'note');
+  if (rough()) l.push('gpsspot');            // phone location worse than 100 m: ask for road and landmark
+  l.push('review', 'thanks');
+  return l;
+}
+const OPTIONAL = new Set(['photo', 'note']);
+const filled = (id) => $(id).value.trim().length >= 2;
+function ready(s) {
+  const need = { start: S.here, place: S.byMap ? (S.loc && filled('landmark')) : (S.pick && filled('street') && filled('landmark')), depth: S.depth || S.exact, exact: S.touched, flow: S.flow, quality: S.quality, when: !future(),
+    gpsspot: filled('g-street') && filled('g-landmark'), review: !sending };
+  return s in need ? !!need[s] : true;
+}
+
+function show(s, push = true) {
+  cur = s;
+  document.querySelectorAll('.step').forEach(x => x.classList.toggle('on', x.dataset.step === s));
+  const qs = steps().filter(x => x !== 'start' && x !== 'thanks'), i = qs.indexOf(s);
+  $('progress').hidden = i < 0;
+  if (i >= 0) { $('bar').style.width = `${(i + 1) / qs.length * 100}%`; $('count').textContent = s === 'review' ? 'Last step' : `${i + 1} of ${qs.length - 1}`; }
+  $('nav').hidden = s === 'start' || s === 'thanks';
+  $('next').hidden = s === 'locate';            // the locate screen has its own two buttons
+  updateNext();
+  if (s === 'place') $('place-q').textContent = S.here === 'yes' ? 'Where are you?' : 'Where was the flooding?';
+  if (s === 'photo') $('photo-hint').textContent = S.here === 'yes' ? 'Optional. A photo helps others see how bad it is.'
+    : 'Optional. A photo you took, or one someone sent you of this flooding.';
+  if (s === 'review') drawReview();
+  if (s === 'exact') hint();
+  if (push) history.pushState({ s }, '', '#' + s);
+  window.scrollTo({ top: 0 });
+  const h = document.querySelector(`.step[data-step="${s}"] .qt, .step[data-step="${s}"] h1`); if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }); }
+}
+function updateNext() {
+  const n = $('next');
+  n.disabled = !ready(cur);
+  if (cur === 'review' && sending) return;
+  n.textContent = cur === 'review' ? 'Send report' : (OPTIONAL.has(cur) && !(cur === 'photo' ? S.photo : $('note').value.trim()) ? 'Skip' : 'Next');
+}
+const go = (d) => { const l = steps(); show(l[Math.max(0, l.indexOf(cur) + d)]); };
+$('next').onclick = () => { if (cur === 'review') return send(); go(1); };
+$('back').onclick = () => history.back();
+window.addEventListener('popstate', (e) => show(e.state?.s || 'start', false));
+history.replaceState({ s: 'start' }, '', location.pathname);
+
+// single-choice screens: tapping an answer selects it and moves on
+document.querySelectorAll('[data-field]').forEach(g => g.addEventListener('click', (e) => {
+  const b = e.target.closest('[role=radio]'); if (!b) return;
+  g.querySelectorAll('[role=radio]').forEach(x => x.setAttribute('aria-checked', x === b));
+  const f = g.dataset.field;
+  if (f === 'depth') {
+    S.exact = b.dataset.val === 'exact';
+    S.depth = S.exact ? (S.touched ? S.depth : null) : +b.dataset.val;
+  } else S[f] = b.dataset.val;
+  if (f === 'here') { stopGps(); S.mode = S.here === 'no' ? 'search' : null; S.loc = null; S.acc = null; }
+  updateNext();
+  setTimeout(() => go(1), 220);
+}));
+
+// multi-select: water condition
+$('quality').addEventListener('click', (e) => {
+  const b = e.target.closest('[role=checkbox]'); if (!b) return;
+  b.setAttribute('aria-checked', b.getAttribute('aria-checked') !== 'true');
+  S.quality = [...$('quality').querySelectorAll('[aria-checked="true"]')].map(x => x.dataset.val);
+  if (!S.quality.length) S.quality = null;
+  updateNext();
+});
+
+// ── exact height: a picture with a vertical slider at its side; the handle sits level with the water ──
+const REFS = [[10, 'ankle height'], [30, 'half the tyre'], [50, 'knee height'], [66, 'the top of the tyres'], [90, 'the door handles, waist height'], [125, 'chest height'], [150, 'the car roof'], [165, 'head height'], [210, 'the top of a door']];
+function refText(cm) {
+  const near = REFS.find(([r]) => Math.abs(r - cm) <= 6);
+  if (near) return `about ${near[1]}`;
+  const lo = [...REFS].reverse().find(([r]) => r < cm), hi = REFS.find(([r]) => r > cm);
+  return lo && hi ? `between ${lo[1]} and ${hi[1]}` : hi ? `below ${hi[1]}` : `above ${lo[1]}`;
+}
+const MIN = 5, MAX = 240, MID = 120;
+$('exact-pic').innerHTML = picture(MID, '0 0 118 90');   // door, person and the front of the car: taller, so the slider is longer
+const pct = (cm) => cmToY(cm) / 90 * 100;          // the slider spans the picture's full height, so y matches the water
+$('vs-ticks').innerHTML = [[10, 'Ankle'], [50, 'Knee'], [90, 'Waist'], [150, 'Car roof'], [210, 'Door top']]
+  .map(([cm, t]) => `<span class="vs-tick" style="top:${pct(cm).toFixed(1)}%">${t}</span>`).join('');
+function draw(cm) {   // move water and handle only
+  $('exact-pic').querySelector('.water').setAttribute('transform', `translate(0 ${cmToY(cm).toFixed(1)})`);
+  $('vs-thumb').style.top = pct(cm) + '%';
+  $('vs-fill').style.height = (100 - pct(cm)) + '%';
+}
+const label = (cm) => cm >= 100 ? `${(cm / 100).toFixed(2).replace(/0$/, '')} m` : `${cm} cm`;
+function setExact(cm) {
+  cm = Math.max(MIN, Math.min(MAX, Math.round(cm / 5) * 5));
+  stopHint(); S.touched = true; S.depth = cm; draw(cm);
+  $('exact-cm').textContent = label(cm); $('exact-ref').textContent = '· ' + refText(cm);
+  const sl = $('vslider'); sl.setAttribute('aria-valuenow', cm); sl.setAttribute('aria-valuetext', `${label(cm)}, ${refText(cm)}`);
+  updateNext();
+}
+draw(MID);
+(() => {
+  const sl = $('vslider'); let drag = false;
+  const at = (e) => { const r = sl.getBoundingClientRect(); setExact((G - (e.clientY - r.top) / r.height * 90) * 3); };
+  sl.addEventListener('pointerdown', (e) => { drag = true; sl.setPointerCapture(e.pointerId); at(e); });
+  sl.addEventListener('pointermove', (e) => { if (drag) at(e); });
+  sl.addEventListener('pointerup', () => { drag = false; });
+  sl.addEventListener('keydown', (e) => {
+    const v = S.touched ? S.depth : MID, step = { ArrowUp: 5, ArrowRight: 5, ArrowDown: -5, ArrowLeft: -5, PageUp: 25, PageDown: -25 }[e.key];
+    if (step) { e.preventDefault(); setExact(v + step); } else if (e.key === 'Home') { e.preventDefault(); setExact(MIN); } else if (e.key === 'End') { e.preventDefault(); setExact(MAX); }
+  });
+})();
+// hint: the handle glides from the middle to the bottom and back, twice, then waits (none under reduced motion)
+let raf = null;
+function hint() {
+  if (S.touched || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  stopHint();
+  const t0 = performance.now() + 500, T = 1400, LOW = 15;
+  const ease = (x) => x < .5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
+  const tick = (now) => {
+    const t = (now - t0) / T;
+    if (t >= 4) { draw(MID); raf = null; return; }        // two down-and-up cycles
+    if (t > 0) { const k = Math.floor(t), f = ease(t - k); draw(k % 2 === 0 ? MID + (LOW - MID) * f : LOW + (MID - LOW) * f); }
+    raf = requestAnimationFrame(tick);
+  };
+  raf = requestAnimationFrame(tick);
+}
+function stopHint() { if (raf) cancelAnimationFrame(raf); raf = null; }
+
+// ── location from the phone: asked only after the explanation; keeps sharpening in the background ──
+$('gps-go').onclick = () => {
+  if (!('geolocation' in navigator)) return gpsFailed('This browser cannot share a location.');
+  S.mode = 'gps'; gotFirst = false;
+  $('gps-go').textContent = 'Waiting for your phone…'; $('gps-go').disabled = true; $('gps-msg').hidden = true;
+  watchId = navigator.geolocation.watchPosition(onFix, (err) => { if (!gotFirst) gpsFailed(err.code === 1
+      ? "Your phone didn't share its location. You can allow it in your browser's settings, or search for the place instead."
+      : "We couldn't get a location from your phone. Try again outside, or search for the place instead."); },
+    { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 });
+};
+const HMDA = [78.00, 16.96, 79.05, 17.90];
+const inHmda = (lng, lat) => lng >= HMDA[0] && lng <= HMDA[2] && lat >= HMDA[1] && lat <= HMDA[3];
+const ROUGH_M = 100;
+const rough = () => S.mode === 'gps' && S.acc != null && S.acc > ROUGH_M;
+function onFix(p) {
+  const { latitude: lat, longitude: lng, accuracy: acc } = p.coords;
+  if (!inHmda(lng, lat)) {            // outside the HMDA area: this form is for Hyderabad
+    if (!gotFirst) gpsFailed("Your phone places you outside the Hyderabad area (HMDA). This form is for flooding in Hyderabad. If you are in Hyderabad, search for the place instead.");
+    return;
+  }
+  if (S.acc == null || acc <= S.acc) { S.loc = { lat, lng }; S.acc = acc; S.ward = wardAt(lng, lat); }
+  if (!gotFirst) { gotFirst = true; $('gps-go').textContent = 'Share my location'; $('gps-go').disabled = false; go(1); }
+  if (cur === 'review') drawReview();
+}
+function gpsFailed(text) {
+  stopGps(); S.mode = null;
+  $('gps-go').textContent = 'Try again'; $('gps-go').disabled = false;
+  $('gps-msg').textContent = text; $('gps-msg').hidden = false;
+}
+function stopGps() { if (watchId != null) navigator.geolocation.clearWatch(watchId); watchId = null; }
+$('gps-search').onclick = () => { stopGps(); S.mode = 'search'; S.loc = null; S.acc = null; go(1); };
+
+// ── place search: the maps viewer's module, without a map ──
+createPlaceSearch({
+  input: $('ps-input'), results: $('ps-results'), local: () => LOCAL, getMap: () => null,
+  onSelect: (p) => {
+    S.pick = p; S.lastPick = p; S.loc = { lat: p.center[1], lng: p.center[0] }; S.acc = null;
+    S.ward = p.kind.startsWith('Ward') ? { name: p.name, zone: (p.context || '').replace(/ zone$/, '') } : wardAt(p.center[0], p.center[1]);
+    $('picked').hidden = false; $('picked-name').textContent = p.name;
+    $('picked-ctx').textContent = [p.kind, p.context].filter(Boolean).join(' · ');
+    updateNext();
+  },
+});
+$('ps-input').addEventListener('input', () => { if (S.pick && $('ps-input').value !== S.pick.name) { S.pick = null; $('picked').hidden = true; updateNext(); } });
+
+// ── map option on the search screen: load MapLibre only when asked ──
+let map = null, pin = null;
+function loadMapLib() {
+  if (window.maplibregl) return Promise.resolve();
+  return new Promise((ok, fail) => {
+    const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css'; document.head.append(css);
+    const js = document.createElement('script'); js.src = 'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js'; js.onload = ok; js.onerror = fail; document.head.append(js);
+  });
+}
+function setByMap(on) {
+  S.byMap = on;
+  $('search-field').hidden = on; $('map-field').hidden = !on;
+  document.querySelector('label[for="street"] .if-req').hidden = on;
+  document.querySelector('label[for="street"] .if-opt').hidden = !on;
+  $('street').required = !on; $('street').setAttribute('aria-required', String(!on));
+  $('place-hint').textContent = on ? 'Mark the spot on the map, then tell us a landmark near it.' : 'Search for the area, then tell us the road and a landmark so we can find the exact spot.';
+  if (on) { S.pick = null; S.loc = null; S.ward = null; openMap(); }
+  else { if (pin) { pin.remove(); pin = null; } S.loc = S.pick ? { lat: S.pick.center[1], lng: S.pick.center[0] } : null; $('pin-info').hidden = true; $('map-hint').classList.remove('off'); }
+  updateNext();
+}
+$('to-map').onclick = (e) => { e.preventDefault(); setByMap(true); };
+$('to-search').onclick = (e) => { e.preventDefault(); setByMap(false); };
+async function openMap() {
+  try { await loadMapLib(); } catch { $('pin-msg').textContent = "The map couldn't load. Use the search instead."; $('pin-msg').hidden = false; return; }
+  const start = S.lastPick;   // start on the area picked in the search, if any
+  if (!map) {
+    map = new maplibregl.Map({ container: 'map', style: 'https://tiles.openfreemap.org/styles/positron',
+      center: start ? start.center : [78.475, 17.405], zoom: start ? 15 : 11, minZoom: 9, maxZoom: 18,
+      maxBounds: [77.6, 16.6, 79.5, 18.3], attributionControl: { compact: true } });
+    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+    map.on('load', () => document.querySelector('.maplibregl-compact-show')?.classList.remove('maplibregl-compact-show'));
+    map.on('click', (e) => placePin(e.lngLat.lng, e.lngLat.lat));
+  } else { map.resize(); if (start) map.jumpTo({ center: start.center, zoom: 15 }); }
+}
+function placePin(lng, lat) {
+  if (!inHmda(lng, lat)) { $('pin-msg').textContent = 'That spot is outside the Hyderabad area (HMDA). Tap a place inside it.'; $('pin-msg').hidden = false; return; }
+  $('pin-msg').hidden = true;
+  if (!pin) { const el = document.createElement('div'); el.className = 'pin';
+    pin = new maplibregl.Marker({ element: el, draggable: true }).setLngLat([lng, lat]).addTo(map);
+    pin.on('dragend', () => { const q = pin.getLngLat(); placePin(q.lng, q.lat); }); }
+  else pin.setLngLat([lng, lat]);
+  S.loc = { lat, lng }; S.acc = null; S.ward = wardAt(lng, lat);
+  $('map-hint').classList.add('off');
+  $('pin-info').hidden = false; $('pin-ward').textContent = wardText(S.ward); $('pin-xy').textContent = `${lat.toFixed(5)}° N, ${lng.toFixed(5)}° E`;
+  updateNext();
+}
+
+// ── when, photo, note ──
+(() => { const n = new Date(), p = (x) => String(x).padStart(2, '0');
+  const d = $('date'); d.value = d.max = `${n.getFullYear()}-${p(n.getMonth() + 1)}-${p(n.getDate())}`;
+  $('time').value = `${p(n.getHours())}:${p(n.getMinutes())}`; })();
+function future() { const t = new Date(`${$('date').value}T${$('time').value || '00:00'}`); return t > new Date(); }
+['date', 'time'].forEach(id => $(id).addEventListener('input', () => { $('when-msg').hidden = !future(); updateNext(); }));
+const PHOTO_MAX = 1600, PHOTO_Q = 0.82;
+$('photo-in').addEventListener('change', async (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  const info = $('photo-info'); info.hidden = false; info.textContent = 'Preparing the photo…';
+  try {
+    const bmp = await createImageBitmap(f, { imageOrientation: 'from-image' });
+    const k = Math.min(1, PHOTO_MAX / Math.max(bmp.width, bmp.height)), w = Math.round(bmp.width * k), h = Math.round(bmp.height * k);
+    const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(bmp, 0, 0, w, h);
+    const url = c.toDataURL('image/jpeg', PHOTO_Q), kb = Math.round(url.length * 3 / 4 / 1024);
+    S.photo = url; $('photo-prev').src = url; $('photo-prev').style.display = 'block';
+    info.textContent = `Ready to send: ${w} × ${h}, ${kb} KB (was ${(f.size / 1048576).toFixed(1)} MB)`;
+    $('photo-btn').textContent = 'Use a different photo';
+  } catch {
+    S.photo = null; $('photo-prev').style.display = 'none';
+    info.textContent = "This photo couldn't be read. Try a different one, or take a new photo.";
+  }
+  updateNext();
+});
+$('note').addEventListener('input', updateNext);
+document.querySelectorAll('.spot, .gspot').forEach(el => el.addEventListener('input', updateNext));
+
+// ── review ──
+const esc = (s) => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+function drawReview() {
+  const d = S.exact ? { label: `${$('exact-cm').textContent}, set exactly` } : DEPTHS.find(x => x.cm === S.depth);
+  const looks = (S.quality || []).map(v => $('quality').querySelector(`[data-val="${v}"] span`).firstChild.textContent.trim()).join(', ');
+  const lab = (f) => document.querySelector(`[data-field="${f}"] [aria-checked="true"] span`)?.firstChild.textContent.trim() || '';
+  let where;
+  if (S.mode === 'gps' && S.loc) {
+    const acc = Math.round(S.acc);
+    const g = rough() ? [$('g-street').value.trim(), 'Near ' + $('g-landmark').value.trim(), $('g-spot').value.trim()].filter(x => x && x !== 'Near ') : [];
+    where = `${esc(wardText(S.ward))}${g.map(l => `<small>${esc(l)}</small>`).join('')}<small>Your phone's location, accurate to about ${acc} m${watchId != null && acc > 30 ? ' — still sharpening' : ''}</small>`;
+  } else if (S.byMap && S.loc) {
+    const lines = [$('street').value.trim(), 'Near ' + $('landmark').value.trim(), $('spot').value.trim()].filter(x => x && x !== 'Near ');
+    where = `${esc(wardText(S.ward))}${lines.map(l => `<small>${esc(l)}</small>`).join('')}<small>Marked on the map</small>`;
+  } else if (S.pick) {
+    const lines = [$('street').value.trim(), 'Near ' + $('landmark').value.trim(), $('spot').value.trim()].filter(x => x && x !== 'Near ');
+    where = `${esc(S.pick.name)}${lines.map(l => `<small>${esc(l)}</small>`).join('')}<small>${esc([S.pick.kind, S.pick.context].filter(Boolean).join(' · '))}</small>`;
+  } else where = 'Not set';
+  const when = S.here === 'yes' ? 'Now' : new Date(`${$('date').value}T${$('time').value}`).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+  const rows = [
+    ['Where', where, S.mode === 'gps' ? (rough() ? 'gpsspot' : 'locate') : 'place', true],
+    ['Depth', d ? d.label : '', S.exact ? 'exact' : 'depth'],
+    ['Moving', lab('flow'), 'flow'],
+    ['Looks', looks, 'quality'],
+    ['When', when, S.here === 'yes' ? null : 'when'],
+    ['Photo', S.photo ? 'Added' : 'None', 'photo'],
+    ['Note', $('note').value.trim() || 'None', 'note'],
+  ];
+  lastRows = rows.map(([k, v, , html]) => [k, html ? v.replace(/<small>/g, ' · ').replace(/<[^>]+>/g, '') : v]);
+  $('review').innerHTML = rows.map(([k, v, s, html]) =>
+    `<div><dt>${k}</dt><dd>${html ? v : esc(v)}</dd>${s ? `<button type="button" data-go="${s}">Change</button>` : '<span></span>'}</div>`).join('');
+  document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => show(b.dataset.go));
+}
+
+// ── send: answers stay on the phone until the server accepts them; location sharing stops after ──
+const DRAFT = 'obs-flood-unsent';
+let sending = false, lastRows = [];
+const store = { get() { try { return JSON.parse(localStorage.getItem(DRAFT)); } catch { return null; } },
+  set(v) { try { localStorage.setItem(DRAFT, JSON.stringify(v)); return true; } catch { return false; } },
+  drop() { try { localStorage.removeItem(DRAFT); } catch { /* ignore */ } } };
+function payload() {
+  const t = S.here === 'yes' ? new Date() : new Date(`${$('date').value}T${$('time').value}`);
+  return { survey: 'flood', version: 2, here: S.here, place_type: S.mode === 'gps' ? 'gps' : S.byMap ? 'map' : 'search',
+    lat: S.loc?.lat, lng: S.loc?.lng, accuracy_m: S.acc != null ? Math.round(S.acc) : null, ward: S.ward?.name || null,
+    place: S.pick?.name || null, street: (rough() ? $('g-street') : $('street')).value.trim() || null,
+    landmark: (rough() ? $('g-landmark') : $('landmark')).value.trim() || null, address_more: (rough() ? $('g-spot') : $('spot')).value.trim() || null,
+    depth_cm: S.depth, depth_exact: !!S.exact, flow: S.flow, quality: S.quality, observed_at: t.toISOString(),
+    note: $('note').value.trim() || null, photo: S.photo || null };
+}
+const spam = Contribute.spamCheck($('ts-review'));
+async function postReport(body) {
+  const token = await spam.token();
+  if (token === null) { const e = new Error('spam check'); e.server = true; e.status = 403; throw e; }
+  try { return await Contribute.post('/flood/reports', { ...body, token, website: $('trap').value }); }
+  finally { spam.reset(); }
+}
+async function send() {
+  const body = payload(), saved = { body, rows: lastRows, at: Date.now() };
+  const kept = store.set(saved) || store.set({ ...saved, body: { ...body, photo: null }, photoDropped: !!body.photo });   // a big photo may not fit
+  sending = true; $('send-msg').hidden = true; updateNext(); $('next').textContent = 'Sending…';
+  try {
+    await postReport(body);
+    store.drop(); stopGps(); sending = false; show('thanks');
+  } catch (err) {
+    sending = false; updateNext(); $('next').textContent = 'Try again';
+    const why = err.server && err.status === 400 ? `The server could not accept this report (${err.message}). Please check your answers.`
+      : err.server && err.status === 403 ? 'The spam check did not finish. Please press Try again.'
+      : err.server && err.status === 429 ? 'Too many reports from this connection just now. Please wait a minute.'
+      : "We couldn't send your report; the signal may be weak.";
+    $('send-msg').textContent = `${why} ${kept ? 'Your answers are saved on this phone, so nothing is lost. Press Try again, or come back to this page later and send it from there.' : 'Press Try again.'}`;
+    $('send-msg').hidden = false;
+  }
+}
+// a report that didn't go through last time: offer it on the start screen
+(() => {
+  const d = store.get(); if (!d || !d.body) return;
+  $('draft').hidden = false;
+  $('draft-text').textContent = `You have a flood report from ${new Date(d.at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })} that didn't send.${d.photoDropped ? ' Its photo was too large to keep.' : ''}`;
+  $('draft-rows').innerHTML = (d.rows || []).map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd><span></span></div>`).join('');
+  $('draft-send').onclick = async () => {
+    $('draft-send').disabled = true; $('draft-send').textContent = 'Sending…'; $('draft-msg').hidden = true;
+    try { await postReport(d.body); store.drop(); show('thanks'); }
+    catch { $('draft-send').disabled = false; $('draft-send').textContent = 'Try again';
+      $('draft-msg').textContent = "Still couldn't send it. Your answers stay saved on this phone."; $('draft-msg').hidden = false; }
+  };
+  $('draft-drop').onclick = () => { store.drop(); $('draft').hidden = true; };
+})();
+$('again').onclick = () => { location.href = location.pathname; };
+
+fetch(`${window.CONTRIBUTE.API}/flood/reports.json`).then(r => r.json()).then(d => {
+  const f = d.features || [];
+  const last = f.map(x => x.properties.observed_at).sort().pop();
+  if (f.length) $('see-reports').firstChild.textContent = `See ${f.length} reports so far `;
+  if (last) $('reports-meta').textContent = `Latest ${new Date(last).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' })}`;
+}).catch(() => {});
+if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__test = { S, show, onFix, wardAt, setExact, store, placePin, setByMap };   // local checks only
+</script>
+</body>
+</html>

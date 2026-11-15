@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flood reports · Hyderabad Urban Observatory</title>
+<meta name="description" content="Flood reports sent by Hyderabad residents: where the roads flooded, and how deep. Community data, CC BY 4.0.">
+<link rel="icon" href="../../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../../vendor/fonts/lato.css">
+<link rel="stylesheet" href="../../vendor/fonts/outfit.css">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<link rel="stylesheet" href="../../assets/contribute.css">
+<!-- visit counter: page, referring site, country; no cookies, no IP addresses (live-feed/visits.js) -->
+<script src="https://api.urbanobservatory.in/visits.js" defer></script>
+<script src="../../assets/config.js"></script>
+<style>
+  .top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 32px; padding-bottom: 24px; }
+  .top-btns { display: flex; flex-wrap: wrap; gap: 10px; }
+  .ctl { display: grid; gap: 12px; margin-bottom: 20px; }
+  .ctl-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .ctl-label { font: 900 11px/1 var(--font-ui); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); min-width: 52px; }
+  /* segmented toggle (house) */
+  .seg { display: inline-flex; background: var(--surface-2); border-radius: var(--r-ctl); padding: 4px; gap: 2px; }
+  .seg button { border: 1px solid transparent; background: none; border-radius: 3px; padding: 7px 16px; font: 700 14px/1 var(--font-ui); color: var(--text-2); cursor: pointer; transition: background .12s; }
+  .seg button[aria-pressed="true"] { background: #fff; border-color: var(--border); color: var(--ink); }
+
+  .fig { border-top: 1px solid var(--border); }
+  .fig-title { font: 700 18px/1.35 var(--font-ui); margin: 16px 0 2px; }
+  .fig-sub { font-size: 13px; color: var(--muted); margin: 0 0 14px; }
+  .fig-foot { border-top: 1px solid var(--border); margin-top: 16px; padding-top: 8px; font-size: 11.5px; color: var(--muted); }
+  .key { display: flex; align-items: center; gap: 8px 16px; flex-wrap: wrap; font-size: 13px; color: var(--text-2); margin-bottom: 12px; }
+  .key-item { display: inline-flex; align-items: center; gap: 6px; }
+  .dot { display: inline-block; border-radius: 50%; border: 1px solid rgba(18,63,112,.5); flex: none; vertical-align: -1px; }
+
+  .view[hidden] { display: none; }
+
+  /* list view: a table on wide screens, cards on phones */
+  .tbl { width: 100%; border-collapse: collapse; font-size: 15px; }
+  .tbl th { text-align: left; font: 900 11px/1.3 var(--font-ui); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); padding: 10px 12px; border-bottom: 1px solid var(--border-2); white-space: nowrap; }
+  .tbl td { padding: 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .tbl tr.row { cursor: pointer; }
+  .tbl tr.row:hover td, .tbl tr.row.on td { background: var(--band); }
+  .tbl .when { white-space: nowrap; font-weight: 700; }
+  .tbl .when small, .tbl .area small { display: block; font-weight: 400; color: var(--muted); font-size: 13px; }
+  .tbl .depth { white-space: nowrap; }
+  .tbl .extra { color: var(--muted); font-size: 13px; white-space: nowrap; }
+  .tbl tr.detail td { background: var(--band); padding: 4px 12px 16px; }
+  .tbl tr.detail[hidden] { display: none; }
+  .more { display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); gap: 16px; font-size: 14px; color: var(--text-2); }
+  .more img, .more .ph { width: 100%; max-height: 240px; object-fit: cover; border-radius: var(--r-card); border: 1px solid var(--border); background: var(--surface-2); }
+  .more .ph { height: 140px; display: grid; place-items: center; color: var(--muted); font-size: 13px; text-align: center; padding: 0 12px; }
+  .more p { margin: 0 0 8px; overflow-wrap: anywhere; }
+  .more .meta { color: var(--muted); font-size: 13px; }
+  .more:not(:has(.ph, img)) { grid-template-columns: 1fr; }
+  .cards { display: none; }
+  @media (max-width: 767px) {
+    .tbl { display: none; }
+    .cards { display: grid; gap: 10px; }
+    .card { border: 1px solid var(--border); border-radius: var(--r-card); background: #fff; }
+    .card-btn { width: 100%; display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; text-align: left; background: none; border: 0; padding: 14px 16px; cursor: pointer; }
+    .card-when { font-weight: 700; }
+    .card-area { color: var(--text-2); font-size: 14px; grid-column: 1 / -1; }
+    .card-depth { font-size: 14px; grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; }
+    .card-extra { font-size: 12px; color: var(--muted); }
+    .card .more { grid-template-columns: 1fr; padding: 0 16px 16px; }
+    .card .more[hidden] { display: none; }
+  }
+  .empty { padding: 24px 0; color: var(--muted); }
+
+  /* map view */
+  .map-wrap { position: relative; height: 60vh; min-height: 380px; max-height: 640px; border: 1px solid var(--border); border-radius: var(--r-card); overflow: hidden; }
+  #map { position: absolute; inset: 0; }
+  .float { position: absolute; left: 12px; bottom: 12px; right: 12px; max-width: 360px; background: rgba(255,255,255,.94); backdrop-filter: blur(6px); border-radius: 12px; box-shadow: var(--shadow-float); padding: 14px 16px; z-index: 3; font-size: 14px; }
+  .float[hidden] { display: none; }
+  .float b { display: block; font-size: 15px; }
+  .float .x { position: absolute; top: 8px; right: 10px; border: 0; background: none; font-size: 20px; line-height: 1; color: var(--muted); cursor: pointer; }
+  .days { margin-top: 14px; }
+  .days-label { font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  .days svg { display: block; width: 100%; height: 64px; overflow: visible; }
+  .pop .maplibregl-popup-content { font: 13px/1.4 var(--font-ui); border-radius: 12px; box-shadow: var(--shadow-float); padding: 8px 12px; }
+  .pop .maplibregl-popup-tip { display: none; }
+
+  /* feedback on a report */
+  .confirmed { font-size: 13px; color: var(--text-2); margin: 0 0 6px; }
+  .confirmed:empty { display: none; }
+  .links a { color: var(--ink); }
+  .fb { border: 1px solid var(--border); border-radius: var(--r-card); padding: 0; width: min(480px, calc(100vw - 32px)); max-height: calc(100vh - 32px); color: var(--ink); }
+  .fb::backdrop { background: rgba(17,24,39,.35); }
+  .fb form { padding: 20px 22px; }
+  .fb h2 { font: 700 19px/1.3 var(--font-ui); margin: 0 0 2px; }
+  .fb-sub { font-size: 13px; color: var(--muted); margin: 0 0 14px; }
+  .fb-opts { display: grid; gap: 8px; margin-bottom: 14px; }
+  .fb-opt { display: block; width: 100%; text-align: left; padding: 10px 14px; background: #fff; border: 1px solid var(--border-2); border-radius: var(--r-card); cursor: pointer; font: 400 14px/1.35 var(--font-ui); }
+  .fb-opt b { display: block; font-size: 15px; }
+  .fb-opt small { color: var(--muted); font-size: 13px; }
+  .fb-opt:hover { background: var(--band); }
+  .fb-opt[aria-checked="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); background: var(--band); }
+  .fb-opt:disabled { opacity: .5; cursor: default; }
+  .fb-label { display: block; font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+  .fb-label span { font-weight: 400; color: var(--muted); }
+  .fb textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--border-2); border-radius: var(--r-ctl); font: 400 15px/1.5 var(--font-ui); resize: vertical; }
+  .fb-fine { font-size: 12.5px; color: var(--muted); margin: 10px 0 14px; }
+  .fb-done { margin: 0 0 14px; padding: 10px 0; border-top: 1px solid var(--border-2); border-bottom: 1px solid var(--border-2); }
+  .fb-btns { display: flex; justify-content: flex-end; gap: 10px; }
+  .ts { margin: 10px 0 0; }
+  .ts:empty { display: none; }
+  .more img { cursor: zoom-in; }
+  .trap { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+  @media (max-width: 767px) {   /* phones: a sheet from the bottom */
+    .fb { width: 100vw; max-width: 100vw; margin: auto 0 0; border-radius: 12px 12px 0 0; border-bottom: 0; }
+    .fb form { padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
+  }
+</style>
+</head>
+<body>
+<header class="obs-header">
+  <a class="obs-brand" href="/" aria-label="Hyderabad Urban Observatory, home"><span class="obs-logo"><svg viewBox="0 0 100 100" aria-hidden="true"><defs><rect id="bH1" x="2" y="26" width="96" height="16" rx="6"/><rect id="bH2" x="2" y="58" width="96" height="16" rx="6"/><rect id="bV1" x="28" y="2" width="16" height="96" rx="6" transform="rotate(18 36 50)"/><rect id="bV2" x="56" y="2" width="16" height="96" rx="6" transform="rotate(18 64 50)"/><mask id="cH1"><rect width="100" height="100" fill="white"/><use href="#bV1" fill="black" stroke="black" stroke-width="4"/></mask><mask id="cV2"><rect width="100" height="100" fill="white"/><use href="#bH1" fill="black" stroke="black" stroke-width="4"/></mask><mask id="cH2"><rect width="100" height="100" fill="white"/><use href="#bV2" fill="black" stroke="black" stroke-width="4"/></mask><mask id="cV1"><rect width="100" height="100" fill="white"/><use href="#bH2" fill="black" stroke="black" stroke-width="4"/></mask></defs><g fill="#FFFFFF" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#bH1" mask="url(#cH1)"/><use href="#bV2" mask="url(#cV2)"/><use href="#bH2" mask="url(#cH2)"/><use href="#bV1" mask="url(#cV1)"/></g></svg></span><span class="obs-word">Hyderabad Urban Observatory</span></a>
+  <nav class="obs-nav" aria-label="Observatory"><a href="/live/" class="obs-live"><i class="obs-live-dot" aria-hidden="true"></i>Live</a><a href="/maps/">Layers</a><a href="/tools/">Tools</a><a href="/stories/">Stories</a><a href="/data/">Data sources</a><a href="/about">About</a></nav>
+  <a href="/live/" class="obs-live obs-live-bar"><i class="obs-live-dot" aria-hidden="true"></i>Live</a>
+  <button type="button" class="obs-burger" aria-label="Menu" aria-expanded="false" aria-controls="obs-menu"><span></span></button>
+  <nav class="obs-menu" id="obs-menu" aria-label="Observatory" hidden><a href="/live/" class="obs-live"><i class="obs-live-dot" aria-hidden="true"></i>Live</a><a href="/maps/">Layers</a><a href="/tools/">Tools</a><a href="/stories/">Stories</a><a href="/data/">Data sources</a><a href="/about">About</a></nav>
+</header>
+
+<main class="wrap">
+  <div class="top">
+    <div>
+      <p class="eyebrow">Community data · Flooding</p>
+      <h1>Flood reports</h1>
+      <p class="lede">Where people have reported water on the roads, and how deep it was.</p>
+    </div>
+    <div class="top-btns"><a class="btn btn-primary" href="../">Report flooding <span class="arr">→</span></a><a class="btn btn-secondary" href="../download/">Download the data</a></div>
+  </div>
+
+  <div class="ctl">
+    <div class="ctl-row"><span class="ctl-label">View</span>
+      <div class="seg" role="group" aria-label="View"><button type="button" data-v="list" aria-pressed="true">List</button><button type="button" data-v="map" aria-pressed="false">Map</button></div></div>
+    <div class="ctl-row"><span class="ctl-label">Period</span><div class="chips" id="period"></div></div>
+  </div>
+
+  <section class="fig">
+    <h2 class="fig-title" id="fig-title"></h2>
+    <p class="fig-sub" id="fig-sub"></p>
+
+    <div class="view" id="v-list">
+      <table class="tbl"><thead><tr><th>When</th><th>Area</th><th>Depth</th><th>Water</th><th></th></tr></thead><tbody id="tbody"></tbody></table>
+      <div class="cards" id="cards"></div>
+    </div>
+
+    <div class="view" id="v-map" hidden>
+      <div class="key" id="key"></div>
+      <div class="map-wrap"><div id="map"></div>
+        <div class="float" id="float" hidden><button type="button" class="x" aria-label="Close" id="float-x">×</button><div id="float-body"></div></div></div>
+      <div class="days"><div class="days-label">Reports per day</div><svg id="days" role="img" aria-label="Reports per day"></svg></div>
+    </div>
+
+    <p class="fig-foot">Source: reports sent by residents through the flood form · Hyderabad Urban Observatory. Reports are not checked on the ground. Areas are the 2026 corporation wards.</p>
+  </section>
+</main>
+
+<dialog class="fb" id="fb" aria-labelledby="fb-title">
+  <form id="fb-form" novalidate>
+    <h2 id="fb-title">Feedback on this report</h2>
+    <p class="fb-sub" id="fb-sub"></p>
+    <div class="fb-opts" role="radiogroup" aria-labelledby="fb-title" id="fb-opts">
+      <button type="button" class="fb-opt" role="radio" aria-checked="false" data-k="confirm"><b>I saw this too</b><small>Adds to "Confirmed by" on this report</small></button>
+      <button type="button" class="fb-opt" role="radio" aria-checked="false" data-k="wrong"><b>Something is wrong</b><small>Wrong place, wrong details, or a duplicate</small></button>
+      <button type="button" class="fb-opt" role="radio" aria-checked="false" data-k="spam"><b>Spam or fake</b><small>Not a real flood report</small></button>
+      <button type="button" class="fb-opt" role="radio" aria-checked="false" data-k="photo"><b>Photo is not OK</b><small>Shows a face, a number plate, or something offensive</small></button>
+    </div>
+    <label class="fb-label" for="fb-note">Note <span>(optional, only we see it)</span></label>
+    <textarea id="fb-note" maxlength="300" rows="3" placeholder="For example: this is near the bridge, not the school"></textarea>
+    <div class="ts" id="ts-fb"></div>
+    <input type="text" name="website" id="fb-trap" tabindex="-1" autocomplete="off" aria-hidden="true" class="trap">
+    <p class="fb-fine">Anonymous: no names, no IP addresses. Three "spam or fake" flags hide a report, and three "photo is not OK" flags hide its photo, until we check. Other feedback comes to us.</p>
+    <p class="fb-done" id="fb-done" hidden></p>
+    <div class="fb-btns"><button type="button" class="btn btn-secondary" id="fb-cancel">Cancel</button><button type="submit" class="btn btn-primary" id="fb-send" disabled>Send feedback</button></div>
+  </form>
+</dialog>
+
+<footer class="obs-footer">
+  <div class="obs-footer-fine">
+    <span>This website is under continuous development; you may find errors or incomplete content.
+      Feedback: <a href="mailto:hulf.observatory@gmail.com">hulf.observatory@gmail.com</a> · Reports are published as community data.</span>
+    <a class="obs-footer-disclaimer" href="/disclaimer">Disclaimer</a>
+  </div>
+</footer>
+
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="../../assets/common.js"></script>
+<script>
+const API = window.CONTRIBUTE.API;
+const $ = (id) => document.getElementById(id);
+
+const DEPTH = {
+  30:  { label: 'Half the tyre or less', color: '#E4EDF6', r: 4 },
+  60:  { label: 'Over the tyres',        color: '#B7CDE4', r: 6 },
+  90:  { label: 'Door handles',          color: '#7FA6CE', r: 8 },
+  140: { label: 'Over the car roof',     color: '#3F76B0', r: 10 },
+  200: { label: 'Door height',           color: '#123F70', r: 12 },
+};
+// exact heights from the slider fall into the five picture levels for colour and key
+const bucket = (cm) => cm <= 30 ? 30 : cm <= 60 ? 60 : cm <= 90 ? 90 : cm <= 140 ? 140 : 200;
+const FLOW = { flowing: 'Flowing', stagnant: 'Standing still' };
+const QUAL = { clear: 'clear', murky: 'muddy', contaminated: 'full of garbage', sewage: 'sewage' };
+const fmt = (iso, o) => new Date(iso).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', ...o });   // times are UTC; shown in IST
+const istDate = (iso) => new Date(iso).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });   // YYYY-MM-DD in IST
+const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const linkify = (s) => esc(s).replace(/https?:\/\/[^\s]+/g, u => `<a href="${u}" target="_blank" rel="noopener nofollow">${u.length > 48 ? u.slice(0, 45) + '…' : u}</a>`);
+// ── feedback: sent to the server; this phone also remembers what it sent, so a choice is offered once ──
+const FB = 'obs-flood-feedback';
+const fbGet = () => { try { return JSON.parse(localStorage.getItem(FB)) || {}; } catch { return {}; } };
+const fbSet = (v) => { try { localStorage.setItem(FB, JSON.stringify(v)); } catch { /* private mode */ } };
+const confCount = (id) => (all.find(x => x.properties.id === id)?.properties.confirmed || 0);
+const confText = (id) => { const n = confCount(id); return n ? `Confirmed by ${n} ${n === 1 ? 'person' : 'people'}` : ''; };
+let fbId = null, fbKind = null;
+function wireFb() { document.querySelectorAll('[data-fb]').forEach(a => a.onclick = (e) => { e.preventDefault(); openFb(a.dataset.fb); }); }
+function openFb(id) {
+  const f = all.find(x => x.properties.id === id); if (!f) return;
+  const p = f.properties, [d, t] = whenOf(p), [a] = areaOf(p), mine = fbGet()[id] || {};
+  fbId = id; fbKind = null;
+  $('fb-sub').textContent = `${d}, ${t} · ${a}`;
+  document.querySelectorAll('.fb-opt').forEach(b => {
+    b.setAttribute('aria-checked', 'false'); b.hidden = b.dataset.k === 'photo' && !p.photo;
+    b.disabled = b.dataset.k === 'confirm' ? !!mine.confirm : (mine.flags || []).includes(b.dataset.k);
+    const s = b.querySelector('small'); s.dataset.orig ??= s.textContent; s.textContent = b.disabled ? 'You already sent this from this phone' : s.dataset.orig;
+  });
+  $('fb-note').value = ''; $('fb-done').hidden = true; $('fb-send').disabled = true; $('fb-send').hidden = false; $('fb-cancel').textContent = 'Cancel';
+  $('fb').showModal();
+}
+$('fb-opts').addEventListener('click', (e) => {
+  const b = e.target.closest('.fb-opt'); if (!b || b.disabled) return;
+  document.querySelectorAll('.fb-opt').forEach(x => x.setAttribute('aria-checked', x === b)); fbKind = b.dataset.k; $('fb-send').disabled = false;
+});
+$('fb-cancel').onclick = () => $('fb').close();
+const fbSpam = Contribute.spamCheck($('ts-fb'));
+$('fb-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!fbKind) return;
+  $('fb-send').disabled = true; $('fb-send').textContent = 'Sending…';
+  try {
+    const token = await fbSpam.token();
+    if (token === null) throw Object.assign(new Error('The spam check did not finish.'), { server: true, status: 403 });
+    const r = await Contribute.post(`/flood/reports/${fbId}/feedback`, { kind: fbKind, note: $('fb-note').value.trim() || null,
+      device: Contribute.device(), token, website: $('fb-trap').value });
+    const v = fbGet(), mine = v[fbId] || {};
+    if (fbKind === 'confirm') mine.confirm = true; else mine.flags = [...new Set([...(mine.flags || []), fbKind])];
+    v[fbId] = mine; fbSet(v);
+    const f = all.find(x => x.properties.id === fbId); if (f && r.confirmed != null) f.properties.confirmed = r.confirmed;
+    $('fb-done').textContent = fbKind === 'confirm' ? `Thank you. ${confText(fbId)}.` : 'Thank you. We will check this report.';
+    $('fb-send').hidden = true; $('fb-cancel').textContent = 'Close';
+    document.querySelectorAll(`[data-conf="${fbId}"]`).forEach(x => x.textContent = confText(fbId));
+  } catch (err) {
+    $('fb-done').textContent = err.status === 429 ? 'Too much feedback from this connection just now. Please wait a minute.'
+      : err.server ? `That didn't go through: ${err.message}` : "That didn't go through; the signal may be weak. Please try again.";
+    $('fb-send').disabled = false;
+  } finally {
+    $('fb-done').hidden = false; $('fb-send').textContent = 'Send feedback'; fbSpam.reset();
+  }
+});
+const dot = (cm, size = 12) => `<i class="dot" style="width:${size}px;height:${size}px;background:${(DEPTH[cm] || {}).color || '#B8BDC6'}"></i>`;
+
+let all = [], shown = [], outside = 0, view = 'list', period = 'all', map = null, openId = null;
+const TODAY = new Date();
+const PERIODS = [
+  { id: '7',   label: 'Last 7 days',  test: (t) => TODAY - t <= 7 * 864e5 },
+  { id: '30',  label: 'Last 30 days', test: (t) => TODAY - t <= 30 * 864e5 },
+  { id: 'mon', label: 'Monsoon 2026', test: (t) => t >= new Date('2026-06-01') && t < new Date('2026-10-01') },
+  { id: 'all', label: 'All',          test: () => true },
+];
+
+fetch(`${API}/flood/reports.json`, { cache: 'no-cache' }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(d => {
+  all = (d.features || []).map(f => (f.properties.depth_key = bucket(f.properties.depth_cm), f))
+    .sort((a, b) => b.properties.observed_at.localeCompare(a.properties.observed_at));
+  drawPeriods(); apply();
+}).catch(() => {
+  $('fig-title').textContent = "The reports couldn't be loaded just now";
+  $('fig-sub').textContent = 'Please try again in a little while.';
+});
+
+document.querySelectorAll('.seg button').forEach(b => b.onclick = () => setView(b.dataset.v));
+function setView(v) {
+  view = v;
+  document.querySelectorAll('.seg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === v));
+  $('v-list').hidden = v !== 'list'; $('v-map').hidden = v !== 'map';
+  if (v === 'map') { if (!map) initMap(); else { map.resize(); fit(); } drawDays(); }
+}
+
+function drawPeriods() {
+  $('period').innerHTML = PERIODS.map(p => {
+    const n = all.filter(f => p.test(new Date(f.properties.observed_at))).length;
+    return `<button type="button" class="chip" data-p="${p.id}" aria-pressed="${p.id === period}">${p.label}<span class="n">${n}</span></button>`;
+  }).join('');
+  document.querySelectorAll('#period .chip').forEach(b => b.onclick = () => { period = b.dataset.p; drawPeriods(); apply(); });
+}
+
+function apply() {
+  const p = PERIODS.find(x => x.id === period);
+  shown = all.filter(f => p.test(new Date(f.properties.observed_at)));
+  openId = null;
+  const n = shown.length;
+  if (!n) { $('fig-title').textContent = `No flooding reported in the ${p.label.toLowerCase()}`; $('fig-sub').textContent = 'Reports by residents · Hyderabad'; }
+  else {
+    const times = shown.map(f => new Date(f.properties.observed_at)), first = new Date(Math.min(...times)), last = new Date(Math.max(...times));
+    const deep = shown.filter(f => f.properties.depth_key >= 60).length;
+    const busiest = Object.entries(shown.reduce((a, f) => { const k = istDate(f.properties.observed_at); a[k] = (a[k] || 0) + 1; return a; }, {})).sort((a, b) => b[1] - a[1])[0];
+    $('fig-title').textContent = `${n} report${n > 1 ? 's' : ''}${deep ? `, ${deep} with water over the tyres or deeper` : ''}${busiest[1] > 1 ? `; the most on ${fmt(busiest[0] + 'T00:00Z', { day: 'numeric', month: 'long' })} (${busiest[1]})` : ''}`;
+    const my = (d) => fmt(d, { month: 'short', year: 'numeric' });
+    $('fig-sub').textContent = `Water depth reported by residents · Hyderabad · ${my(first) === my(last) ? my(first) : fmt(first, { month: 'short' }) + '–' + my(last)}`
+      + '';
+  }
+  drawList();
+  if (map && map.getSource('r')) { map.getSource('r').setData({ type: 'FeatureCollection', features: shown }); fit(); $('float').hidden = true; }
+  if (view === 'map') drawDays();
+}
+
+// ── list ──
+const whenOf = (p) => [fmt(p.observed_at, { day: 'numeric', month: 'short', year: 'numeric' }), fmt(p.observed_at, { hour: 'numeric', minute: '2-digit' })];
+const areaOf = (p) => p.ward ? [p.ward, p.zone ? p.zone + ' zone' : ''] : [p.place || 'Outside the corporation wards', ''];
+const depthOf = (p) => p.depth_exact ? `About ${p.depth_cm >= 100 ? (p.depth_cm / 100).toFixed(2).replace(/0$/, '') + ' m' : p.depth_cm + ' cm'}` : (DEPTH[p.depth_key] || {}).label;
+const HOW = { gps: (p) => `Phone location${p.accuracy_m != null ? `, within about ${p.accuracy_m} m` : ''}`, search: () => 'Place searched by name', map: () => 'Marked on a map', 'legacy-pin': () => 'Earlier flood report form' };
+const waterOf = (p) => `${FLOW[p.flow] || esc(p.flow)}, ${[].concat(p.quality).map(q => QUAL[q] || esc(q)).join(', ')}`;
+const extraOf = (p) => [p.photo ? 'Photo' : '', p.note ? 'Note' : '', p.confirmed ? `✓ ${p.confirmed}` : ''].filter(Boolean).join(' · ');
+function drawList() {
+  if (!shown.length) { $('tbody').innerHTML = `<tr><td colspan="5" class="empty">No reports in this period. Choose a longer period.</td></tr>`; $('cards').innerHTML = '<p class="empty">No reports in this period. Choose a longer period.</p>'; return; }
+  $('tbody').innerHTML = shown.map(f => { const p = f.properties, [d, t] = whenOf(p), [a, z] = areaOf(p);
+    return `<tr class="row" data-id="${p.id}" tabindex="0" aria-expanded="false"><td class="when">${d}<small>${t}</small></td><td class="area">${esc(a)}<small>${esc(z)}</small></td>
+      <td class="depth">${dot(p.depth_key)} ${esc(depthOf(p))}</td><td>${waterOf(p)}</td><td class="extra">${extraOf(p)}</td></tr>
+      <tr class="detail" id="d-${p.id}" hidden><td colspan="5"></td></tr>`; }).join('');
+  $('cards').innerHTML = shown.map(f => { const p = f.properties, [d, t] = whenOf(p), [a, z] = areaOf(p);
+    return `<div class="card"><button type="button" class="card-btn" data-id="${p.id}" aria-expanded="false"><span class="card-when">${d}, ${t}</span><span class="card-extra">${extraOf(p)}</span>
+      <span class="card-area">${esc(a)}${z ? ' · ' + esc(z) : ''}</span><span class="card-depth">${dot(p.depth_key)} ${esc(depthOf(p))} · ${waterOf(p).toLowerCase()}</span></button>
+      <div class="more" id="c-${p.id}" hidden></div></div>`; }).join('');
+  document.querySelectorAll('tr.row, .card-btn').forEach(el => {
+    el.onclick = () => toggle(el.dataset.id);
+    el.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(el.dataset.id); } };
+  });
+}
+function moreHtml(f) {
+  const p = f.properties, [lng, lat] = f.geometry.coordinates;
+  const where = [p.place, p.street, p.landmark ? 'near ' + p.landmark : '', p.address_more].filter(Boolean).join(' · ');
+  return `${p.photo ? `<a href="${esc(p.photo)}" target="_blank" rel="noopener"><img src="${esc(p.photo)}" alt="Photo sent with the report" loading="lazy"></a>` : ''}<div>${where ? `<p>${esc(where)}</p>` : ''}${p.note ? `<p>${linkify(p.note)}</p>` : ''}
+    <p class="meta">${lat.toFixed(4)}° N, ${lng.toFixed(4)}° E · ${esc((HOW[p.place_type] || (() => ''))(p))}</p>
+    <p class="confirmed" data-conf="${p.id}">${confText(p.id)}</p>
+    <p class="meta links"><a href="#" data-fb="${p.id}">Give feedback</a><span class="onmap"> · <a href="#" data-onmap="${p.id}">Show on map</a></span></p></div>`;
+}
+function loadPhoto() { /* photos load straight from their address (img loading=lazy) */ }
+function toggle(id) {
+  const f = shown.find(x => x.properties.id === id); if (!f) return;
+  const close = openId === id;
+  document.querySelectorAll('tr.detail, .card .more').forEach(x => x.hidden = true);
+  document.querySelectorAll('tr.row, .card-btn').forEach(x => { x.classList.remove('on'); x.setAttribute('aria-expanded', 'false'); });
+  openId = close ? null : id; if (close) return;
+  const tr = $('d-' + id), card = $('c-' + id);
+  tr.firstElementChild.innerHTML = `<div class="more">${moreHtml(f)}</div>`; card.innerHTML = moreHtml(f);
+  tr.hidden = false; card.hidden = false;
+  document.querySelectorAll(`[data-id="${id}"]`).forEach(x => { x.classList.add('on'); x.setAttribute('aria-expanded', 'true'); });
+  loadPhoto(tr, id); loadPhoto(card, id);
+  wireFb();
+  document.querySelectorAll(`[data-onmap="${id}"]`).forEach(a => a.onclick = (e) => { e.preventDefault(); setView('map'); setTimeout(() => pick(id), map && map.loaded() ? 0 : 1500); });
+}
+
+// ── map view ──
+$('key').innerHTML = '<span>Water depth</span>' + Object.entries(DEPTH).map(([cm, d]) => `<span class="key-item">${dot(cm, d.r * 2)}${d.label}</span>`).join('');
+function fit() { if (!map || !shown.length) return; const b = new maplibregl.LngLatBounds(); shown.forEach(f => b.extend(f.geometry.coordinates)); map.fitBounds(b, { padding: 50, maxZoom: 14, duration: 0 }); }
+function pick(id) {
+  const f = shown.find(x => x.properties.id === id); if (!f || !map) return;
+  const p = f.properties, [d, t] = whenOf(p), [a, z] = areaOf(p);
+  map.setFilter('r-on', ['==', ['get', 'id'], id]);
+  map.easeTo({ center: f.geometry.coordinates, zoom: Math.max(map.getZoom(), 13.5), duration: 1600 });
+  $('float-body').innerHTML = `<b>${(DEPTH[p.depth_key] || {}).label}</b>${d}, ${t}<br>${esc(a)}${z ? ' · ' + esc(z) : ''}<br>${waterOf(p)}<div class="more" style="margin-top:10px;grid-template-columns:1fr">${moreHtml(f).replace(/<span class="onmap">[^]*?<\/span>/, '')}</div>`;
+  $('float').hidden = false; loadPhoto($('float'), id); wireFb();
+}
+$('float-x').onclick = () => { $('float').hidden = true; map.setFilter('r-on', ['==', ['get', 'id'], -1]); };
+function initMap() {
+  map = new maplibregl.Map({ container: 'map', style: 'https://tiles.openfreemap.org/styles/positron', center: [78.45, 17.41], zoom: 10.5, minZoom: 9,
+    maxBounds: [77.1, 15.7, 81.5, 20.05], attributionControl: { compact: true }, cooperativeGestures: window.innerWidth < 1024 });
+  map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+  map.on('load', () => {
+    document.querySelector('.maplibregl-compact-show')?.classList.remove('maplibregl-compact-show');
+    map.addSource('r', { type: 'geojson', data: { type: 'FeatureCollection', features: shown } });
+    const radius = ['match', ['get', 'depth_key'], 30, 4, 60, 6, 90, 8, 140, 10, 200, 12, 5];
+    map.addLayer({ id: 'r', type: 'circle', source: 'r', paint: {
+      'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, ['*', radius, .9], 15, ['*', radius, 1.5]],
+      'circle-color': ['match', ['get', 'depth_key'], 30, '#E4EDF6', 60, '#B7CDE4', 90, '#7FA6CE', 140, '#3F76B0', 200, '#123F70', '#B8BDC6'],
+      'circle-stroke-color': '#123F70', 'circle-stroke-width': 1, 'circle-stroke-opacity': .55 } });
+    map.addLayer({ id: 'r-on', type: 'circle', source: 'r', filter: ['==', ['get', 'id'], -1], paint: {
+      'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, ['+', ['*', radius, .9], 4], 15, ['+', ['*', radius, 1.5], 4]],
+      'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-color': '#111827', 'circle-stroke-width': 2 } });
+    const pop = new maplibregl.Popup({ closeButton: false, closeOnClick: false, className: 'pop', offset: 10 });
+    map.on('mouseenter', 'r', (e) => { map.getCanvas().style.cursor = 'pointer'; const p = e.features[0].properties;
+      pop.setLngLat(e.features[0].geometry.coordinates).setHTML(`<b>${(DEPTH[p.depth_key] || {}).label}</b><br>${fmt(p.observed_at, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}`).addTo(map); });
+    map.on('mouseleave', 'r', () => { map.getCanvas().style.cursor = ''; pop.remove(); });
+    map.on('click', 'r', (e) => { pop.remove(); pick(e.features[0].properties.id); });
+    fit();
+  });
+}
+
+function drawDays() {
+  const svg = $('days'), W = svg.clientWidth || 600, H = 64;
+  if (!shown.length) { svg.innerHTML = ''; return; }
+  const day = (iso) => { const d = istDate(iso); return Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10)); };
+  const ds = shown.map(f => day(f.properties.observed_at)), lo = Math.min(...ds), hi = Math.max(...ds) + 864e5, nd = Math.round((hi - lo) / 864e5);
+  const counts = {}; shown.forEach(f => { const k = day(f.properties.observed_at); (counts[k] = counts[k] || []).push(f.properties.depth_key); });
+  const max = Math.max(...Object.values(counts).map(a => a.length)), bw = Math.max(3, W / nd - 1), u = (H - 18) / max;
+  let out = `<line x1="0" x2="${W}" y1="${H - 16}" y2="${H - 16}" stroke="#E5E7EB"/>`;
+  Object.entries(counts).forEach(([k, arr]) => { const x = (k - lo) / (hi - lo) * W; let acc = 0;
+    arr.sort((a, b) => b - a).forEach(cm => { out += `<rect x="${x}" y="${H - 16 - acc - u}" width="${bw}" height="${u - .5}" fill="${DEPTH[cm].color}" stroke="rgba(18,63,112,.35)" stroke-width=".5"/>`; acc += u; });
+    if (arr.length === max) out += `<text x="${x + bw / 2}" y="${H - 16 - acc - 4}" font-size="11" text-anchor="middle" fill="#111827" font-weight="700">${arr.length}</text>`; });
+  const d0 = new Date(lo);
+  for (let m = new Date(Date.UTC(d0.getUTCFullYear(), d0.getUTCMonth() + 1, 1)); m < hi; m.setUTCMonth(m.getUTCMonth() + 1)) { const x = (m - lo) / (hi - lo) * W;
+    out += `<line x1="${x}" x2="${x}" y1="${H - 16}" y2="${H - 12}" stroke="#9CA3AF"/><text x="${x + 3}" y="${H - 2}" font-size="12" fill="#6B7280">${fmt(m, { month: 'short' })}</text>`; }
+  svg.innerHTML = out;
+}
+window.addEventListener('resize', () => { clearTimeout(drawDays.t); drawDays.t = setTimeout(() => view === 'map' && drawDays(), 150); });
+</script>
+</body>
+</html>

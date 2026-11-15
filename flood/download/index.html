@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Download the flood reports · Hyderabad Urban Observatory</title>
+<meta name="description" content="Download every community flood report for Hyderabad as CSV or GeoJSON. CC BY 4.0, updated daily.">
+<link rel="icon" href="../../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../../vendor/fonts/lato.css">
+<link rel="stylesheet" href="../../vendor/fonts/outfit.css">
+<link rel="stylesheet" href="../../assets/contribute.css">
+<!-- visit counter: page, referring site, country; no cookies, no IP addresses (live-feed/visits.js) -->
+<script src="https://api.urbanobservatory.in/visits.js" defer></script>
+<script src="../../assets/config.js"></script>
+<style>
+  .dl { max-width: var(--measure); }
+  .dl .lede { margin-bottom: 24px; }
+  .hint { color: var(--text-2); margin: 0 0 16px; }
+  .req { color: #C2413B; font-weight: 700; margin-left: 2px; }
+  .req-word { font: 400 13px var(--font-ui); color: #C2413B; margin-left: 8px; }
+  .req-note { font-size: 13px; color: var(--muted); margin: 0 0 18px; }
+  .opt { font-weight: 400; color: var(--muted); }
+  .field { margin-bottom: 20px; }
+  .field-label { display: block; font: 700 16px/1.3 var(--font-ui); margin-bottom: 6px; }
+  .field-hint { display: block; font-size: 14px; color: var(--muted); margin: -2px 0 8px; }
+  .inp { width: 100%; height: 48px; padding: 0 14px; border: 1px solid var(--border-2); border-radius: var(--r-ctl); background: #fff; font: 400 16px var(--font-ui); color: var(--ink); }
+  .inp:focus, .chip:focus-visible, .btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .privacy { font-size: 14px; color: var(--text-2); padding: 12px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin: 8px 0 16px; }
+  .ts { margin: 0 0 12px; } .ts:empty { display: none; }
+  .trap { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+  .msg { margin: 0 0 12px; padding: 10px 0; border-top: 1px solid var(--border-2); border-bottom: 1px solid var(--border-2); color: var(--text-2); }
+  .msg[hidden] { display: none; }
+  #links-box h2 { font: 700 20px/1.3 var(--font-ui); margin: 8px 0 12px; }
+  .files { list-style: none; margin: 0 0 16px; padding: 0; border-top: 1px solid var(--border); }
+  .files li { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .files a { font-weight: 700; }
+  .files span { font-size: 14px; color: var(--muted); }
+  .fine { font-size: 13px; color: var(--muted); }
+  .back { margin-top: 32px; font-size: 14px; }
+</style>
+</head>
+<body>
+<header class="obs-header">
+  <a class="obs-brand" href="/" aria-label="Hyderabad Urban Observatory, home"><span class="obs-logo"><svg viewBox="0 0 100 100" aria-hidden="true"><defs><rect id="bH1" x="2" y="26" width="96" height="16" rx="6"/><rect id="bH2" x="2" y="58" width="96" height="16" rx="6"/><rect id="bV1" x="28" y="2" width="16" height="96" rx="6" transform="rotate(18 36 50)"/><rect id="bV2" x="56" y="2" width="16" height="96" rx="6" transform="rotate(18 64 50)"/><mask id="cH1"><rect width="100" height="100" fill="white"/><use href="#bV1" fill="black" stroke="black" stroke-width="4"/></mask><mask id="cV2"><rect width="100" height="100" fill="white"/><use href="#bH1" fill="black" stroke="black" stroke-width="4"/></mask><mask id="cH2"><rect width="100" height="100" fill="white"/><use href="#bV2" fill="black" stroke="black" stroke-width="4"/></mask><mask id="cV1"><rect width="100" height="100" fill="white"/><use href="#bH2" fill="black" stroke="black" stroke-width="4"/></mask></defs><g fill="#FFFFFF" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#bH1" mask="url(#cH1)"/><use href="#bV2" mask="url(#cV2)"/><use href="#bH2" mask="url(#cH2)"/><use href="#bV1" mask="url(#cV1)"/></g></svg></span><span class="obs-word">Hyderabad Urban Observatory</span></a>
+  <nav class="obs-nav" aria-label="Observatory"><a href="/live/" class="obs-live"><i class="obs-live-dot" aria-hidden="true"></i>Live</a><a href="/maps/">Layers</a><a href="/tools/">Tools</a><a href="/stories/">Stories</a><a href="/data/">Data sources</a><a href="/about">About</a></nav>
+  <a href="/live/" class="obs-live obs-live-bar"><i class="obs-live-dot" aria-hidden="true"></i>Live</a>
+  <button type="button" class="obs-burger" aria-label="Menu" aria-expanded="false" aria-controls="obs-menu"><span></span></button>
+  <nav class="obs-menu" id="obs-menu" aria-label="Observatory" hidden><a href="/live/" class="obs-live"><i class="obs-live-dot" aria-hidden="true"></i>Live</a><a href="/maps/">Layers</a><a href="/tools/">Tools</a><a href="/stories/">Stories</a><a href="/data/">Data sources</a><a href="/about">About</a></nav>
+</header>
+
+<main class="wrap">
+  <div class="dl">
+    <p class="eyebrow">Community data · Flooding</p>
+    <h1>Download the flood reports</h1>
+    <p class="lede">Every report residents have sent through the flood form, one row per report: when, where (coordinates,
+      ward, street and landmark), how deep, the water, and any note. Updated daily. Photos are not included.</p>
+
+    <section id="form-box">
+      <p class="hint">Tell us a little about yourself and the download links appear straight away. It helps us know who
+        uses the data, and lets us tell you about corrections.</p>
+      <p class="req-note"><span class="req" aria-hidden="true">*</span> Required</p>
+      <form id="dl-form" novalidate>
+        <div class="field">
+          <label class="field-label" for="dl-name">Name <span class="req" aria-hidden="true">*</span><span class="req-word">Required</span></label>
+          <input class="inp" id="dl-name" autocomplete="name" maxlength="120" required aria-required="true">
+        </div>
+        <div class="field">
+          <label class="field-label" for="dl-email">Email <span class="req" aria-hidden="true">*</span><span class="req-word">Required</span></label>
+          <input class="inp" id="dl-email" type="email" autocomplete="email" maxlength="254" required aria-required="true">
+        </div>
+        <div class="field">
+          <label class="field-label" for="dl-org">Organisation <span class="opt">(optional)</span></label>
+          <span class="field-hint">University, NGO, government, company, or leave empty</span>
+          <input class="inp" id="dl-org" autocomplete="organization" maxlength="160">
+        </div>
+        <div class="field">
+          <span class="field-label" id="dl-purpose-label">What is it for? <span class="req" aria-hidden="true">*</span><span class="req-word">Required</span></span>
+          <div class="chips" role="radiogroup" aria-labelledby="dl-purpose-label" id="dl-purpose">
+            <button type="button" class="chip" role="radio" aria-pressed="false" data-v="research">Research</button>
+            <button type="button" class="chip" role="radio" aria-pressed="false" data-v="teaching">Teaching</button>
+            <button type="button" class="chip" role="radio" aria-pressed="false" data-v="journalism">Journalism</button>
+            <button type="button" class="chip" role="radio" aria-pressed="false" data-v="planning">Planning</button>
+            <button type="button" class="chip" role="radio" aria-pressed="false" data-v="personal">Personal</button>
+            <button type="button" class="chip" role="radio" aria-pressed="false" data-v="other">Other</button>
+          </div>
+        </div>
+        <p class="privacy">Your name, email and organisation are kept privately on our server. We use them only to tell
+          you about updates or corrections to this data. They are never published or shared.</p>
+        <div class="ts" id="ts-dl"></div>
+        <input type="text" name="website" id="dl-trap" tabindex="-1" autocomplete="off" aria-hidden="true" class="trap">
+        <p class="msg" id="dl-msg" hidden></p>
+        <button type="submit" class="btn btn-primary btn-lg" id="dl-send" disabled>Show the download links</button>
+      </form>
+    </section>
+
+    <section id="links-box" hidden>
+      <h2>Your download</h2>
+      <ul class="files">
+        <li><a id="f-csv" href="#">flood-reports.csv</a><span>for spreadsheets</span></li>
+        <li><a id="f-geojson" href="#">flood-reports.geojson</a><span>for maps (QGIS and similar)</span></li>
+        <li><a id="f-readme" href="#">README</a><span>what each column means</span></li>
+      </ul>
+      <p class="fine">Licence: <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>.
+        Credit "Hyderabad Urban Observatory, community flood reports". Reports are not checked on the ground; reports
+        flagged as spam are left out.</p>
+    </section>
+
+    <p class="back"><a href="../reports/">← Back to the flood reports</a></p>
+  </div>
+</main>
+
+<footer class="obs-footer">
+  <div class="obs-footer-fine">
+    <span>This website is under continuous development; you may find errors or incomplete content.
+      Feedback: <a href="mailto:hulf.observatory@gmail.com">hulf.observatory@gmail.com</a> · Reports are published as community data.</span>
+    <a class="obs-footer-disclaimer" href="/disclaimer">Disclaimer</a>
+  </div>
+</footer>
+
+<script src="../../assets/common.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const KEY = 'obs-flood-download';   // after one sign-up this browser goes straight to the links
+let purpose = null;
+function showLinks(files) {
+  $('f-csv').href = files.csv; $('f-geojson').href = files.geojson; $('f-readme').href = files.readme;
+  $('form-box').hidden = true; $('links-box').hidden = false;
+}
+try { const f = JSON.parse(localStorage.getItem(KEY)); if (f && f.csv) showLinks(f); } catch { /* first visit */ }
+const filled = () => $('dl-name').value.trim() && /^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$/.test($('dl-email').value.trim()) && purpose;
+const update = () => { $('dl-send').disabled = !filled(); };
+['dl-name', 'dl-email', 'dl-org'].forEach((id) => $(id).addEventListener('input', update));
+$('dl-purpose').addEventListener('click', (e) => {
+  const b = e.target.closest('.chip'); if (!b) return;
+  document.querySelectorAll('#dl-purpose .chip').forEach((x) => x.setAttribute('aria-pressed', x === b));
+  purpose = b.dataset.v; update();
+});
+const spam = Contribute.spamCheck($('ts-dl'));
+$('dl-form').addEventListener('submit', async (e) => {
+  e.preventDefault(); if (!filled()) return;
+  $('dl-send').disabled = true; $('dl-send').textContent = 'Checking…'; $('dl-msg').hidden = true;
+  try {
+    const token = await spam.token();
+    if (token === null) throw Object.assign(new Error('The spam check did not finish. Please try again.'), { server: true });
+    const r = await Contribute.post('/flood/download', { name: $('dl-name').value.trim(), email: $('dl-email').value.trim(),
+      organisation: $('dl-org').value.trim() || null, purpose, token, website: $('dl-trap').value });
+    try { localStorage.setItem(KEY, JSON.stringify(r.files)); } catch { /* private mode */ }
+    showLinks(r.files);
+  } catch (err) {
+    $('dl-msg').textContent = err.status === 429 ? 'Too many tries from this connection just now. Please wait a minute.'
+      : err.server ? err.message : "That didn't go through; the connection may be weak. Please try again.";
+    $('dl-msg').hidden = false; update();
+  } finally { $('dl-send').textContent = 'Show the download links'; spam.reset(); }
+});
+</script>
+</body>
+</html>

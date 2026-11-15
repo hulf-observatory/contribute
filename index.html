@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contribute · Hyderabad Urban Observatory</title>
+<meta name="description" content="Tell the Hyderabad Urban Observatory what you see in the city: flooding now, more surveys soon. Anonymous, no sign-in; shared as community data.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="vendor/fonts/lato.css">
+<link rel="stylesheet" href="vendor/fonts/outfit.css">
+<link rel="stylesheet" href="assets/contribute.css">
+<!-- visit counter: page, referring site, country; no cookies, no IP addresses (live-feed/visits.js) -->
+<script src="https://api.urbanobservatory.in/visits.js" defer></script>
+<style>
+  .intro { max-width: var(--measure); margin-bottom: 32px; }
+  .surveys { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 768px) { .surveys { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (min-width: 1280px) { .surveys { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  .card { border: 1px solid var(--border); border-radius: var(--r-card); padding: 22px 24px; background: #fff; display: flex; flex-direction: column; }
+  .card h2 { font: 700 19px/1.3 var(--font-ui); margin: 0 0 6px; }
+  .card p { color: var(--text-2); margin: 0 0 18px; font-size: 15px; flex: 1; }
+  .card .row { display: flex; flex-wrap: wrap; gap: 10px; }
+  .card.soon { background: var(--band); }
+  .card.soon p { color: var(--muted); }
+  .rules { max-width: var(--measure); margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--text-2); font-size: 15px; }
+  .rules h2 { font: 700 18px/1.3 var(--font-ui); color: var(--ink); margin: 0 0 8px; }
+  .rules ul { margin: 0; padding-left: 20px; }
+  .rules li { margin-bottom: 6px; }
+</style>
+</head>
+<body>
+<header class="obs-header">
+  <a class="obs-brand" href="/" aria-label="Hyderabad Urban Observatory, home"><span class="obs-logo"><svg viewBox="0 0 100 100" aria-hidden="true"><defs><rect id="bH1" x="2" y="26" width="96" height="16" rx="6"/><rect id="bH2" x="2" y="58" width="96" height="16" rx="6"/><rect id="bV1" x="28" y="2" width="16" height="96" rx="6" transform="rotate(18 36 50)"/><rect id="bV2" x="56" y="2" width="16" height="96" rx="6" transform="rotate(18 64 50)"/><mask id="cH1"><rect width="100" height="100" fill="white"/><use href="#bV1" fill="black" stroke="black" stroke-width="4"/></mask><mask id="cV2"><rect width="100" height="100" fill="white"/><use href="#bH1" fill="black" stroke="black" stroke-width="4"/></mask><mask id="cH2"><rect width="100" height="100" fill="white"/><use href="#bV2" fill="black" stroke="black" stroke-width="4"/></mask><mask id="cV1"><rect width="100" height="100" fill="white"/><use href="#bH2" fill="black" stroke="black" stroke-width="4"/></mask></defs><g fill="#FFFFFF" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#bH1" mask="url(#cH1)"/><use href="#bV2" mask="url(#cV2)"/><use href="#bH2" mask="url(#cH2)"/><use href="#bV1" mask="url(#cV1)"/></g></svg></span><span class="obs-word">Hyderabad Urban Observatory</span></a>
+  <nav class="obs-nav" aria-label="Observatory"><a href="/live/" class="obs-live"><i class="obs-live-dot" aria-hidden="true"></i>Live</a><a href="/maps/">Layers</a><a href="/tools/">Tools</a><a href="/stories/">Stories</a><a href="/data/">Data sources</a><a href="/about">About</a></nav>
+  <a href="/live/" class="obs-live obs-live-bar"><i class="obs-live-dot" aria-hidden="true"></i>Live</a>
+  <button type="button" class="obs-burger" aria-label="Menu" aria-expanded="false" aria-controls="obs-menu"><span></span></button>
+  <nav class="obs-menu" id="obs-menu" aria-label="Observatory" hidden><a href="/live/" class="obs-live"><i class="obs-live-dot" aria-hidden="true"></i>Live</a><a href="/maps/">Layers</a><a href="/tools/">Tools</a><a href="/stories/">Stories</a><a href="/data/">Data sources</a><a href="/about">About</a></nav>
+</header>
+
+<main class="wrap">
+  <section class="intro">
+    <p class="eyebrow">Contribute</p>
+    <h1>Tell us what you see in the city</h1>
+    <p class="lede">Short surveys anyone can fill in on a phone. What you send is shown with everyone else's and shared
+      as community data, so residents, researchers and city offices can see the same picture.</p>
+  </section>
+
+  <div class="surveys">
+    <article class="card">
+      <p class="eyebrow">Open now</p>
+      <h2>Flooding</h2>
+      <p>Seen water on a road? Say where and how deep. About a minute.</p>
+      <div class="row"><a class="btn btn-primary" href="flood/">Report flooding <span class="arr">→</span></a><a class="btn btn-secondary" href="flood/reports/">See reports</a></div>
+    </article>
+    <article class="card soon">
+      <p class="eyebrow">Coming</p>
+      <h2>Bus stops</h2>
+      <p>Pick a bus stop and tell us about its shelter, seating, footpath and lighting.</p>
+    </article>
+    <article class="card soon">
+      <p class="eyebrow">Coming</p>
+      <h2>Water at home</h2>
+      <p>When your water comes, how much, and whether you buy tankers. Shown only as ward totals.</p>
+    </article>
+  </div>
+
+  <section class="rules">
+    <h2>How we handle what you send</h2>
+    <ul>
+      <li>No names, no sign-in, and we don't keep IP addresses.</li>
+      <li>Location comes from your phone only if you agree; otherwise from a place you search for, or a pin you put on a map.</li>
+      <li>Photos are made smaller and their hidden location data is removed on your phone, before sending.</li>
+      <li>Answers are shared as open data under CC BY 4.0; photos are shown on the website but not in the download.</li>
+      <li>Want updates? <a href="https://chat.whatsapp.com/GJUFWd2UJyEImsmgxbEKlg" target="_blank" rel="noopener">Join the Observatory's WhatsApp community</a>.</li>
+    </ul>
+  </section>
+</main>
+
+<footer class="obs-footer">
+  <div class="obs-footer-fine">
+    <span>This website is under continuous development; you may find errors or incomplete content.
+      Feedback: <a href="mailto:hulf.observatory@gmail.com">hulf.observatory@gmail.com</a> · Reports are published as community data.</span>
+    <a class="obs-footer-disclaimer" href="/disclaimer">Disclaimer</a>
+  </div>
+</footer>
+
+<script src="assets/common.js"></script>
+</body>
+</html>
