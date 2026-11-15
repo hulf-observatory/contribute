@@ -105,7 +105,7 @@
   .ts { margin: 10px 0 0; }
   .ts:empty { display: none; }
   .more img { cursor: zoom-in; }
-  .more > a { display: block; }   /* the photo link must take the column width, or the lazy image never loads */
+  .more > a { display: block; }
   .trap { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
   @media (max-width: 767px) {   /* phones: a sheet from the bottom */
     .fb { width: 100vw; max-width: 100vw; margin: auto 0 0; border-radius: 12px 12px 0 0; border-bottom: 0; }
@@ -339,12 +339,12 @@ function drawList() {
 function moreHtml(f) {
   const p = f.properties, [lng, lat] = f.geometry.coordinates;
   const where = [p.place, p.street, p.landmark ? 'near ' + p.landmark : '', p.address_more].filter(Boolean).join(' · ');
-  return `${p.photo ? `<a href="${esc(p.photo)}" target="_blank" rel="noopener"><img src="${esc(p.photo)}" alt="Photo sent with the report" loading="lazy"></a>` : ''}<div>${where ? `<p>${esc(where)}</p>` : ''}${p.note ? `<p>${linkify(p.note)}</p>` : ''}
+  return `${p.photo ? `<a href="${esc(p.photo)}" target="_blank" rel="noopener"><img src="${esc(p.photo)}"  alt="Photo sent with the report"></a>` : ''}<div>${where ? `<p>${esc(where)}</p>` : ''}${p.note ? `<p>${linkify(p.note)}</p>` : ''}
     <p class="meta">${lat.toFixed(4)}° N, ${lng.toFixed(4)}° E · ${esc((HOW[p.place_type] || (() => ''))(p))}</p>
     <p class="confirmed" data-conf="${p.id}">${confText(p.id)}</p>
     <p class="meta links"><a href="#" data-fb="${p.id}">Give feedback</a><span class="onmap"> · <a href="#" data-onmap="${p.id}">Show on map</a></span></p></div>`;
 }
-function loadPhoto() { /* photos load straight from their address (img loading=lazy) */ }
+function loadPhoto() { /* photos load straight from their address when a report is opened */ }
 function toggle(id) {
   const f = shown.find(x => x.properties.id === id); if (!f) return;
   const close = openId === id;
