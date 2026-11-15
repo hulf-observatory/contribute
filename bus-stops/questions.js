@@ -112,11 +112,15 @@ export const player = {
 };
 // check a nickname and PIN with the server: free / yours / wrong / locked / banned (a wrong PIN counts towards a lock)
 // returns { status, name } — name is the nickname as its player first wrote it
-export async function checkPlayer(nick, pin) {
-  return Contribute.post(`/${SURVEY}/nickname`, { nick, nick_pin: pin });
+// mode: 'create' (free / taken), 'login' (unknown / yours / wrong / locked), or none (either)
+export async function checkPlayer(nick, pin, mode) {
+  return Contribute.post(`/${SURVEY}/nickname`, { nick, nick_pin: pin, mode });
 }
 export const PLAYER_SAYS = {
+  taken: 'This nickname is already taken. Choose another, or log in if it is yours.',
+  unknown: 'There is no player with this nickname. Check the spelling, or create a player.',
   wrong: 'This nickname is already taken, or the PIN is wrong. Check the PIN, or choose another nickname.',
+  wrongLogin: 'Wrong PIN for this nickname. After 5 wrong tries it is locked for an hour.',
   locked: 'Too many wrong PINs for this nickname. Try again in an hour.',
   banned: "This nickname can't be used. Please choose another.",
 };

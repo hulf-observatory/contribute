@@ -257,16 +257,31 @@ function drawPlay() {
   $('play-box').hidden = !!p; $('play-in').hidden = !p;
   if (p) $('play-name').textContent = p.nick;
 }
-$('play-go').onclick = () => show('player');
+// one screen for both: Create a player (the nickname must be free) or Log in (an existing player, on any phone)
+let mode = 'create';
+function setMode(m) {
+  mode = m;
+  const c = m === 'create';
+  $('p-title').textContent = c ? 'Create a player' : 'Log in';
+  $('p-hint').textContent = c ? 'Make up a nickname and a 4-digit PIN. Use them to log in on any phone.' : 'Enter the nickname and 4-digit PIN you chose when you created your player.';
+  $('p-go').textContent = c ? 'Create player' : 'Log in';
+  $('p-switch-text').textContent = c ? 'Played before?' : 'New here?';
+  $('p-switch').textContent = c ? 'Log in' : 'Create a player';
+  $('p-msg').hidden = true;
+}
+$('play-create').onclick = (e) => { e.preventDefault(); setMode('create'); show('player'); };
+$('play-login').onclick = (e) => { e.preventDefault(); setMode('login'); show('player'); };
+$('p-switch').onclick = (e) => { e.preventDefault(); setMode(mode === 'create' ? 'login' : 'create'); };
 $('play-out').onclick = (e) => { e.preventDefault(); player.clear(); drawPlay(); };
 const playerReady = () => { $('p-go').disabled = cleanNick($('p-nick').value).length < 3 || !pinOk($('p-pin').value); };
 ['p-nick', 'p-pin'].forEach(id => $(id).addEventListener('input', () => { $('p-msg').hidden = true; playerReady(); }));
 $('p-pin').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !$('p-go').disabled) $('p-go').click(); });
 $('p-back').onclick = () => history.back();
-async function check(n, pin, say) {
+async function check(n, pin, say, m) {
   try {
-    const r = await checkPlayer(n, pin);
-    if (PLAYER_SAYS[r.status]) { say(PLAYER_SAYS[r.status]); return null; }
+    const r = await checkPlayer(n, pin, m);
+    const key = m === 'login' && r.status === 'wrong' ? 'wrongLogin' : r.status;
+    if (PLAYER_SAYS[key]) { say(PLAYER_SAYS[key]); return null; }
     return r.name || n;                            // free (theirs with the first rating) or yours, as first written
   } catch (err) {
     say(err.status === 400 ? 'Use 3 to 24 letters, numbers and spaces, and a 4-digit PIN.'
@@ -279,8 +294,8 @@ $('p-go').onclick = async () => {
   const n = cleanNick($('p-nick').value), pin = $('p-pin').value;
   const say = (t) => { $('p-msg').textContent = t; $('p-msg').hidden = false; };
   $('p-go').disabled = true; $('p-go').textContent = 'Checking…';
-  const st = await check(n, pin, say);
-  $('p-go').textContent = 'Continue'; playerReady();
+  const st = await check(n, pin, say, mode);
+  $('p-go').textContent = mode === 'create' ? 'Create player' : 'Log in'; playerReady();
   if (!st) return;
   player.set(st, pin);
   history.back();                                  // back to where they came from, now signed in
@@ -403,10 +418,10 @@ async function send() {
 $('again').onclick = () => { location.href = location.pathname; };
 
 // ── load stops, ratings (for "rated before" and stops residents added) and areas ──
-const openPlay = location.hash === '#play';      // links can open the nickname screen straight away
+const openPlay = { '#play': 'create', '#create': 'create', '#login': 'login' }[location.hash];   // links can open these screens
 history.replaceState({ s: 'start' }, '', location.search);
 drawPlay();
-if (openPlay) show('player');
+if (openPlay && !player.get()) { setMode(openPlay); show('player'); }
 const [stops, ratings, areas] = await Promise.all([
   loadStops().catch(() => []), loadRatings().catch(() => []), fetch(C.AREAS_URL).then(r => r.json()).catch(() => null)]);
 STOPS = stops.concat(addedStops(ratings));
