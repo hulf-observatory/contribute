@@ -20,7 +20,9 @@ export const TOPICS = [
     { id: 'footpath', s: 'Footpath', q: 'Is there a footpath at the stop?', opts: [['yes', 'Yes', 1], ['no', 'No', 0]] },
     { id: 'blocked', s: 'Footpath blocked', q: 'Is the footpath blocked?', hint: 'By parked vehicles, vendors, debris', if: a => a.footpath === 'yes', opts: [['no', 'No', 1], ['partly', 'Partly', .5], ['badly', 'Badly', 0]] },
     { id: 'pass', s: 'Walk past', q: 'Can you walk or wheel past the stop without stepping onto the road?', if: a => a.footpath === 'yes', opts: [['yes', 'Yes', 1], ['no', 'No', 0]] },
-    { id: 'access', s: 'Access', q: 'Which of these are there?', hint: 'Tick all you see', multi: true, opts: [['footpath_both', 'Footpath on both sides'], ['ramp', 'A working ramp'], ['tactile', 'Tactile paving'], ['crossing', 'A crossing nearby'], ['none', 'None of these']] },
+    { id: 'access', s: 'Access', q: 'Which of these are there?', hint: 'Tick all you see', multi: true, opts: [['footpath_both', 'Footpath on both sides'], ['ramp', 'A working ramp'], ['tactile', 'Tactile paving'], ['none', 'None of these']] },
+    { id: 'crossing', s: 'Crossing', q: 'Is there a pedestrian crossing near the stop?', hint: 'A zebra, a signal, a foot overbridge or a subway', opts: [['yes', 'Yes', 1], ['no', 'No', 0]] },
+    { id: 'crossing_safe', s: 'Safe to cross', q: 'Does it feel safe to cross?', if: a => a.crossing === 'yes', opts: [['yes', 'Yes', 1], ['somewhat', 'Somewhat', .5], ['no', 'No', 0]] },
   ] },
   { id: 'buses', title: 'Buses', qs: [
     { id: 'bus_stops_at', s: 'Buses stop', q: 'Where do buses usually stop?', opts: [['kerb', 'At the kerb', 1], ['step', 'One step out', .6], ['lane', 'In the traffic lane', .2], ['away', 'Away from the stop', 0]] },

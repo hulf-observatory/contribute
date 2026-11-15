@@ -11,7 +11,7 @@ site feature: this repo has no custom domain). Static, no build step. The answer
 | `flood/` | the flood report form: one question per screen; phone location (explained before asking), place search (the maps viewer's `place-search.js`, unchanged) or a map pin; depth pictures or an exact-height slider; answers kept on the phone until the server accepts them |
 | `flood/reports/` | the reports: list (table / cards) and map view, period filter, feedback on each report |
 | `flood/download/` | the download form (name, email, organisation, purpose; kept privately), then the links to the data site |
-| `bus-stops/` | rate a bus stop: nearest stops to the phone (location never sent), search by stop or area, or add a missing stop on a map; six topic screens; photo, one improvement, a slim "Create a player · Log in" line on the start screen (nickname + 4-digit PIN, any phone; links `#create`, `#login`), or a nickname and PIN at the end |
+| `bus-stops/` | rate a bus stop: nearest stops to the phone (location never sent), search by stop or area, or add a missing stop on a map; six topic screens; photo, one improvement, a slim "Create a player · Log in" line on the start screen (nickname + 4-digit PIN, any phone; links `#create`, `#login`) |
 | `bus-stops/map/` | every TGSRTC stop, grey until rated, coloured by condition (blue good, light orange needs work, dark red poor); leaderboard |
 | `bus-stops/stop/?id=` | one stop: latest answer to each question, photos, every rating with feedback, "Still the same" |
 | `bus-stops/download/` | download form for the bus stop ratings |
