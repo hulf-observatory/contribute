@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tell us about a water tanker · Hyderabad Urban Observatory</title>
+<meta name="description" content="Tell us about a water tanker you ordered in Hyderabad: price, size, how long it took. Anonymous; you choose how exactly the place is shown.">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../vendor/fonts/lato.css">
+<link rel="stylesheet" href="../vendor/fonts/outfit.css">
+<link rel="stylesheet" href="../assets/contribute.css">
+<!-- visit counter: page, referring site, country; no cookies, no IP addresses (live-feed/visits.js) -->
+<script src="https://api.urbanobservatory.in/visits.js" defer></script>
+<script src="../assets/config.js"></script>
+<style>
+  .steps { max-width: var(--measure); margin: 0 auto; }
+  .progress { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; min-height: 20px; }
+  .progress[hidden] { display: none; }
+  .bar { flex: 1; height: 3px; background: var(--surface-2); border-radius: 2px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--ink); width: 0; transition: width .2s ease; }
+  .progress span { font-size: 13px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .step { display: none; }
+  .step.on { display: block; }
+  .step h1, .step h2.qt { font: 700 30px/1.2 var(--font-ui); letter-spacing: -.005em; margin: 0 0 8px; }
+  @media (max-width: 767px) { .step h1, .step h2.qt { font-size: 26px; } }
+  .step h1:focus, .step .qt:focus { outline: none; }
+  .hint { font-size: 16px; color: var(--text-2); margin: 0 0 24px; }
+
+  .answers { display: grid; gap: 10px; }
+  .answer { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 56px; padding: 14px 18px; text-align: left;
+    background: #fff; border: 1px solid var(--border-2); border-radius: var(--r-card); cursor: pointer; font: 700 17px/1.3 var(--font-ui); }
+  .answer:hover { background: var(--band); }
+  .answer[aria-checked="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); background: var(--band); }
+  .answer small { display: block; font: 400 14px/1.4 var(--font-ui); color: var(--muted); margin-top: 2px; }
+  .answer .tick { margin-left: auto; width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--border-2); flex: none; }
+  .answer[aria-checked="true"] .tick { border: 6px solid var(--ink); }
+  .answer.check .tick { border-radius: 4px; }
+  .answer.check[aria-checked="true"] .tick { border: 0; background: var(--ink) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5 10.5l3.2 3.2L15 7' fill='none' stroke='%23fff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/16px no-repeat; }
+  .answer[disabled] { opacity: .45; cursor: not-allowed; }
+
+  /* tanker sizes: picture answers */
+  .sizes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .size { display: block; padding: 10px 10px 12px; text-align: center; }
+  .size svg { display: block; width: 100%; height: auto; margin: 0 0 8px; }
+  .size .tick { display: none; }
+
+  /* grouped questions (who) */
+  .qblock { padding: 16px 0 18px; border-top: 1px solid var(--border); }
+  .qblock:first-of-type { border-top: 0; padding-top: 0; }
+  .qblock[hidden] { display: none; }
+  .qblock h3 { font: 700 17px/1.35 var(--font-ui); margin: 0 0 10px; }
+  .opts { display: flex; flex-wrap: wrap; gap: 8px; }
+  .opt { min-height: 44px; padding: 10px 16px; border: 1px solid var(--border-2); border-radius: var(--r-ctl); background: #fff; cursor: pointer; font: 400 15px/1.2 var(--font-ui); color: var(--ink); }
+  .opt:hover { background: var(--band); }
+  .opt[aria-checked="true"] { background: var(--ink); border-color: var(--ink); color: #fff; font-weight: 700; }
+
+  .field { margin-bottom: 22px; }
+  .field-label { display: block; font: 700 16px/1.3 var(--font-ui); margin-bottom: 4px; }
+  .field-hint { display: block; font-size: 14px; color: var(--muted); margin-bottom: 8px; }
+  .opt-word { font-weight: 400; color: var(--muted); }
+  .inp { width: 100%; height: 48px; padding: 0 14px; border: 1px solid var(--border-2); border-radius: var(--r-ctl); background: #fff; font: 400 16px var(--font-ui); color: var(--ink); }
+  textarea.inp { height: auto; min-height: 96px; padding: 12px 14px; line-height: 1.5; resize: vertical; }
+  .money { position: relative; max-width: 220px; }
+  .money span { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 16px; }
+  .money .inp { padding-left: 30px; font-variant-numeric: tabular-nums; }
+  .inline-check { display: flex; align-items: center; gap: 10px; font-size: 15px; margin-top: 10px; cursor: pointer; }
+  .inline-check input { width: 18px; height: 18px; }
+  .search { position: relative; }
+  .ps-results { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 10; background: #fff; border: 1px solid var(--border); border-radius: var(--r-card);
+    padding: 6px; max-height: min(360px, 50vh); overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,.08); }
+  .ps-results[hidden] { display: none; }
+  .ps-list { list-style: none; margin: 0; padding: 0; }
+  .ps-item { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 10px; border-radius: 3px; cursor: pointer; }
+  .ps-item.ps-active { background: var(--surface-2); }
+  .ps-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+  .ps-name, .ps-ctx { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ps-name { font-size: 15px; line-height: 1.3; }
+  .ps-ctx { font-size: 13px; color: var(--muted); line-height: 1.3; }
+  .ps-kind { flex: none; font: 900 10.5px/1 var(--font-ui); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .ps-status { margin: 6px 10px; font-size: 13px; color: var(--muted); }
+  .ps-credit { margin: 6px 4px 0; padding: 6px 6px 0; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+  .picked { margin-top: 10px; font-size: 15px; }
+  .picked[hidden] { display: none; }
+  .picked span { color: var(--muted); }
+  .map-box { position: relative; height: 50vh; min-height: 300px; max-height: 460px; border: 1px solid var(--border); border-radius: var(--r-card); overflow: hidden; }
+  #map { position: absolute; inset: 0; }
+  .map-hint { position: absolute; left: 0; right: 0; top: 12px; text-align: center; font: 700 15px/1.3 var(--font-ui); pointer-events: none; z-index: 2; transition: opacity .2s ease; }
+  .map-hint.off { opacity: 0; }
+  .pin { width: 20px; height: 20px; border-radius: 50%; background: var(--ink); border: 3px solid #fff; box-shadow: 0 0 0 1px var(--ink); cursor: grab; }
+  .promise { list-style: none; margin: 0 0 28px; padding: 0; border-top: 1px solid var(--border); }
+  .promise li { padding: 12px 0 12px 28px; border-bottom: 1px solid var(--border); position: relative; color: var(--text-2); }
+  .promise li::before { content: ''; position: absolute; left: 4px; top: 19px; width: 10px; height: 6px; border-left: 2px solid var(--ink); border-bottom: 2px solid var(--ink); transform: rotate(-45deg); }
+  .promise b { color: var(--ink); }
+  .stack { display: grid; gap: 10px; }
+  .stack .btn { width: 100%; }
+  .msg { margin: 16px 0 0; padding: 12px 0; border-top: 1px solid var(--border-2); border-bottom: 1px solid var(--border-2); color: var(--text-2); }
+  .msg[hidden] { display: none; }
+  .alt-link { margin: 12px 0 0; font-size: 14px; }
+  .when { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+  .when .inp { width: auto; }
+  .stepper { display: flex; align-items: center; gap: 12px; }
+  .stepper button { width: 48px; height: 48px; border: 1px solid var(--border-2); border-radius: var(--r-ctl); background: #fff; font: 700 22px var(--font-ui); cursor: pointer; }
+  .stepper output { min-width: 64px; text-align: center; font: 700 30px var(--font-ui); font-variant-numeric: tabular-nums; }
+  .review { margin: 0 0 8px; border-top: 1px solid var(--border); }
+  .review > div { display: grid; grid-template-columns: 96px 1fr auto; gap: 12px; align-items: baseline; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .review dt { color: var(--muted); font-size: 14px; }
+  .review dd { margin: 0; font-weight: 700; overflow-wrap: anywhere; }
+  .review dd small { display: block; font-weight: 400; font-size: 13px; color: var(--muted); }
+  .review button { background: none; border: 0; padding: 0; font: 400 14px var(--font-ui); color: var(--ink); text-decoration: underline; text-decoration-color: var(--border-2); text-underline-offset: 3px; cursor: pointer; }
+  .nav { display: flex; align-items: center; gap: 10px; margin-top: 28px; }
+  .nav[hidden] { display: none; }
+  .nav .next { margin-left: auto; min-width: 120px; }
+  .nav .next[hidden] { display: none; }
+  @media (max-width: 767px) {
+    .nav { position: sticky; bottom: 0; z-index: 5; background: #fff; border-top: 1px solid var(--border); margin: 28px -24px 0; padding: 12px 24px calc(12px + env(safe-area-inset-bottom)); }
+  }
+  .answer:focus-visible, .btn:focus-visible, .opt:focus-visible, .inp:focus { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .intro-link { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border); display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+  .intro-link .meta { font-size: 13px; color: var(--muted); }
+  .anon { font-size: 13px; color: var(--muted); margin: 16px 0 0; }
+  .join { margin-top: 32px; padding: 20px 0 0; border-top: 1px solid var(--border); }
+  .join h3 { font: 700 19px/1.3 var(--font-ui); margin: 0 0 6px; }
+  .join p:not(.eyebrow) { color: var(--text-2); margin: 0 0 16px; font-size: 15px; }
+  .ts { margin: 12px 0 0; }
+  .ts:empty { display: none; }
+  .trap { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+  .draft { margin-top: 24px; padding: 16px 0 0; border-top: 1px solid var(--border-2); }
+  .draft p { margin: 0 0 12px; color: var(--text-2); }
+  .row-btns { display: flex; flex-wrap: wrap; gap: 10px; }
+</style>
+</head>
+<body>
+<header class="obs-header">
+  <a class="obs-brand" href="/" aria-label="Hyderabad Urban Observatory, home"><span class="obs-logo"><svg viewBox="0 0 100 100" aria-hidden="true"><defs><rect id="bH1" x="2" y="26" width="96" height="16" rx="6"/><rect id="bH2" x="2" y="58" width="96" height="16" rx="6"/><rect id="bV1" x="28" y="2" width="16" height="96" rx="6" transform="rotate(18 36 50)"/><rect id="bV2" x="56" y="2" width="16" height="96" rx="6" transform="rotate(18 64 50)"/><mask id="cH1"><rect width="100" height="100" fill="white"/><use href="#bV1" fill="black" stroke="black" stroke-width="4"/></mask><mask id="cV2"><rect width="100" height="100" fill="white"/><use href="#bH1" fill="black" stroke="black" stroke-width="4"/></mask><mask id="cH2"><rect width="100" height="100" fill="white"/><use href="#bV2" fill="black" stroke="black" stroke-width="4"/></mask><mask id="cV1"><rect width="100" height="100" fill="white"/><use href="#bH2" fill="black" stroke="black" stroke-width="4"/></mask></defs><g fill="#FFFFFF" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#bH1" mask="url(#cH1)"/><use href="#bV2" mask="url(#cV2)"/><use href="#bH2" mask="url(#cH2)"/><use href="#bV1" mask="url(#cV1)"/></g></svg></span><span class="obs-word">Hyderabad Urban Observatory</span></a>
+  <nav class="obs-nav" aria-label="Observatory"><a href="/live/" class="obs-live"><i class="obs-live-dot" aria-hidden="true"></i>Live</a><a href="/maps/">Layers</a><a href="/tools/">Tools</a><a href="/stories/">Stories</a><a href="/contribute/" aria-current="page">Contribute</a><a href="/data/">Data sources</a><a href="/about">About</a></nav>
+  <a href="/live/" class="obs-live obs-live-bar"><i class="obs-live-dot" aria-hidden="true"></i>Live</a>
+  <button type="button" class="obs-burger" aria-label="Menu" aria-expanded="false" aria-controls="obs-menu"><span></span></button>
+  <nav class="obs-menu" id="obs-menu" aria-label="Observatory" hidden><a href="/live/" class="obs-live"><i class="obs-live-dot" aria-hidden="true"></i>Live</a><a href="/maps/">Layers</a><a href="/tools/">Tools</a><a href="/stories/">Stories</a><a href="/contribute/" aria-current="page">Contribute</a><a href="/data/">Data sources</a><a href="/about">About</a></nav>
+</header>
+
+<main class="wrap">
+  <div class="steps">
+    <div class="progress" id="progress" hidden><div class="bar"><i id="bar"></i></div><span id="count"></span></div>
+
+    <section class="step on" data-step="start">
+      <p class="eyebrow">Contribute · Water</p>
+      <h1>Tell us about a water tanker</h1>
+      <p class="hint">Ordered a tanker recently? Tell us what you paid, its size and how long it took to come. About a minute. Send one entry for every tanker you order.</p>
+      <h2 class="qt" style="font-size:20px;margin-top:8px" id="q-where">Where was it delivered?</h2>
+      <div class="answers" role="radiogroup" aria-labelledby="q-where" data-field="mode">
+        <button type="button" class="answer" role="radio" aria-checked="false" data-val="gps"><span>I'm there now<small>Your phone can tell us where</small></span><i class="tick"></i></button>
+        <button type="button" class="answer" role="radio" aria-checked="false" data-val="search"><span>Search for the area<small>Your colony, area or ward</small></span><i class="tick"></i></button>
+        <button type="button" class="answer" role="radio" aria-checked="false" data-val="map"><span>Mark it on a map</span><i class="tick"></i></button>
+      </div>
+      <p class="anon">No names, no sign-in, and we don't keep IP addresses. You choose how exactly the place is shown.</p>
+      <div class="draft" id="draft" hidden>
+        <p class="eyebrow">Not sent yet</p>
+        <p id="draft-text"></p>
+        <div class="row-btns"><button type="button" class="btn btn-primary btn-lg" id="draft-send">Send it now</button><button type="button" class="btn btn-secondary btn-lg" id="draft-drop">Discard it</button></div>
+        <p class="msg" id="draft-msg" hidden></p>
+      </div>
+      <div class="intro-link">
+        <a class="btn btn-secondary" href="orders/">See tanker orders so far <span class="arr">→</span></a>
+        <span class="meta" id="meta"></span>
+      </div>
+    </section>
+
+    <section class="step" data-step="locate">
+      <h2 class="qt">Share your location?</h2>
+      <p class="hint">Your phone will ask whether this page may use your location.</p>
+      <ul class="promise">
+        <li><b>Nothing is saved until you press Send</b> at the end.</li>
+        <li>On the next screen <b>you choose how exactly</b> the place is kept: the exact spot, about 500 m, or only the ward.</li>
+        <li>We never keep your name, phone number or IP address.</li>
+      </ul>
+      <div class="stack">
+        <button type="button" class="btn btn-primary btn-lg" id="gps-go">Share my location</button>
+        <button type="button" class="btn btn-secondary btn-lg" id="gps-search">Search for the area instead</button>
+      </div>
+      <p class="msg" id="gps-msg" hidden></p>
+    </section>
+
+    <section class="step" data-step="place">
+      <h2 class="qt">Which area?</h2>
+      <p class="hint">Search for your colony, area or ward.</p>
+      <div class="field">
+        <label class="field-label" for="ps-input">Area</label>
+        <div class="search">
+          <input class="inp" type="search" id="ps-input" placeholder="For example Kondapur, Malkajgiri, Tolichowki">
+          <div class="ps-results" id="ps-results" hidden></div>
+        </div>
+        <p class="picked" id="picked" hidden><b id="picked-name"></b> <span id="picked-ctx"></span></p>
+        <p class="alt-link"><a href="#" id="to-map">Prefer a map? Mark it on a map instead</a></p>
+      </div>
+    </section>
+
+    <section class="step" data-step="map">
+      <h2 class="qt">Mark the place</h2>
+      <p class="hint">Tap where the tanker was delivered. Drag the pin to adjust. You choose next how exactly it is shown.</p>
+      <div class="map-box"><div id="map"></div><div class="map-hint halo" id="map-hint">Tap the place</div></div>
+      <p class="picked" id="pin-info" hidden></p>
+      <p class="msg" id="pin-msg" hidden></p>
+    </section>
+
+    <section class="step" data-step="precision">
+      <h2 class="qt" id="prec-q">How exactly may we show it?</h2>
+      <p class="hint">It appears on the public map and in the open data at the detail you choose.</p>
+      <div class="answers" role="radiogroup" aria-labelledby="prec-q" id="prec"></div>
+    </section>
+
+    <section class="step" data-step="who">
+      <h2 class="qt">Who was it for?</h2>
+      <p class="hint">Tap the answers that fit.</p>
+      <div class="qblock"><h3 id="h-for">The tanker was for</h3>
+        <div class="opts" role="radiogroup" aria-labelledby="h-for" data-g="for"><button type="button" class="opt" role="radio" aria-checked="false" data-v="home">My home</button><button type="button" class="opt" role="radio" aria-checked="false" data-v="building">The whole building<br><small style="font-weight:400">I look after its water</small></button></div></div>
+      <div class="qblock"><h3 id="h-bt">Kind of building</h3>
+        <div class="opts" role="radiogroup" aria-labelledby="h-bt" data-g="building"><button type="button" class="opt" role="radio" aria-checked="false" data-v="house">Independent house</button><button type="button" class="opt" role="radio" aria-checked="false" data-v="house_rented">House with rented portions</button><button type="button" class="opt" role="radio" aria-checked="false" data-v="apartment_small">Apartment, up to 20 flats</button><button type="button" class="opt" role="radio" aria-checked="false" data-v="apartment_large">Apartment complex, over 20 flats</button><button type="button" class="opt" role="radio" aria-checked="false" data-v="basti">Basti</button><button type="button" class="opt" role="radio" aria-checked="false" data-v="other">Other</button></div></div>
+      <div class="qblock"><h3 id="h-hh">Households sharing the tank or sump</h3>
+        <div class="opts" role="radiogroup" aria-labelledby="h-hh" data-g="households"><button type="button" class="opt" role="radio" aria-checked="false" data-v="1">Just mine</button><button type="button" class="opt" role="radio" aria-checked="false" data-v="2-5">2–5</button><button type="button" class="opt" role="radio" aria-checked="false" data-v="6-20">6–20</button><button type="button" class="opt" role="radio" aria-checked="false" data-v="21-100">21–100</button><button type="button" class="opt" role="radio" aria-checked="false" data-v="100+">Over 100</button><button type="button" class="opt" role="radio" aria-checked="false" data-v="dk">Don't know</button></div></div>
+    </section>
+
+    <section class="step" data-step="source">
+      <h2 class="qt" id="src-q">Who supplied it?</h2>
+      <p class="hint">&nbsp;</p>
+      <div class="answers" role="radiogroup" aria-labelledby="src-q" data-field="source">
+        <button type="button" class="answer" role="radio" aria-checked="false" data-val="hmwssb"><span>HMWSSB (water board)<small>Booked on the app, website or 155313</small></span><i class="tick"></i></button>
+        <button type="button" class="answer" role="radio" aria-checked="false" data-val="private"><span>A private tanker</span><i class="tick"></i></button>
+        <button type="button" class="answer" role="radio" aria-checked="false" data-val="society"><span>Arranged by our association or society</span><i class="tick"></i></button>
+        <button type="button" class="answer" role="radio" aria-checked="false" data-val="other"><span>Other or not sure</span><i class="tick"></i></button>
+      </div>
+    </section>
+
+    <section class="step" data-step="size">
+      <h2 class="qt" id="size-q">How big was the tanker?</h2>
+      <p class="hint">Pick the closest. HMWSSB's usual tanker is 5,000 litres.</p>
+      <div class="sizes" role="radiogroup" aria-labelledby="size-q" data-field="size" id="sizes"></div>
+    </section>
+
+    <section class="step" data-step="paid">
+      <h2 class="qt">What did you pay?</h2>
+      <p class="hint">For this one tanker.</p>
+      <div class="field">
+        <label class="field-label" for="price">Price of the tanker</label>
+        <div class="money"><span>₹</span><input class="inp" id="price" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="0"></div>
+        <label class="inline-check"><input type="checkbox" id="free"> We didn't pay for it (free, or paid by someone else)</label>
+      </div>
+      <div class="field">
+        <label class="field-label" for="extra">Anything extra to the driver? <span class="opt-word">(optional)</span></label>
+        <span class="field-hint">A tip, or a charge for coming faster or climbing a slope</span>
+        <div class="money"><span>₹</span><input class="inp" id="extra" inputmode="numeric" maxlength="5" autocomplete="off" placeholder="0"></div>
+      </div>
+    </section>
+
+    <section class="step" data-step="ordered">
+      <h2 class="qt">When did you order it?</h2>
+      <p class="hint">Roughly is fine.</p>
+      <div class="when"><input class="inp" type="date" id="odate" aria-label="Date ordered"></div>
+      <div class="opts" role="radiogroup" aria-label="Time of day" data-g="tod"><button type="button" class="opt" role="radio" aria-checked="false" data-v="morning">Morning</button><button type="button" class="opt" role="radio" aria-checked="false" data-v="afternoon">Afternoon</button><button type="button" class="opt" role="radio" aria-checked="false" data-v="evening">Evening</button><button type="button" class="opt" role="radio" aria-checked="false" data-v="night">Night</button></div>
+      <p class="msg" id="odate-msg" hidden>That date hasn't come yet. Pick today or earlier.</p>
+    </section>
+
+    <section class="step" data-step="came">
+      <h2 class="qt" id="came-q">When did it come?</h2>
+      <p class="hint">After you ordered it.</p>
+      <div class="answers" role="radiogroup" aria-labelledby="came-q" data-field="came">
+        <button type="button" class="answer" role="radio" aria-checked="false" data-val="same_day"><span>The same day</span><i class="tick"></i></button>
+        <button type="button" class="answer" role="radio" aria-checked="false" data-val="next_day"><span>The next day</span><i class="tick"></i></button>
+        <button type="button" class="answer" role="radio" aria-checked="false" data-val="2_days"><span>After 2 days</span><i class="tick"></i></button>
+        <button type="button" class="answer" role="radio" aria-checked="false" data-val="3_days"><span>After 3 days or more</span><i class="tick"></i></button>
+        <button type="button" class="answer" role="radio" aria-checked="false" data-val="not_yet"><span>Not yet, still waiting</span><i class="tick"></i></button>
+        <button type="button" class="answer" role="radio" aria-checked="false" data-val="never"><span>It never came</span><i class="tick"></i></button>
+      </div>
+    </section>
+
+    <section class="step" data-step="often">
+      <h2 class="qt">How many tankers in the last 30 days?</h2>
+      <p class="hint">For the same home or building, including this one.</p>
+      <div class="stepper"><button type="button" id="minus" aria-label="Fewer">−</button><output id="count30" aria-live="polite">1</output><button type="button" id="plus" aria-label="More">+</button></div>
+    </section>
+
+    <section class="step" data-step="why">
+      <h2 class="qt" id="why-q">Why did you need it?</h2>
+      <p class="hint">Pick all that apply.</p>
+      <div class="answers" role="group" aria-labelledby="why-q" id="why">
+        <button type="button" class="answer check" role="checkbox" aria-checked="false" data-val="piped_irregular"><span>Piped water doesn't come often enough</span><i class="tick"></i></button>
+        <button type="button" class="answer check" role="checkbox" aria-checked="false" data-val="piped_low"><span>Piped water comes, but too little</span><i class="tick"></i></button>
+        <button type="button" class="answer check" role="checkbox" aria-checked="false" data-val="borewell"><span>Our borewell dried up or gave less</span><i class="tick"></i></button>
+        <button type="button" class="answer check" role="checkbox" aria-checked="false" data-val="no_connection"><span>We have no piped connection</span><i class="tick"></i></button>
+        <button type="button" class="answer check" role="checkbox" aria-checked="false" data-val="other"><span>Other</span><i class="tick"></i></button>
+      </div>
+    </section>
+
+    <section class="step" data-step="note">
+      <h2 class="qt"><label for="note">Anything else?</label></h2>
+      <p class="hint">Optional. For example how often piped water comes, or if prices went up. Please no names or phone numbers.</p>
+      <textarea class="inp" id="note" maxlength="500"></textarea>
+    </section>
+
+    <section class="step" data-step="review">
+      <h2 class="qt">Check and send</h2>
+      <p class="hint">Tap "Change" to fix anything. Nothing has been saved yet.</p>
+      <dl class="review" id="review"></dl>
+      <div class="ts" id="ts-review"></div>
+      <input type="text" name="website" id="trap" tabindex="-1" autocomplete="off" aria-hidden="true" class="trap">
+      <p class="msg" id="send-msg" hidden></p>
+      <p class="anon">Your entry will be shown publicly with the other tanker orders, at the detail you chose. Your answers are shared as open data under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>. No names, no sign-in, no IP addresses.</p>
+    </section>
+
+    <section class="step" data-step="thanks">
+      <p class="eyebrow">Received</p>
+      <h2 class="qt">Thank you</h2>
+      <p class="hint">Entries like yours show what people really pay for water, and how long they wait. Order another tanker later? Add it too.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:10px">
+        <a class="btn btn-primary btn-lg" href="orders/">See tanker orders <span class="arr">→</span></a>
+        <button type="button" class="btn btn-secondary btn-lg" id="again">Add another tanker</button>
+      </div>
+      <div class="join">
+        <p class="eyebrow">Stay in touch</p>
+        <h3>Get updates on WhatsApp</h3>
+        <p>If you haven't joined yet, join the Observatory's WhatsApp community for news of new surveys, maps and results. Joining shares your phone number with the group's admins, not with this entry.</p>
+        <a class="btn btn-secondary btn-lg" href="https://chat.whatsapp.com/GJUFWd2UJyEImsmgxbEKlg" target="_blank" rel="noopener">Join the WhatsApp community <span class="arr">→</span></a>
+      </div>
+    </section>
+
+    <div class="nav" id="nav" hidden>
+      <button type="button" class="btn btn-secondary btn-lg" id="back">Back</button>
+      <button type="button" class="btn btn-primary btn-lg next" id="next">Next</button>
+    </div>
+  </div>
+</main>
+
+<footer class="obs-footer">
+  <div class="obs-footer-fine">
+    <span>This website is under continuous development; you may find errors or incomplete content.
+      Feedback: <a href="mailto:hulf.observatory@gmail.com">hulf.observatory@gmail.com</a> · Entries are published as community data.</span>
+    <a class="obs-footer-disclaimer" href="/disclaimer">Disclaimer</a>
+  </div>
+</footer>
+
+<script src="../assets/common.js"></script>
+<script type="module" src="form.js"></script>
+</body>
+</html>

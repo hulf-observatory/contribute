@@ -16,6 +16,7 @@ site feature: this repo has no custom domain). Static, no build step. The answer
 | `bus-stops/stop/?id=` | one stop: latest answer to each question, photos, every rating with feedback, "Still the same" |
 | `bus-stops/download/` | download form for the bus stop ratings |
 | `bus-stops/questions.js`, `form.js`, `stops.json` | the questions (values must match `contribute-api/surveys/bus-stops.json`), the form, TGSRTC's stops (built by `contribute-api/make_bus_stops.py`) |
+| `tankers/`, `tankers/orders/`, `tankers/download/` | water tanker orders: place by phone, area search or map, then the sender chooses exact / about 500 m / area / ward only; supplier, size, price, when ordered and came; results as cards, a ward map and table, latest orders with feedback |
 | `assets/config.js` | the API address, the areas file, the Turnstile site key, the WhatsApp link — **settings live only here** |
 | `assets/common.js` | phone menu, the spam check (Cloudflare Turnstile), the browser's random device id, sending JSON |
 | `assets/contribute.css` | house tokens, header, footer, buttons, chips |
