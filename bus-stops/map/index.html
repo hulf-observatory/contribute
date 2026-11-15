@@ -25,7 +25,10 @@
   .cover .track i { display: block; height: 100%; background: var(--ink); }
 
   .layout { display: grid; gap: 28px; }
-  @media (min-width: 1024px) { .layout { grid-template-columns: minmax(0, 1fr) 340px; } }
+  .stat-link { text-decoration: none; color: inherit; }
+  .stat-link span { text-decoration: underline; text-decoration-color: var(--border-2); text-underline-offset: 3px; }
+  .stat-link:hover span { text-decoration-color: var(--ink); }
+  /* the leaderboard has its own page since 15 Nov 2026 */
   .chips { margin-bottom: 12px; }
   .chip i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
   .map-box { position: relative; height: 62vh; min-height: 380px; max-height: 680px; border: 1px solid var(--border); border-radius: var(--r-card); overflow: hidden; }
@@ -89,7 +92,7 @@
   <div class="stats">
     <div class="cover"><span class="stat"><b id="n-rated">0</b><span id="n-of">of 0 stops with details</span></span><div class="track"><i id="cover-bar"></i></div></div>
     <span class="stat"><b id="n-ratings">0</b><span>contributions</span></span>
-    <span class="stat"><b id="n-people">0</b><span>people on the leaderboard</span></span>
+    <a class="stat stat-link" href="../leaderboard/"><b id="n-people">0</b><span>players on the leaderboard <span class="arr">→</span></span></a>
     <span class="stat"><b id="n-added">0</b><span>missing stops added</span></span>
     <span class="stat" id="load-msg" hidden></span>
   </div>
@@ -101,19 +104,6 @@
       <div class="map-box"><div id="map"></div></div>
       <p class="note">Condition is worked out from each stop's latest answers: shelter, seating, footpath, where buses stop, shade, lighting, safety, flooding and signs. Facilities don't count towards it.</p>
     </div>
-    <aside class="side">
-      <h2>Leaderboard</h2>
-      <p class="sub">Nicknames people chose. Points for every contribution, photo, missing stop and check.</p>
-      <div class="seg" role="group" aria-label="Period"><button type="button" aria-pressed="true" data-p="all">All time</button><button type="button" aria-pressed="false" data-p="month">Last 30 days</button></div>
-      <ol class="board" id="board"></ol>
-      <div class="howto">
-        <h3>How to earn points</h3>
-        <ul id="pts"></ul>
-        <h3>Not on the board?</h3>
-        <p>Create a player with a nickname and a 4-digit PIN: no email, and it works on any phone.</p>
-        <p><a class="btn btn-primary" href="../#create">Create a player</a> <a class="btn btn-secondary" href="../#login">Log in</a></p>
-      </div>
-    </aside>
   </div>
 </main>
 

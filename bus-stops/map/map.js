@@ -1,5 +1,5 @@
-// Bus stops map: every TGSRTC stop, grey until rated, then coloured by its latest condition; leaderboard beside it.
-import { SURVEY, BANDS, UNRATED, band, score, loadStops, loadRatings, addedStops, byStop, latest, POINTS, esc, player } from '../questions.js';
+// Bus stops map: every TGSRTC stop, grey until rated, then coloured by its latest condition. The leaderboard is its own page.
+import { SURVEY, BANDS, UNRATED, band, score, loadStops, loadRatings, addedStops, byStop, latest, esc } from '../questions.js';
 
 const C = window.CONTRIBUTE;
 const $ = (id) => document.getElementById(id);
@@ -12,7 +12,6 @@ const ratings = rs || [];
 const added = addedStops(ratings);
 const stops = base.concat(added);
 const per = byStop(ratings);
-const me = player.get()?.nick || '';
 
 const feats = stops.map(s => {
   const list = per.get(s.id) || [], b = list.length ? band(score(latest(list).answers)) : UNRATED;
@@ -94,21 +93,5 @@ sugg.addEventListener('click', (e) => {
 });
 document.addEventListener('pointerdown', (e) => { if (!sugg.contains(e.target) && e.target !== $('find')) sugg.hidden = true; });
 
-// leaderboard (worked out on the server)
-function drawBoard(period) {
-  const list = lb ? lb[period] || [] : [];
-  $('n-people').textContent = lb ? fmt(lb.all.length) : '–';
-  const top = list.slice(0, 10), mine = me ? list.findIndex(x => x[0].toLowerCase() === me.toLowerCase()) : -1;
-  let html = top.map(([n, p], i) => `<li class="${i === mine ? 'me' : ''}"><span class="r">${i + 1}</span><span>${esc(n)}${i === mine ? ' (you)' : ''}</span><b>${fmt(p)}</b></li>`).join('');
-  if (mine >= 10) html += `<li class="gap">…</li><li class="me"><span class="r">${mine + 1}</span><span>${esc(list[mine][0])} (you)</span><b>${fmt(list[mine][1])}</b></li>`;
-  $('board').innerHTML = html || `<li class="gap">${lb ? 'No points yet. Send details with a nickname to be first.' : "The leaderboard couldn't load just now."}</li>`;
-}
-drawBoard('all');
-document.querySelector('.seg').addEventListener('click', (e) => {
-  const b = e.target.closest('button'); if (!b) return;
-  document.querySelectorAll('.seg button').forEach(x => x.setAttribute('aria-pressed', x === b));
-  drawBoard(b.dataset.p);
-});
-const P = (lb && lb.points) || POINTS;
-$('pts').innerHTML = [['Tell us about a stop', P.rating], ['…the first details for a stop', '+' + P.first], ['Add a photo', '+' + P.photo], ['Add a missing stop', '+' + P.missing],
-  ['Confirm a stop is still the same', P.confirm], ['Flag a wrong contribution', P.flag]].map(([k, v]) => `<li><span>${k}</span><b>${v}</b></li>`).join('');
+// the leaderboard has its own page; here only how many players it has
+$('n-people').textContent = lb ? fmt(lb.all.length) : '–';
