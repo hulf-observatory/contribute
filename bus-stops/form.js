@@ -2,7 +2,7 @@
 // topic screens, optional photo, improvement and nickname, check and send. Talks to contribute-api.
 import { createPlaceSearch } from '../assets/place-search.js';
 import { SURVEY, TOPICS, QUESTIONS, MIN_ANSWERS, optLabel, shown, answered, POINTS, loadStops, loadRatings, addedStops,
-  byStop, metres, stopLabel, esc, nick } from './questions.js';
+  byStop, metres, stopLabel, esc, player, checkPlayer, PLAYER_SAYS } from './questions.js';
 
 const C = window.CONTRIBUTE;
 const $ = (id) => document.getElementById(id);
@@ -33,7 +33,9 @@ function steps() {
     if (S.how === 'missing') l.push('missing');
   }
   for (const t of TOPICS) l.push('t-' + t.id);
-  l.push('photo', 'improve', 'nick', 'review', 'thanks');
+  l.push('photo', 'improve');
+  if (!player.get()) l.push('nick');          // signed-in players skip it
+  l.push('review', 'thanks');
   return l;
 }
 const filled = (id) => $(id).value.trim().length >= 2;
@@ -41,6 +43,7 @@ function ready(s) {
   if (s === 'nearest' || s === 'find') return !!S.stop;
   if (s === 'missing') return !!(S.missing && filled('m-name'));
   if (s === 'nick') return !checkingNick;
+  if (s === 'player') return true;
   if (s === 'review') return !sending && answered(S.a) >= MIN_ANSWERS;
   return true;
 }
@@ -51,7 +54,7 @@ function show(s, push = true) {
   const qs = steps().filter(x => x !== 'start' && x !== 'thanks'), i = qs.indexOf(s);
   $('progress').hidden = i < 0;
   if (i >= 0) { $('bar').style.width = `${(i + 1) / qs.length * 100}%`; $('count').textContent = s === 'review' ? 'Last step' : `${i + 1} of ${qs.length - 1}`; }
-  $('nav').hidden = s === 'start' || s === 'thanks';
+  $('nav').hidden = s === 'start' || s === 'thanks' || s === 'player';
   $('next').hidden = s === 'locate';
   const showCard = (TOPIC_STEPS.includes(s) || ['photo', 'improve', 'nick', 'review'].includes(s)) && (S.stop || S.missing);
   $('stopcard').hidden = !showCard;
@@ -59,12 +62,9 @@ function show(s, push = true) {
   if (s === 'photo') $('photo-hint').textContent = S.here === 'yes' ? 'Optional. One photo of the stop helps others see it.' : 'Optional. A photo you took of this stop.';
   if (s === 'review') drawReview();
   if (s === 'missing') openMap();
-  if (s === 'nick') {
-    const n = nick.get(); if (n && !$('nick').value) $('nick').value = n;
-    $('nick-msg').hidden = true;
-    $('nick-hint').textContent = n ? `You are on the leaderboard as ${n}. Keep it, change it, or clear it to stay off the board.`
-      : "Optional. Make up a nickname to collect points for your ratings. Don't use your real name. It is kept on this phone only: clearing the browser or changing phones starts you again.";
-  }
+  if (s === 'nick') $('nick-msg').hidden = true;
+  if (s === 'start') drawPlay();
+  if (s === 'player') { const p = player.get(); $('p-nick').value = p ? p.nick : $('p-nick').value; $('p-pin').value = ''; $('p-msg').hidden = true; playerReady(); }
   if (s === 't-facilities') document.querySelector('[data-step="t-facilities"] [data-few]').hidden = answered(S.a) >= MIN_ANSWERS;
   updateNext();
   if (push) history.pushState({ s }, '', location.search + '#' + s);
@@ -74,7 +74,7 @@ function show(s, push = true) {
 function updateNext() {
   const n = $('next'); n.disabled = !ready(cur);
   if ((cur === 'review' && sending) || (cur === 'nick' && checkingNick)) return;
-  const optional = { photo: !S.photo, improve: !$('improve').value.trim(), nick: !$('nick').value.trim() };
+  const optional = { photo: !S.photo, improve: !$('improve').value.trim(), nick: !cleanNick($('nick').value) };
   const topicEmpty = TOPIC_STEPS.includes(cur) && !TOPICS.find(t => 't-' + t.id === cur).qs.some(q => S.a[q.id] != null);
   n.textContent = cur === 'review' ? 'Send rating' : (optional[cur] || topicEmpty) ? 'Skip' : 'Next';
 }
@@ -234,7 +234,6 @@ function placePin(lng, lat) {
   updateNext();
 }
 ['m-name', 'm-towards', 'improve'].forEach(id => $(id).addEventListener('input', updateNext));
-$('nick').addEventListener('input', () => { $('nick-msg').hidden = true; updateNext(); });
 
 // ── photo: made smaller on the phone; the server re-encodes it again and drops all hidden data ──
 $('photo-in').addEventListener('change', async (e) => {
@@ -250,25 +249,58 @@ $('photo-in').addEventListener('change', async (e) => {
   updateNext();
 });
 
-// ── nickname: first come, first served; checked before moving on (the server checks again when sending) ──
+// ── the player: nickname + 4-digit PIN, checked with the server (a new nickname becomes theirs with the first rating) ──
+const cleanNick = (v) => v.trim().replace(/\s+/g, ' ');
+const pinOk = (v) => /^\d{4}$/.test(v);
+function drawPlay() {
+  const p = player.get();
+  $('play-box').hidden = !!p; $('play-in').hidden = !p;
+  if (p) $('play-name').textContent = p.nick;
+}
+$('play-go').onclick = () => show('player');
+$('play-out').onclick = (e) => { e.preventDefault(); player.clear(); drawPlay(); };
+const playerReady = () => { $('p-go').disabled = cleanNick($('p-nick').value).length < 3 || !pinOk($('p-pin').value); };
+['p-nick', 'p-pin'].forEach(id => $(id).addEventListener('input', () => { $('p-msg').hidden = true; playerReady(); }));
+$('p-pin').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !$('p-go').disabled) $('p-go').click(); });
+$('p-back').onclick = () => history.back();
+async function check(n, pin, say) {
+  try {
+    const r = await checkPlayer(n, pin);
+    if (PLAYER_SAYS[r.status]) { say(PLAYER_SAYS[r.status]); return null; }
+    return r.name || n;                            // free (theirs with the first rating) or yours, as first written
+  } catch (err) {
+    say(err.status === 400 ? 'Use 3 to 24 letters, numbers and spaces, and a 4-digit PIN.'
+      : err.status === 429 ? 'Too many tries from this connection just now. Please wait a minute.'
+      : "We couldn't check the nickname; the connection may be weak. Please try again.");
+    return null;
+  }
+}
+$('p-go').onclick = async () => {
+  const n = cleanNick($('p-nick').value), pin = $('p-pin').value;
+  const say = (t) => { $('p-msg').textContent = t; $('p-msg').hidden = false; };
+  $('p-go').disabled = true; $('p-go').textContent = 'Checking…';
+  const st = await check(n, pin, say);
+  $('p-go').textContent = 'Continue'; playerReady();
+  if (!st) return;
+  player.set(st, pin);
+  history.back();                                  // back to where they came from, now signed in
+};
+
+// at the end, for people who didn't sign in at the start
 let checkingNick = false;
 async function nickOk() {
-  const n = $('nick').value.trim().replace(/\s+/g, ' ');
+  const n = cleanNick($('nick').value), pin = $('nick-pin').value;
   if (!n) return true;
   const say = (t) => { $('nick-msg').textContent = t; $('nick-msg').hidden = false; };
   if (n.length < 3) { say('A nickname needs at least 3 letters.'); return false; }
-  if (!nick.secret()) { say("This browser can't keep a nickname (private mode?). Clear the box to rate without one."); return false; }
+  if (!pinOk(pin)) { say('Add a 4-digit PIN, or clear the nickname to rate without one.'); return false; }
   checkingNick = true; updateNext(); $('next').textContent = 'Checking…';
-  try {
-    const r = await Contribute.post(`/${SURVEY}/nickname`, { nick: n, nick_secret: nick.secret() });
-    if (r.status === 'taken') { say(`Someone else already uses "${n}". Please choose another nickname.`); return false; }
-    if (r.status === 'banned') { say("This nickname can't be used. Please choose another."); return false; }
-    return true;
-  } catch (err) {
-    if (err.status === 400) { say('Use 3 to 24 letters, numbers and spaces.'); return false; }
-    return true;                      // offline: the server checks again when the rating is sent
-  } finally { checkingNick = false; updateNext(); }
+  const st = await check(n, pin, say);
+  checkingNick = false; updateNext();
+  if (st) $('nick').value = st;
+  return !!st;
 }
+['nick', 'nick-pin'].forEach(id => $(id).addEventListener('input', () => { $('nick-msg').hidden = true; updateNext(); }));
 
 // ── review ──
 function topicSummary(t) {
@@ -282,7 +314,7 @@ function drawReview() {
   const rows = [['Stop', stopTxt, S.preset ? null : S.missing ? 'missing' : S.how === 'gps' ? 'nearest' : 'find'],
     ...TOPICS.map(t => [t.title.replace(' and seating', '').replace('Comfort and safety', 'Safety'), topicSummary(t), 't-' + t.id]),
     ['Photo', S.photo ? 'Added' : 'None', 'photo'], ['Improve', esc($('improve').value.trim() || 'None'), 'improve'],
-    ['Nickname', esc($('nick').value.trim() || 'None (off the board)'), 'nick']];
+    ['Nickname', esc(who().nick || 'None (no points)'), player.get() ? 'player' : 'nick']];
   lastRows = rows.map(([k, v]) => [k, v.replace(/<br>|<small>/g, ' · ').replace(/<[^>]+>/g, '')]);
   $('review').innerHTML = rows.map(([k, v, s]) => `<div><dt>${k}</dt><dd>${v}</dd>${s ? `<button type="button" data-go="${s}">Change</button>` : '<span></span>'}</div>`).join('');
   document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => show(b.dataset.go));
@@ -297,11 +329,17 @@ const store = { get() { try { return JSON.parse(localStorage.getItem(DRAFT)); } 
   set(v) { try { localStorage.setItem(DRAFT, JSON.stringify(v)); return true; } catch { return false; } },
   drop() { try { localStorage.removeItem(DRAFT); } catch { /* ignore */ } } };
 let sending = false;
+// the signed-in player, or the nickname and PIN given at the end
+function who() {
+  const p = player.get();
+  if (p) return { nick: p.nick, pin: p.pin };
+  const n = cleanNick($('nick').value);
+  return n ? { nick: n, pin: $('nick-pin').value } : { nick: null, pin: null };
+}
 function payload() {
-  const nk = $('nick').value.trim().replace(/\s+/g, ' ') || null;
   const b = { here: S.here, place_type: S.missing ? 'missing' : S.preset ? 'preset' : S.how === 'gps' ? 'gps' : 'search',
     ...Object.fromEntries(QUESTIONS.filter(q => shown(q, S.a) && S.a[q.id] != null).map(q => [q.id, S.a[q.id]])),
-    improve: $('improve').value.trim() || null, nick: nk, nick_secret: nk ? nick.secret() : null, photo: S.photo || null };
+    improve: $('improve').value.trim() || null, nick: who().nick, nick_pin: who().pin, photo: S.photo || null };
   if (S.missing) Object.assign(b, { lat: S.missing.lat, lng: S.missing.lng, stop_name: $('m-name').value.trim(), towards: $('m-towards').value.trim() || null });
   else b.stop_id = S.stop.id;               // the server takes the stop's place from TGSRTC's list, not from the phone
   return b;
@@ -324,8 +362,9 @@ function thanks(body, id) {
   const got = points(body), total = got.reduce((a, b) => a + b[1], 0);
   $('pts').textContent = '+' + total;
   $('pts-list').innerHTML = got.map(([k, v]) => `<li>${k}<b>+${v}</b></li>`).join('');
-  $('thanks-text').textContent = body.nick ? `Points go to ${body.nick} on the leaderboard.` : "You didn't pick a nickname, so these points aren't on the leaderboard. Add one next time to collect them.";
-  if (body.nick) nick.set(body.nick);
+  $('thanks-text').textContent = body.nick ? `Points go to ${body.nick} on the leaderboard. This phone remembers you; on another phone, use the same nickname and PIN.`
+    : "You didn't play with a nickname, so these points aren't on the leaderboard. Pick a nickname and PIN next time to collect them.";
+  if (body.nick) player.set(body.nick, body.nick_pin);   // signed in for next time
   $('to-stop').href = 'stop/?id=' + encodeURIComponent(body.place_type === 'missing' ? 'new-' + id : body.stop_id);
   show('thanks');
 }
@@ -364,7 +403,10 @@ async function send() {
 $('again').onclick = () => { location.href = location.pathname; };
 
 // ── load stops, ratings (for "rated before" and stops residents added) and areas ──
+const openPlay = location.hash === '#play';      // links can open the nickname screen straight away
 history.replaceState({ s: 'start' }, '', location.search);
+drawPlay();
+if (openPlay) show('player');
 const [stops, ratings, areas] = await Promise.all([
   loadStops().catch(() => []), loadRatings().catch(() => []), fetch(C.AREAS_URL).then(r => r.json()).catch(() => null)]);
 STOPS = stops.concat(addedStops(ratings));

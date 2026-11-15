@@ -1,5 +1,5 @@
 // Bus stops map: every TGSRTC stop, grey until rated, then coloured by its latest condition; leaderboard beside it.
-import { SURVEY, BANDS, UNRATED, band, score, loadStops, loadRatings, addedStops, byStop, latest, POINTS, esc, nick } from '../questions.js';
+import { SURVEY, BANDS, UNRATED, band, score, loadStops, loadRatings, addedStops, byStop, latest, POINTS, esc, player } from '../questions.js';
 
 const C = window.CONTRIBUTE;
 const $ = (id) => document.getElementById(id);
@@ -12,7 +12,7 @@ const ratings = rs || [];
 const added = addedStops(ratings);
 const stops = base.concat(added);
 const per = byStop(ratings);
-const me = nick.get();
+const me = player.get()?.nick || '';
 
 const feats = stops.map(s => {
   const list = per.get(s.id) || [], b = list.length ? band(score(latest(list).answers)) : UNRATED;

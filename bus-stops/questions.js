@@ -103,16 +103,21 @@ export function latest(list) {
   return { answers: a, from };
 }
 
-// the nickname and the hidden code that keeps it this phone's (first come, first served on the server)
-export const nick = {
-  get() { try { return localStorage.getItem('obs-bus-nick') || ''; } catch { return ''; } },
-  set(v) { try { v ? localStorage.setItem('obs-bus-nick', v) : localStorage.removeItem('obs-bus-nick'); } catch { /* private mode */ } },
-  secret() {
-    try {
-      let s = localStorage.getItem('obs-nick-secret');
-      if (!s) { s = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now()).replace(/[^A-Za-z0-9-]/g, ''); localStorage.setItem('obs-nick-secret', s); }
-      return s;
-    } catch { return null; }
-  },
+// the player: a nickname and a 4-digit PIN (first come, first served on the server). The phone remembers both so
+// the player stays signed in; on another phone they enter them again. A forgotten PIN means a new nickname.
+export const player = {
+  get() { try { const p = JSON.parse(localStorage.getItem('obs-bus-player')); return p && p.nick && /^\d{4}$/.test(p.pin) ? p : null; } catch { return null; } },
+  set(nick, pin) { try { localStorage.setItem('obs-bus-player', JSON.stringify({ nick, pin })); } catch { /* private mode */ } },
+  clear() { try { localStorage.removeItem('obs-bus-player'); } catch { /* ignore */ } },
+};
+// check a nickname and PIN with the server: free / yours / wrong / locked / banned (a wrong PIN counts towards a lock)
+// returns { status, name } — name is the nickname as its player first wrote it
+export async function checkPlayer(nick, pin) {
+  return Contribute.post(`/${SURVEY}/nickname`, { nick, nick_pin: pin });
+}
+export const PLAYER_SAYS = {
+  wrong: 'This nickname is already taken, or the PIN is wrong. Check the PIN, or choose another nickname.',
+  locked: 'Too many wrong PINs for this nickname. Try again in an hour.',
+  banned: "This nickname can't be used. Please choose another.",
 };
 export const day = (iso) => new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });

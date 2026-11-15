@@ -1,6 +1,6 @@
 // One bus stop: condition, routes, the latest answer to each question, photos, every rating with feedback.
 import { SURVEY, TOPICS, optLabel, shown, band, score, UNRATED, loadStops, loadRatings, addedStops, byStop, latest, POINTS,
-  esc, nick, day } from '../questions.js';
+  esc, player, day } from '../questions.js';
 
 const $ = (id) => document.getElementById(id);
 const id = new URLSearchParams(location.search).get('id');
@@ -54,7 +54,7 @@ function drawHistory() {
 drawHistory();
 
 // feedback and "still the same" both go to the server with this phone's id (counted once) and the nickname, if any
-const who = () => { const n = nick.get(); return n && nick.secret() ? { nick: n, nick_secret: nick.secret() } : {}; };
+const who = () => { const p = player.get(); return p ? { nick: p.nick, nick_pin: p.pin } : {}; };
 async function feedback(rid, kind, note, check, trap) {
   const token = await check.token();
   if (token === null) throw Object.assign(new Error('The spam check did not finish. Please try again.'), { server: true });
@@ -69,7 +69,7 @@ $('same').onclick = async () => {
   $('same').disabled = true; $('same').textContent = 'Sending…'; $('same-msg').hidden = true;
   try {
     const r = await feedback(list[0].id, 'confirm', null, sameCheck, '');
-    const n = nick.get();
+    const n = player.get()?.nick;
     $('same').textContent = 'Thanks';
     $('same-msg').textContent = r.accepted ? `Thanks, your check is added${n ? `, and ${n} gets ${POINTS.confirm} points` : ''}. Something changed? Rate the stop instead.`
       : 'You already confirmed the latest rating from this phone. Something changed? Rate the stop instead.';
