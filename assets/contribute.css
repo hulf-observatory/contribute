@@ -27,12 +27,14 @@ button { font: inherit; color: inherit; }
 .obs-nav { display: none; align-self: stretch; gap: 28px; }
 .obs-nav a { display: flex; align-items: center; padding-top: 2px; font: 400 15px/1 var(--font-ui); color: var(--text-2); text-decoration: none; border-bottom: 2px solid transparent; white-space: nowrap; }
 .obs-nav a:hover { color: var(--ink); }
+.obs-nav a[aria-current="page"] { color: var(--ink); font-weight: 700; border-bottom-color: var(--ink); }
 .obs-burger { display: grid; place-items: center; width: 36px; height: 36px; border: 0; background: none; color: var(--ink); cursor: pointer; padding: 0; }
 .obs-burger span { display: block; width: 20px; height: 1.5px; background: currentColor; box-shadow: 0 -6px 0 currentColor, 0 6px 0 currentColor; }
 .obs-menu { position: absolute; right: 16px; top: 60px; min-width: 200px; background: #fff; border: 1px solid var(--border); border-radius: var(--r-card); padding: 6px; display: grid; }
 .obs-menu[hidden] { display: none; }
 .obs-menu a { padding: 11px 12px; border-radius: var(--r-ctl); font: 400 15px/1 var(--font-ui); color: var(--text-2); text-decoration: none; }
 .obs-menu a:hover { background: var(--band); color: var(--ink); }
+.obs-menu a[aria-current="page"] { color: var(--ink); font-weight: 900; }
 .obs-live { display: inline-flex; align-items: center; gap: 6px; }
 .obs-live-dot { position: relative; width: 7px; height: 7px; border-radius: 50%; background: #4A9447; flex: none; }
 .obs-live-dot::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: #4A9447; animation: obs-live-pulse 1.8s ease-out infinite; }
