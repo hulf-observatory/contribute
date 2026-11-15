@@ -76,7 +76,7 @@ function updateNext() {
   if ((cur === 'review' && sending) || (cur === 'nick' && checkingNick)) return;
   const optional = { photo: !S.photo, improve: !$('improve').value.trim(), nick: !cleanNick($('nick').value) };
   const topicEmpty = TOPIC_STEPS.includes(cur) && !TOPICS.find(t => 't-' + t.id === cur).qs.some(q => S.a[q.id] != null);
-  n.textContent = cur === 'review' ? 'Send rating' : (optional[cur] || topicEmpty) ? 'Skip' : 'Next';
+  n.textContent = cur === 'review' ? 'Send' : (optional[cur] || topicEmpty) ? 'Skip' : 'Next';
 }
 const go = (d) => { const l = steps(); show(l[Math.max(0, l.indexOf(cur) + d)]); };
 $('next').onclick = async () => {
@@ -124,7 +124,7 @@ function drawCard() {
   if (S.missing) { $('sc-name').textContent = $('m-name').value.trim() || 'New stop'; $('sc-ctx').textContent = ($('m-towards').value.trim() ? `towards ${$('m-towards').value.trim()} · ` : '') + 'A stop you are adding'; return; }
   const s = S.stop, n = (RATED.get(s.id) || []).length;
   $('sc-name').textContent = s.name;
-  $('sc-ctx').textContent = [s.towards && `towards ${s.towards}`, n ? `rated ${n} time${n > 1 ? 's' : ''} before` : 'not rated yet: the first rating earns extra points'].filter(Boolean).join(' · ');
+  $('sc-ctx').textContent = [s.towards && `towards ${s.towards}`, n ? `${n} contribution${n > 1 ? 's' : ''} so far` : 'no one has added details yet: being first earns extra points'].filter(Boolean).join(' · ');
 }
 function routeText(s) {
   if (!s.nRoutes) return 'A stop someone added';
@@ -353,7 +353,7 @@ async function nickOk() {
   if (!n) return true;
   const say = (t) => { $('nick-msg').textContent = t; $('nick-msg').hidden = false; };
   if (n.length < 3) { say('A nickname needs at least 3 letters.'); return false; }
-  if (!pinOk(pin)) { say('Add a 4-digit PIN, or clear the nickname to rate without one.'); return false; }
+  if (!pinOk(pin)) { say('Add a 4-digit PIN, or clear the nickname to send without one.'); return false; }
   checkingNick = true; updateNext(); $('next').textContent = 'Checking…';
   const st = await check(n, pin, say);
   checkingNick = false; updateNext();
@@ -412,9 +412,9 @@ async function postRating(body) {
   finally { spam.reset(); }
 }
 function points(body) {
-  const got = [['Rating a stop', POINTS.rating]];
+  const got = [['Telling us about a stop', POINTS.rating]];
   if (body.place_type === 'missing') got.push(['Adding a missing stop', POINTS.missing]);
-  else if (!(RATED.get(body.stop_id) || []).length) got.push(['First rating of this stop', POINTS.first]);
+  else if (!(RATED.get(body.stop_id) || []).length) got.push(['First details for this stop', POINTS.first]);
   if (body.photo) got.push(['Adding a photo', POINTS.photo]);
   return got;
 }
@@ -438,10 +438,10 @@ async function send() {
     store.drop(); sending = false; thanks(body, r.id);
   } catch (err) {
     sending = false; updateNext(); $('next').textContent = 'Try again';
-    const why = err.server && err.status === 400 ? (/^nick:/.test(err.message) ? `${err.message.replace(/^nick: /, '').replace(/^./, c => c.toUpperCase())}. Tap "Change" next to Nickname.` : `The server could not accept this rating (${err.message}).`)
+    const why = err.server && err.status === 400 ? (/^nick:/.test(err.message) ? `${err.message.replace(/^nick: /, '').replace(/^./, c => c.toUpperCase())}. Tap "Change" next to Nickname.` : `The server could not accept this (${err.message}).`)
       : err.server && err.status === 403 ? 'The spam check did not finish. Please press Try again.'
-      : err.server && err.status === 429 ? 'Too many ratings from this connection just now. Please wait a minute.'
-      : "We couldn't send your rating; the signal may be weak.";
+      : err.server && err.status === 429 ? 'Too many sends from this connection just now. Please wait a minute.'
+      : "We couldn't send this; the signal may be weak.";
     $('send-msg').textContent = `${why} ${kept ? 'Your answers are saved on this phone, so nothing is lost.' : ''}`;
     $('send-msg').hidden = false;
   }
@@ -451,12 +451,12 @@ async function send() {
   const d = store.get(); if (!d || !d.body) return;
   $('draft').hidden = false;
   const stop = (d.rows || []).find(r => r[0] === 'Stop');
-  $('draft-text').textContent = `You have a rating${stop ? ' of ' + stop[1].split(' · ')[0] : ''} from ${new Date(d.at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })} that didn't send.${d.photoDropped ? ' Its photo was too large to keep.' : ''}`;
+  $('draft-text').textContent = `You have details${stop ? ' for ' + stop[1].split(' · ')[0] : ''} from ${new Date(d.at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })} that didn't send.${d.photoDropped ? ' Its photo was too large to keep.' : ''}`;
   $('draft-send').onclick = async () => {
     $('draft-send').disabled = true; $('draft-send').textContent = 'Sending…'; $('draft-msg').hidden = true;
     try { const r = await postRating(d.body); store.drop(); thanks(d.body, r.id); }
     catch (err) { $('draft-send').disabled = false; $('draft-send').textContent = 'Try again';
-      $('draft-msg').textContent = err.status === 400 ? `The server could not accept it (${err.message}). Discard it and rate the stop again.` : "Still couldn't send it. Your answers stay saved on this phone."; $('draft-msg').hidden = false; }
+      $('draft-msg').textContent = err.status === 400 ? `The server could not accept it (${err.message}). Discard it and start again.` : "Still couldn't send it. Your answers stay saved on this phone."; $('draft-msg').hidden = false; }
   };
   $('draft-drop').onclick = () => { store.drop(); $('draft').hidden = true; };
 })();
@@ -480,9 +480,9 @@ if (areas) {
   for (const w of areas.wards || []) { const z = zones[w.zone]; LOCAL.push({ name: w.name, kind: 'Ward' + (w.no != null ? ' ' + w.no : ''), context: z ? z.name + ' zone' : '', bbox: w.bounds }); }
 }
 search.refresh?.();
-if (stops.length) $('meta').textContent = `${RATED.size.toLocaleString('en-IN')} of ${STOPS.length.toLocaleString('en-IN')} stops rated so far`;
+if (stops.length) $('meta').textContent = `${RATED.size.toLocaleString('en-IN')} of ${STOPS.length.toLocaleString('en-IN')} stops with details so far`;
 if (PRESET && BY_ID.get(PRESET)) {
   S.preset = true; S.stop = BY_ID.get(PRESET);
-  document.querySelector('[data-step="start"] h1').textContent = 'Rate ' + S.stop.name;
+  document.querySelector('[data-step="start"] h1').textContent = 'Tell us about ' + S.stop.name;
   document.querySelector('[data-step="start"] .hint').textContent = (S.stop.towards ? `The stop towards ${S.stop.towards}. ` : '') + "Tell us what it is like now. It takes about two minutes, and you don't need to sign in.";
 }

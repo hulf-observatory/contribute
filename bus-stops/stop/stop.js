@@ -19,8 +19,8 @@ $('rate').href = '../?stop=' + encodeURIComponent(s.id);
 const { answers, from } = latest(list), sc = list.length ? score(answers) : null, b = list.length ? band(sc) : UNRATED;
 $('cond-dot').style.background = list.length && b === UNRATED ? '#7C8FA6' : b.color;
 $('cond').textContent = list.length && b === UNRATED ? 'Too few answers to judge yet' : b.label;
-$('cond-meta').textContent = list.length ? `From ${list.length} rating${list.length > 1 ? 's' : ''}, latest ${day(list[0].observed_at)}` : 'No one has rated this stop yet. The first rating earns extra points.';
-if (!list.length) { ['state-sec', 'photo-sec', 'hist-sec', 'same'].forEach(x => { $(x).hidden = true; }); $('rate').textContent = 'Be the first to rate it'; }
+$('cond-meta').textContent = list.length ? `From ${list.length} contribution${list.length > 1 ? 's' : ''}, latest ${day(list[0].observed_at)}` : 'No one has sent details for this stop yet. Being first earns extra points.';
+if (!list.length) { ['state-sec', 'photo-sec', 'hist-sec', 'same'].forEach(x => { $(x).hidden = true; }); $('rate').textContent = 'Be the first to add details'; }
 
 // latest state, topic by topic, with how many of the last few said the same
 const agree = (q) => {
@@ -71,8 +71,8 @@ $('same').onclick = async () => {
     const r = await feedback(list[0].id, 'confirm', null, sameCheck, '');
     const n = player.get()?.nick;
     $('same').textContent = 'Thanks';
-    $('same-msg').textContent = r.accepted ? `Thanks, your check is added${n ? `, and ${n} gets ${POINTS.confirm} points` : ''}. Something changed? Rate the stop instead.`
-      : 'You already confirmed the latest rating from this phone. Something changed? Rate the stop instead.';
+    $('same-msg').textContent = r.accepted ? `Thanks, your check is added${n ? `, and ${n} gets ${POINTS.confirm} points` : ''}. Something changed? Add your details instead.`
+      : 'You already confirmed the latest details from this phone. Something changed? Add your details instead.';
     list[0].confirmed = r.confirmed; drawHistory();
   } catch (err) { $('same').disabled = false; $('same').textContent = 'Still the same'; $('same-msg').textContent = why(err); }
   $('same-msg').hidden = false;

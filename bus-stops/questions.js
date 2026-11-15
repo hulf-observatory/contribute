@@ -61,7 +61,7 @@ export const BANDS = [
   { id: 'fair', label: 'Needs work', color: '#EF8A62', min: .4 },
   { id: 'poor', label: 'Poor', color: '#B2182B', min: 0 },
 ];
-export const UNRATED = { id: 'none', label: 'Not rated yet', color: '#B8BDC6' };
+export const UNRATED = { id: 'none', label: 'No details yet', color: '#B8BDC6' };
 export const band = (sc) => sc == null ? UNRATED : BANDS.find(b => sc >= b.min);
 
 // points, as in the survey file on the server (the leaderboard itself is worked out there)

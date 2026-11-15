@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Rate a bus stop · Hyderabad Urban Observatory</title>
-<meta name="description" content="Rate a bus stop in Hyderabad: shelter, footpath, lighting, signs. Two minutes, anonymous, no sign-in.">
+<title>Tell us about a bus stop · Hyderabad Urban Observatory</title>
+<meta name="description" content="Tell us about a bus stop in Hyderabad: shelter, footpath, lighting, signs. Two minutes, anonymous, no sign-in.">
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../vendor/fonts/lato.css">
 <link rel="stylesheet" href="../vendor/fonts/outfit.css">
@@ -173,16 +173,16 @@
 
     <section class="step on" data-step="start">
       <p class="eyebrow">Contribute · Bus stops</p>
-      <h1>Rate a bus stop</h1>
+      <h1>Tell us about a bus stop</h1>
       <p class="hint">Tell us what a bus stop is like: shelter, footpath, lighting, signs. It takes about two minutes. Anyone can update a stop later, so the picture stays current.</p>
       <h2 class="qt" style="font-size:20px;margin-top:8px" id="q-here">Are you at the bus stop now?</h2>
       <div class="answers" role="radiogroup" aria-labelledby="q-here" data-field="here">
         <button type="button" class="answer" role="radio" aria-checked="false" data-val="yes"><span>Yes, I'm at the stop<small>Your phone can find the stop for you</small></span><i class="tick"></i></button>
-        <button type="button" class="answer" role="radio" aria-checked="false" data-val="no"><span>No, it's a stop I use<small>Rate it from memory; you can skip what you don't know</small></span><i class="tick"></i></button>
+        <button type="button" class="answer" role="radio" aria-checked="false" data-val="no"><span>No, it's a stop I use<small>Tell us from memory; you can skip what you don't know</small></span><i class="tick"></i></button>
       </div>
       <p class="playline" id="play-box">Collect points on the <a href="map/#board">leaderboard</a>: <a href="#" id="play-create"><b>Create a player</b></a> · <a href="#" id="play-login"><b>Log in</b></a></p>
       <p class="playline" id="play-in" hidden>Playing as <b id="play-name"></b> · <a href="map/#board">Leaderboard</a> · <a href="#" id="play-out">Log out</a></p>
-      <p class="anon">No names, no email, and we don't keep IP addresses. You can rate without a nickname too.</p>
+      <p class="anon">No names, no email, and we don't keep IP addresses. You can take part without a nickname too.</p>
       <div class="draft" id="draft" hidden>
         <p class="eyebrow">Not sent yet</p>
         <p id="draft-text"></p>
@@ -287,7 +287,7 @@
       <p class="hint" id="p-hint">Make up a nickname and a 4-digit PIN. Use them to log in on any phone.</p>
       <div class="field">
         <label class="field-label" for="p-nick">Nickname</label>
-        <span class="field-hint">Shown on the leaderboard and with your ratings. Not your real name.</span>
+        <span class="field-hint">Shown on the leaderboard and with what you send. Not your real name.</span>
         <input class="inp" id="p-nick" maxlength="24" autocomplete="off" autocapitalize="words" placeholder="For example Golconda Rider">
       </div>
       <div class="field">
@@ -301,7 +301,7 @@
     </section>
 
     <section class="step" data-step="nick">
-      <h2 class="qt">Points for this rating?</h2>
+      <h2 class="qt">Points for this?</h2>
       <p class="hint">Optional. Add a nickname and a 4-digit PIN to collect points and appear on the leaderboard. Played before? Enter the same ones.</p>
       <div class="field">
         <label class="field-label" for="nick">Nickname <span class="opt-word">(optional)</span></label>
@@ -323,11 +323,11 @@
       <div class="ts" id="ts-review"></div>
       <input type="text" name="website" id="trap" tabindex="-1" autocomplete="off" aria-hidden="true" class="trap">
       <p class="msg" id="send-msg" hidden></p>
-      <p class="anon">Your rating will be shown publicly on the stop's page. Your answers, without the photo, are shared as open data under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>. No names, no sign-in, no IP addresses.</p>
+      <p class="anon">What you send will be shown publicly on the stop's page. Your answers, without the photo, are shared as open data under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>. No names, no sign-in, no IP addresses.</p>
     </section>
 
     <section class="step" data-step="thanks">
-      <p class="eyebrow">Rating received</p>
+      <p class="eyebrow">Received</p>
       <h2 class="qt">Thank you</h2>
       <div id="pts-box">
         <div class="points"><b id="pts">+0</b><span>points</span></div>
@@ -336,13 +336,13 @@
       <p class="hint" id="thanks-text"></p>
       <div style="display:flex;flex-wrap:wrap;gap:10px">
         <a class="btn btn-primary btn-lg" id="to-stop" href="#">See this stop's page <span class="arr">→</span></a>
-        <button type="button" class="btn btn-secondary btn-lg" id="again">Rate another stop</button>
+        <button type="button" class="btn btn-secondary btn-lg" id="again">Tell us about another stop</button>
       </div>
       <p class="alt-link"><a href="map/">The map and leaderboard</a></p>
       <div class="join">
         <p class="eyebrow">Stay in touch</p>
         <h3>Get updates on WhatsApp</h3>
-        <p>If you haven't joined yet, join the Observatory's WhatsApp community for news of new surveys, maps and results. Joining shares your phone number with the group's admins, not with this rating.</p>
+        <p>If you haven't joined yet, join the Observatory's WhatsApp community for news of new surveys, maps and results. Joining shares your phone number with the group's admins, not with what you sent.</p>
         <a class="btn btn-secondary btn-lg" href="https://chat.whatsapp.com/GJUFWd2UJyEImsmgxbEKlg" target="_blank" rel="noopener" id="wa">Join the WhatsApp community <span class="arr">→</span></a>
       </div>
     </section>
@@ -357,7 +357,7 @@
 <footer class="obs-footer">
   <div class="obs-footer-fine">
     <span>This website is under continuous development; you may find errors or incomplete content.
-      Feedback: <a href="mailto:hulf.observatory@gmail.com">hulf.observatory@gmail.com</a> · Bus stops from TGSRTC's open data (June 2026). Ratings are published as community data.</span>
+      Feedback: <a href="mailto:hulf.observatory@gmail.com">hulf.observatory@gmail.com</a> · Bus stops from TGSRTC's open data (June 2026). What people send is published as community data.</span>
     <a class="obs-footer-disclaimer" href="/disclaimer">Disclaimer</a>
   </div>
 </footer>

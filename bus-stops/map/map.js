@@ -7,7 +7,7 @@ const fmt = (n) => n.toLocaleString('en-IN');
 
 const [base, rs, lb] = await Promise.all([loadStops('../').catch(() => []), loadRatings().catch(() => null),
   fetch(`${C.API}/${SURVEY}/leaderboard.json`, { credentials: 'omit' }).then(r => r.json()).catch(() => null)]);
-if (!rs) { $('load-msg').hidden = false; $('load-msg').textContent = "Ratings couldn't load just now; showing the stops only."; }
+if (!rs) { $('load-msg').hidden = false; $('load-msg').textContent = "Contributions couldn't load just now; showing the stops only."; }
 const ratings = rs || [];
 const added = addedStops(ratings);
 const stops = base.concat(added);
@@ -22,14 +22,14 @@ const feats = stops.map(s => {
 // a stop rated with too few answers to judge still counts as rated; it shows in grey-blue
 for (const f of feats) if (f.properties.band === 'few') f.properties.color = '#7C8FA6';
 $('n-rated').textContent = fmt(per.size);
-$('n-of').textContent = `of ${fmt(stops.length)} stops rated`;
+$('n-of').textContent = `of ${fmt(stops.length)} stops with details`;
 $('cover-bar').style.width = (stops.length ? per.size / stops.length * 100 : 0).toFixed(1) + '%';
 $('n-ratings').textContent = fmt(ratings.length);
 $('n-added').textContent = fmt(added.length);
 
 // filter chips double as the legend
 const counts = {}; feats.forEach(f => counts[f.properties.band] = (counts[f.properties.band] || 0) + 1);
-const CH = [{ id: 'rated', label: 'All rated', n: per.size }, ...BANDS.map(b => ({ ...b, n: counts[b.id] || 0 })), { ...UNRATED, n: counts.none || 0 }];
+const CH = [{ id: 'rated', label: 'All with details', n: per.size }, ...BANDS.map(b => ({ ...b, n: counts[b.id] || 0 })), { ...UNRATED, n: counts.none || 0 }];
 let filter = 'all';
 $('chips').innerHTML = CH.map(c => `<button type="button" class="chip" aria-pressed="false" data-f="${c.id}">${c.color ? `<i style="background:${c.color}"></i>` : ''}${c.label}<span class="n">${fmt(c.n)}</span></button>`).join('');
 $('chips').addEventListener('click', (e) => {
@@ -66,14 +66,14 @@ function applyFilter() {
 let pop = null;
 function popup(f) {
   const p = f.properties;
-  const b = p.band === 'none' ? UNRATED : p.band === 'few' ? { label: 'Rated, too few answers to judge', color: p.color } : BANDS.find(x => x.id === p.band);
+  const b = p.band === 'none' ? UNRATED : p.band === 'few' ? { label: 'Too few answers to judge yet', color: p.color } : BANDS.find(x => x.id === p.band);
   const when = p.last ? new Date(p.last).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '';
   if (pop) pop.remove();
   pop = new maplibregl.Popup({ offset: 10, maxWidth: '280px' }).setLngLat(f.geometry.coordinates).setHTML(`<div class="pop">
     <b>${esc(p.name)}</b><span class="ctx">${p.towards ? 'towards ' + esc(p.towards) : ''}${p.added ? ' · added by someone' : ''}</span>
     <div class="cond"><i style="background:${b.color}"></i>${b.label}</div>
-    <div class="ctx">${p.n ? `${p.n} rating${p.n > 1 ? 's' : ''}, latest ${when}` : 'Be the first to rate it: extra points'}</div>
-    <p style="margin:8px 0 0"><a href="../stop/?id=${encodeURIComponent(p.id)}">${p.n ? 'Open the stop' : 'See the stop and rate it'} →</a></p></div>`).addTo(map);
+    <div class="ctx">${p.n ? `${p.n} contribution${p.n > 1 ? 's' : ''}, latest ${when}` : 'No details yet. Be first: extra points'}</div>
+    <p style="margin:8px 0 0"><a href="../stop/?id=${encodeURIComponent(p.id)}">${p.n ? 'Open the stop' : 'See the stop and add details'} →</a></p></div>`).addTo(map);
 }
 
 // find a stop by name
@@ -82,7 +82,7 @@ $('find').addEventListener('input', () => {
   const q = $('find').value.trim().toLowerCase();
   if (q.length < 2) { sugg.hidden = true; return; }
   const hits = stops.filter(s => s.name.toLowerCase().includes(q)).sort((a, b) => a.name.toLowerCase().indexOf(q) - b.name.toLowerCase().indexOf(q) || a.name.length - b.name.length).slice(0, 8);
-  sugg.innerHTML = hits.map(s => `<li data-id="${esc(s.id)}">${esc(s.name)}<small>${s.towards ? 'towards ' + esc(s.towards) + ' · ' : ''}${per.has(s.id) ? per.get(s.id).length + ' ratings' : 'not rated yet'}</small></li>`).join('') || '<li style="color:var(--muted)">No stop by that name</li>';
+  sugg.innerHTML = hits.map(s => `<li data-id="${esc(s.id)}">${esc(s.name)}<small>${s.towards ? 'towards ' + esc(s.towards) + ' · ' : ''}${per.has(s.id) ? per.get(s.id).length + ' contributions' : 'no details yet'}</small></li>`).join('') || '<li style="color:var(--muted)">No stop by that name</li>';
   sugg.hidden = false;
 });
 sugg.addEventListener('click', (e) => {
@@ -101,7 +101,7 @@ function drawBoard(period) {
   const top = list.slice(0, 10), mine = me ? list.findIndex(x => x[0].toLowerCase() === me.toLowerCase()) : -1;
   let html = top.map(([n, p], i) => `<li class="${i === mine ? 'me' : ''}"><span class="r">${i + 1}</span><span>${esc(n)}${i === mine ? ' (you)' : ''}</span><b>${fmt(p)}</b></li>`).join('');
   if (mine >= 10) html += `<li class="gap">…</li><li class="me"><span class="r">${mine + 1}</span><span>${esc(list[mine][0])} (you)</span><b>${fmt(list[mine][1])}</b></li>`;
-  $('board').innerHTML = html || `<li class="gap">${lb ? 'No points yet. Rate a stop with a nickname to be first.' : "The leaderboard couldn't load just now."}</li>`;
+  $('board').innerHTML = html || `<li class="gap">${lb ? 'No points yet. Send details with a nickname to be first.' : "The leaderboard couldn't load just now."}</li>`;
 }
 drawBoard('all');
 document.querySelector('.seg').addEventListener('click', (e) => {
@@ -110,5 +110,5 @@ document.querySelector('.seg').addEventListener('click', (e) => {
   drawBoard(b.dataset.p);
 });
 const P = (lb && lb.points) || POINTS;
-$('pts').innerHTML = [['Rate a stop', P.rating], ['…the first rating of a stop', '+' + P.first], ['Add a photo', '+' + P.photo], ['Add a missing stop', '+' + P.missing],
-  ['Confirm a stop is still the same', P.confirm], ['Flag a wrong rating', P.flag]].map(([k, v]) => `<li><span>${k}</span><b>${v}</b></li>`).join('');
+$('pts').innerHTML = [['Tell us about a stop', P.rating], ['…the first details for a stop', '+' + P.first], ['Add a photo', '+' + P.photo], ['Add a missing stop', '+' + P.missing],
+  ['Confirm a stop is still the same', P.confirm], ['Flag a wrong contribution', P.flag]].map(([k, v]) => `<li><span>${k}</span><b>${v}</b></li>`).join('');
