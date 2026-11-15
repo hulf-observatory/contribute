@@ -463,6 +463,7 @@ async function send() {
 $('again').onclick = () => { location.href = location.pathname; };
 
 // ── load stops, ratings (for "rated before" and stops residents added) and areas ──
+drawAnswers();                                   // follow-up questions stay hidden until their first question is answered
 const openPlay = { '#play': 'create', '#create': 'create', '#login': 'login' }[location.hash];   // links can open these screens
 history.replaceState({ s: 'start' }, '', location.search);
 drawPlay();
