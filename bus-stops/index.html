@@ -141,7 +141,7 @@
   .intro-link { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border); display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
   .intro-link .meta { font-size: 13px; color: var(--muted); }
   .anon { font-size: 13px; color: var(--muted); margin: 16px 0 0; }
-  .playline { margin: -8px 0 24px; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--r-card); background: var(--band); font-size: 15px; color: var(--text-2); }
+  .playline { margin: 16px 0 0; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--r-card); background: var(--band); font-size: 15px; color: var(--text-2); }
   .playline[hidden] { display: none; }
   .playline b { color: var(--ink); }
   .inp.pin-inp { max-width: 160px; letter-spacing: .3em; font-variant-numeric: tabular-nums; }
@@ -171,13 +171,13 @@
       <p class="eyebrow">Contribute · Bus stops</p>
       <h1>Rate a bus stop</h1>
       <p class="hint">Tell us what a bus stop is like: shelter, footpath, lighting, signs. It takes about two minutes. Anyone can update a stop later, so the picture stays current.</p>
-      <p class="playline" id="play-box">Collect points on the <a href="map/#board">leaderboard</a>: <a href="#" id="play-create"><b>Create a player</b></a> · <a href="#" id="play-login"><b>Log in</b></a></p>
-      <p class="playline" id="play-in" hidden>Playing as <b id="play-name"></b> · <a href="map/#board">Leaderboard</a> · <a href="#" id="play-out">Log out</a></p>
       <h2 class="qt" style="font-size:20px;margin-top:8px" id="q-here">Are you at the bus stop now?</h2>
       <div class="answers" role="radiogroup" aria-labelledby="q-here" data-field="here">
         <button type="button" class="answer" role="radio" aria-checked="false" data-val="yes"><span>Yes, I'm at the stop<small>Your phone can find the stop for you</small></span><i class="tick"></i></button>
         <button type="button" class="answer" role="radio" aria-checked="false" data-val="no"><span>No, it's a stop I use<small>Rate it from memory; you can skip what you don't know</small></span><i class="tick"></i></button>
       </div>
+      <p class="playline" id="play-box">Collect points on the <a href="map/#board">leaderboard</a>: <a href="#" id="play-create"><b>Create a player</b></a> · <a href="#" id="play-login"><b>Log in</b></a></p>
+      <p class="playline" id="play-in" hidden>Playing as <b id="play-name"></b> · <a href="map/#board">Leaderboard</a> · <a href="#" id="play-out">Log out</a></p>
       <p class="anon">No names, no email, and we don't keep IP addresses. You can rate without a nickname too.</p>
       <div class="draft" id="draft" hidden>
         <p class="eyebrow">Not sent yet</p>
