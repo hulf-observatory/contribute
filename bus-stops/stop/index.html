@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bus stop · Hyderabad Urban Observatory</title>
+<meta name="description" content="What a Hyderabad bus stop is like, from the ratings of people who use it.">
+<link rel="icon" href="../../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../../vendor/fonts/lato.css">
+<link rel="stylesheet" href="../../vendor/fonts/outfit.css">
+<link rel="stylesheet" href="../../assets/contribute.css">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<!-- visit counter: page, referring site, country; no cookies, no IP addresses (live-feed/visits.js) -->
+<script src="https://api.urbanobservatory.in/visits.js" defer></script>
+<script src="../../assets/config.js"></script>
+<style>
+  .back { font-size: 14px; margin: 0 0 18px; }
+  .head { display: grid; gap: 24px; margin-bottom: 28px; }
+  @media (min-width: 900px) { .head { grid-template-columns: minmax(0, 1fr) 360px; align-items: start; } }
+  .ctx { color: var(--text-2); font-size: 16px; margin: 0 0 14px; }
+  .cond { display: inline-flex; align-items: center; gap: 8px; font: 700 17px var(--font-ui); margin: 0 0 4px; }
+  .cond i { width: 14px; height: 14px; border-radius: 50%; }
+  .cond-meta { font-size: 14px; color: var(--muted); margin: 0 0 18px; }
+  .routes { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 18px; }
+  .routes span { font: 700 13px/1 var(--font-ui); padding: 6px 8px; border: 1px solid var(--border-2); border-radius: var(--r-ctl); }
+  .routes em { font-style: normal; font-size: 13px; color: var(--muted); align-self: center; }
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; }
+  .minimap { height: 220px; border: 1px solid var(--border); border-radius: var(--r-card); overflow: hidden; }
+  .msg { margin: 14px 0 0; font-size: 14px; color: var(--text-2); }
+  .msg[hidden] { display: none; }
+
+  h2.sec { font: 700 20px/1.3 var(--font-ui); margin: 36px 0 4px; }
+  .sec-sub { font-size: 14px; color: var(--muted); margin: 0 0 14px; }
+  .state { display: grid; gap: 0 32px; }
+  @media (min-width: 768px) { .state { grid-template-columns: 1fr 1fr; } }
+  .topic { border-top: 1px solid var(--border); padding: 12px 0 6px; }
+  .topic h3 { font: 900 11px/1.3 var(--font-ui); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+  .row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; padding: 6px 0; font-size: 15px; }
+  .row span { color: var(--text-2); }
+  .row b { text-align: right; }
+  .row b.bad { color: #B2182B; }
+  .row b small { display: block; font-weight: 400; font-size: 12px; color: var(--muted); }
+  .row.none b { color: var(--disabled); font-weight: 400; }
+
+  .photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .ph { display: block; margin: 0; }
+  .ph a { display: block; }
+  .ph img { display: block; width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: var(--r-card); border: 1px solid var(--border); background: var(--surface-2); }
+  .ph figcaption { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .notfound { padding: 40px 0; }
+  .fbmsg { font-size: 13px; color: var(--text-2); margin: 6px 0 0; }
+
+  .hist { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--border); }
+  .hist li { padding: 14px 0; border-bottom: 1px solid var(--border); }
+  .hist .who { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 14px; color: var(--muted); }
+  .hist .who b { color: var(--ink); font-size: 15px; }
+  .hist .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .hist .said { margin: 6px 0 0; font-size: 15px; color: var(--text-2); }
+  .hist .said q { font-style: italic; }
+  .hist .fb { background: none; border: 0; padding: 0; margin-top: 6px; font: 400 13px var(--font-ui); color: var(--muted); text-decoration: underline; text-decoration-color: var(--border-2); text-underline-offset: 3px; cursor: pointer; }
+  .tag { font: 900 10px/1 var(--font-ui); letter-spacing: .08em; text-transform: uppercase; padding: 4px 6px; border-radius: 3px; background: var(--surface-2); color: var(--text-2); }
+
+  .ts { margin: 12px 0 0; }
+  .ts:empty { display: none; }
+  dialog { border: 1px solid var(--border); border-radius: var(--r-card); padding: 22px; max-width: 420px; width: calc(100% - 32px); box-shadow: var(--shadow-float); }
+  dialog::backdrop { background: rgba(17,24,39,.35); }
+  dialog h3 { font: 700 19px/1.3 var(--font-ui); margin: 0 0 12px; }
+  .fbopts { display: grid; gap: 8px; margin-bottom: 12px; }
+  .fbopts button { text-align: left; padding: 12px 14px; border: 1px solid var(--border-2); border-radius: var(--r-ctl); background: #fff; font: 700 15px var(--font-ui); cursor: pointer; }
+  .fbopts button small { display: block; font-weight: 400; font-size: 13px; color: var(--muted); }
+  .fbopts button[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); background: var(--band); }
+  dialog textarea { width: 100%; min-height: 70px; padding: 10px 12px; border: 1px solid var(--border-2); border-radius: var(--r-ctl); font: 15px var(--font-ui); }
+  .dlg-btns { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; }
+</style>
+</head>
+<body>
+<header class="obs-header">
+  <a class="obs-brand" href="/" aria-label="Hyderabad Urban Observatory, home"><span class="obs-logo"><svg viewBox="0 0 100 100" aria-hidden="true"><defs><rect id="bH1" x="2" y="26" width="96" height="16" rx="6"/><rect id="bH2" x="2" y="58" width="96" height="16" rx="6"/><rect id="bV1" x="28" y="2" width="16" height="96" rx="6" transform="rotate(18 36 50)"/><rect id="bV2" x="56" y="2" width="16" height="96" rx="6" transform="rotate(18 64 50)"/><mask id="cH1"><rect width="100" height="100" fill="white"/><use href="#bV1" fill="black" stroke="black" stroke-width="4"/></mask><mask id="cV2"><rect width="100" height="100" fill="white"/><use href="#bH1" fill="black" stroke="black" stroke-width="4"/></mask><mask id="cH2"><rect width="100" height="100" fill="white"/><use href="#bV2" fill="black" stroke="black" stroke-width="4"/></mask><mask id="cV1"><rect width="100" height="100" fill="white"/><use href="#bH2" fill="black" stroke="black" stroke-width="4"/></mask></defs><g fill="#FFFFFF" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#bH1" mask="url(#cH1)"/><use href="#bV2" mask="url(#cV2)"/><use href="#bH2" mask="url(#cH2)"/><use href="#bV1" mask="url(#cV1)"/></g></svg></span><span class="obs-word">Hyderabad Urban Observatory</span></a>
+  <nav class="obs-nav" aria-label="Observatory"><a href="/live/" class="obs-live"><i class="obs-live-dot" aria-hidden="true"></i>Live</a><a href="/maps/">Layers</a><a href="/tools/">Tools</a><a href="/stories/">Stories</a><a href="/data/">Data sources</a><a href="/about">About</a></nav>
+  <a href="/live/" class="obs-live obs-live-bar"><i class="obs-live-dot" aria-hidden="true"></i>Live</a>
+  <button type="button" class="obs-burger" aria-label="Menu" aria-expanded="false" aria-controls="obs-menu"><span></span></button>
+  <nav class="obs-menu" id="obs-menu" aria-label="Observatory" hidden><a href="/live/" class="obs-live"><i class="obs-live-dot" aria-hidden="true"></i>Live</a><a href="/maps/">Layers</a><a href="/tools/">Tools</a><a href="/stories/">Stories</a><a href="/data/">Data sources</a><a href="/about">About</a></nav>
+</header>
+
+<main class="wrap" style="max-width:1080px">
+  <p class="notfound" id="notfound" hidden>We couldn't find this bus stop. <a href="../map/">See all bus stops</a>.</p>
+  <div id="page">
+  <p class="back"><a href="../map/">← All bus stops</a></p>
+  <div class="head">
+    <div>
+      <p class="eyebrow">Bus stop</p>
+      <h1 id="name"></h1>
+      <p class="ctx" id="ctx"></p>
+      <p class="cond"><i id="cond-dot"></i><span id="cond"></span></p>
+      <p class="cond-meta" id="cond-meta"></p>
+      <div class="routes" id="routes"></div>
+      <div class="actions">
+        <a class="btn btn-primary btn-lg" id="rate">Rate this stop</a>
+        <button type="button" class="btn btn-secondary btn-lg" id="same">Still the same</button>
+      </div>
+      <div class="ts" id="ts-same"></div>
+      <p class="msg" id="same-msg" hidden></p>
+    </div>
+    <div class="minimap" id="map"></div>
+  </div>
+
+  <section id="state-sec">
+    <h2 class="sec">What it's like now</h2>
+    <p class="sec-sub">Each answer is the latest one given, with how many of the last few people said the same.</p>
+    <div class="state" id="state"></div>
+  </section>
+
+  <section id="photo-sec">
+    <h2 class="sec">Photos</h2>
+    <p class="sec-sub">From people who rated the stop.</p>
+    <div class="photos" id="photos"></div>
+  </section>
+
+  <section id="hist-sec">
+    <h2 class="sec">All ratings</h2>
+    <p class="sec-sub">Newest first. Something wrong or not OK? Use "Give feedback".</p>
+    <ul class="hist" id="hist"></ul>
+  </section>
+  </div>
+</main>
+
+<dialog id="dlg">
+  <h3>Feedback on this rating</h3>
+  <div class="fbopts" id="fbopts">
+    <button type="button" data-k="confirm">It's still like this<small>Adds a confirmation</small></button>
+    <button type="button" data-k="wrong">Something is wrong<small>Wrong stop, or the answers don't match</small></button>
+    <button type="button" data-k="spam">Spam or fake</button>
+    <button type="button" data-k="photo">Photo is not OK<small>Shows a face, a number plate, or is offensive</small></button>
+  </div>
+  <textarea id="fb-note" maxlength="300" placeholder="Optional note, only we see it"></textarea>
+  <div class="ts" id="ts-fb"></div>
+  <input type="text" name="website" id="fb-trap" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
+  <p class="fbmsg" id="fb-msg" hidden></p>
+  <div class="dlg-btns"><button type="button" class="btn btn-secondary" id="fb-cancel">Cancel</button><button type="button" class="btn btn-primary" id="fb-send" disabled>Send</button></div>
+</dialog>
+
+<footer class="obs-footer">
+  <div class="obs-footer-fine">
+    <span>This website is under continuous development; you may find errors or incomplete content.
+      Feedback: <a href="mailto:hulf.observatory@gmail.com">hulf.observatory@gmail.com</a> · Stop details from TGSRTC's open data (June 2026). Ratings are community data under CC BY 4.0.</span>
+    <a class="obs-footer-disclaimer" href="/disclaimer">Disclaimer</a>
+  </div>
+</footer>
+
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="../../assets/common.js"></script>
+<script type="module" src="stop.js"></script>
+</body>
+</html>

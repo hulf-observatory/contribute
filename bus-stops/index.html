@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rate a bus stop · Hyderabad Urban Observatory</title>
+<meta name="description" content="Rate a bus stop in Hyderabad: shelter, footpath, lighting, signs. Two minutes, anonymous, no sign-in.">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../vendor/fonts/lato.css">
+<link rel="stylesheet" href="../vendor/fonts/outfit.css">
+<link rel="stylesheet" href="../assets/contribute.css">
+<!-- visit counter: page, referring site, country; no cookies, no IP addresses (live-feed/visits.js) -->
+<script src="https://api.urbanobservatory.in/visits.js" defer></script>
+<script src="../assets/config.js"></script>
+<style>
+  .steps { max-width: var(--measure); margin: 0 auto; }
+  .progress { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; min-height: 20px; }
+  .progress[hidden] { display: none; }
+  .bar { flex: 1; height: 3px; background: var(--surface-2); border-radius: 2px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--ink); width: 0; transition: width .2s ease; }
+  .progress span { font-size: 13px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .step { display: none; }
+  .step.on { display: block; }
+  .step h1, .step h2.qt { font: 700 30px/1.2 var(--font-ui); letter-spacing: -.005em; margin: 0 0 8px; }
+  @media (max-width: 767px) { .step h1, .step h2.qt { font-size: 26px; } }
+  .step h1:focus, .step .qt:focus { outline: none; }
+  .hint { font-size: 16px; color: var(--text-2); margin: 0 0 24px; }
+
+  .answers { display: grid; gap: 10px; }
+  .answer { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 56px; padding: 14px 18px; text-align: left;
+    background: #fff; border: 1px solid var(--border-2); border-radius: var(--r-card); cursor: pointer; font: 700 17px/1.3 var(--font-ui); }
+  .answer:hover { background: var(--band); }
+  .answer[aria-checked="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); background: var(--band); }
+  .answer small { display: block; font: 400 14px/1.4 var(--font-ui); color: var(--muted); margin-top: 2px; }
+  .answer .tick { margin-left: auto; width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--border-2); flex: none; }
+  .answer[aria-checked="true"] .tick { border: 6px solid var(--ink); }
+  .answer .dist { margin-left: auto; font: 400 14px var(--font-ui); color: var(--muted); white-space: nowrap; }
+
+  /* topic screens: several short questions, answers as wrapping buttons */
+  .qblock { padding: 18px 0 20px; border-top: 1px solid var(--border); }
+  .qblock:first-of-type { border-top: 0; padding-top: 4px; }
+  .qblock[hidden] { display: none; }
+  .qblock h3 { font: 700 17px/1.35 var(--font-ui); margin: 0 0 4px; }
+  .qblock .qh { font-size: 14px; color: var(--muted); margin: 0 0 10px; }
+  .qblock h3 + .opts { margin-top: 10px; }
+  .opts { display: flex; flex-wrap: wrap; gap: 8px; }
+  .opt { min-height: 44px; padding: 10px 16px; border: 1px solid var(--border-2); border-radius: var(--r-ctl); background: #fff; cursor: pointer;
+    font: 400 15px/1.2 var(--font-ui); color: var(--ink); text-align: left; }
+  .opt:hover { background: var(--band); }
+  .opt[aria-checked="true"] { background: var(--ink); border-color: var(--ink); color: #fff; font-weight: 700; }
+  .opt.check { padding-left: 38px; position: relative; }
+  .opt.check::before { content: ''; position: absolute; left: 13px; top: 50%; width: 16px; height: 16px; margin-top: -8px; border: 1px solid var(--border-2); border-radius: 3px; background: #fff; }
+  .opt.check[aria-checked="true"]::before { border-color: #fff; background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5 10.5l3.2 3.2L15 7' fill='none' stroke='%23111827' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/14px no-repeat; }
+  .skipnote { font-size: 13px; color: var(--muted); margin: 4px 0 0; }
+
+  /* the chosen stop, shown on every topic screen */
+  .stopcard { display: flex; align-items: center; gap: 12px; padding: 12px 14px; margin: 0 0 22px; background: var(--band); border: 1px solid var(--border); border-radius: var(--r-card); }
+  .stopcard[hidden] { display: none; }
+  .stopcard .ico { flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--ink); color: #fff; display: grid; place-items: center; }
+  .stopcard b { display: block; font-size: 15px; line-height: 1.3; }
+  .stopcard span { display: block; font-size: 13px; color: var(--muted); line-height: 1.35; }
+
+  .promise { list-style: none; margin: 0 0 28px; padding: 0; border-top: 1px solid var(--border); }
+  .promise li { padding: 12px 0 12px 28px; border-bottom: 1px solid var(--border); position: relative; color: var(--text-2); }
+  .promise li::before { content: ''; position: absolute; left: 4px; top: 19px; width: 10px; height: 6px; border-left: 2px solid var(--ink); border-bottom: 2px solid var(--ink); transform: rotate(-45deg); }
+  .promise b { color: var(--ink); }
+  .stack { display: grid; gap: 10px; }
+  .stack .btn { width: 100%; }
+  .msg { margin: 16px 0 0; padding: 12px 0; border-top: 1px solid var(--border-2); border-bottom: 1px solid var(--border-2); color: var(--text-2); }
+  .msg[hidden] { display: none; }
+  .alt-link { margin: 14px 0 0; font-size: 14px; }
+  .alt-link a { color: var(--ink); }
+
+  .field { margin-bottom: 24px; }
+  .field-label { display: block; font: 700 16px/1.3 var(--font-ui); margin-bottom: 4px; }
+  .req { color: #C2413B; font-weight: 700; margin-left: 2px; }
+  .req-word { font: 400 13px var(--font-ui); color: #C2413B; margin-left: 8px; }
+  .opt-word { font-weight: 400; color: var(--muted); }
+  .field-hint { display: block; font-size: 14px; color: var(--muted); margin-bottom: 8px; }
+  .search { position: relative; }
+  .inp { width: 100%; height: 48px; padding: 0 14px; border: 1px solid var(--border-2); border-radius: var(--r-ctl); background: #fff; font: 400 16px var(--font-ui); color: var(--ink); }
+  textarea.inp { height: auto; min-height: 96px; padding: 12px 14px; line-height: 1.5; resize: vertical; }
+  .inp::placeholder { color: var(--disabled); }
+  .ps-results { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 10; background: #fff; border: 1px solid var(--border); border-radius: var(--r-card);
+    padding: 6px; max-height: min(380px, 55vh); overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,.08); }
+  .ps-results[hidden] { display: none; }
+  .ps-list { list-style: none; margin: 0; padding: 0; }
+  .ps-item { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 10px; border-radius: 3px; cursor: pointer; }
+  .ps-item.ps-active { background: var(--surface-2); }
+  .ps-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+  .ps-name, .ps-ctx { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ps-name { font-size: 15px; line-height: 1.3; }
+  .ps-ctx { font-size: 13px; color: var(--muted); line-height: 1.3; }
+  .ps-kind { flex: none; font: 900 10.5px/1 var(--font-ui); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .ps-status { margin: 6px 10px; font-size: 13px; color: var(--muted); }
+  .ps-credit { margin: 6px 4px 0; padding: 6px 6px 0; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+  .inarea { margin-top: 18px; }
+  .inarea[hidden] { display: none; }
+  .inarea h3 { font: 700 16px/1.3 var(--font-ui); margin: 0 0 10px; }
+  .inarea .answers { max-height: 420px; overflow-y: auto; padding: 2px; }
+
+  .map-box { position: relative; height: 46vh; min-height: 280px; max-height: 420px; border: 1px solid var(--border); border-radius: var(--r-card); overflow: hidden; }
+  #map { position: absolute; inset: 0; }
+  .map-hint { position: absolute; left: 0; right: 0; top: 12px; text-align: center; font: 700 15px/1.3 var(--font-ui); pointer-events: none; z-index: 2; transition: opacity .2s ease; }
+  .map-hint.off { opacity: 0; }
+  .pin { width: 20px; height: 20px; border-radius: 50%; background: var(--ink); border: 3px solid #fff; box-shadow: 0 0 0 1px var(--ink); cursor: grab; }
+  .picked { margin-top: 10px; font-size: 14px; color: var(--muted); }
+
+  .photo input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+  .photo img { display: none; width: 100%; max-height: 300px; object-fit: cover; border: 1px solid var(--border); border-radius: var(--r-card); margin: 0 0 12px; }
+  @media (max-width: 767px) { .photo img { max-height: 200px; } }
+  .fine { font-size: 13px; color: var(--muted); margin: 12px 0 0; }
+
+  .review { margin: 0 0 8px; border-top: 1px solid var(--border); }
+  .review > div { display: grid; grid-template-columns: 96px 1fr auto; gap: 12px; align-items: baseline; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .review dt { color: var(--muted); font-size: 14px; }
+  .review dd { margin: 0; font-weight: 700; overflow-wrap: anywhere; }
+  .review dd small { display: block; font-weight: 400; font-size: 13px; color: var(--muted); }
+  .review dd .lines { font-weight: 400; font-size: 15px; line-height: 1.5; }
+  .review button { background: none; border: 0; padding: 0; font: 400 14px var(--font-ui); color: var(--ink); text-decoration: underline; text-decoration-color: var(--border-2); text-underline-offset: 3px; cursor: pointer; }
+
+  /* points on the thanks screen */
+  .points { display: flex; align-items: baseline; gap: 10px; margin: 6px 0 4px; }
+  .points b { font: 700 44px/1 var(--font-ui); font-variant-numeric: tabular-nums; }
+  .points span { color: var(--muted); }
+  .pts-list { list-style: none; margin: 8px 0 24px; padding: 0; border-top: 1px solid var(--border); }
+  .pts-list li { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 15px; color: var(--text-2); }
+  .pts-list li b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .join { margin-top: 32px; padding: 20px 0 0; border-top: 1px solid var(--border); }
+  .join h3 { font: 700 19px/1.3 var(--font-ui); margin: 0 0 6px; }
+  .join p:not(.eyebrow) { color: var(--text-2); margin: 0 0 16px; font-size: 15px; }
+
+  .nav { display: flex; align-items: center; gap: 10px; margin-top: 28px; }
+  .nav[hidden] { display: none; }
+  .nav .next { margin-left: auto; min-width: 120px; }
+  .nav .next[hidden] { display: none; }
+  @media (max-width: 767px) {
+    .nav { position: sticky; bottom: 0; z-index: 5; background: #fff; border-top: 1px solid var(--border); margin: 28px -24px 0; padding: 12px 24px calc(12px + env(safe-area-inset-bottom)); }
+  }
+  .answer:focus-visible, .btn:focus-visible, .opt:focus-visible, .inp:focus { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .intro-link { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border); display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+  .intro-link .meta { font-size: 13px; color: var(--muted); }
+  .anon { font-size: 13px; color: var(--muted); margin: 16px 0 0; }
+  .ts { margin: 12px 0 0; }
+  .ts:empty { display: none; }
+  .trap { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+  .draft { margin-top: 24px; padding: 16px 0 0; border-top: 1px solid var(--border-2); }
+  .draft #draft-text { margin: 0 0 12px; color: var(--text-2); }
+  .row-btns { display: flex; flex-wrap: wrap; gap: 10px; }
+</style>
+</head>
+<body>
+<header class="obs-header">
+  <a class="obs-brand" href="/" aria-label="Hyderabad Urban Observatory, home"><span class="obs-logo"><svg viewBox="0 0 100 100" aria-hidden="true"><defs><rect id="bH1" x="2" y="26" width="96" height="16" rx="6"/><rect id="bH2" x="2" y="58" width="96" height="16" rx="6"/><rect id="bV1" x="28" y="2" width="16" height="96" rx="6" transform="rotate(18 36 50)"/><rect id="bV2" x="56" y="2" width="16" height="96" rx="6" transform="rotate(18 64 50)"/><mask id="cH1"><rect width="100" height="100" fill="white"/><use href="#bV1" fill="black" stroke="black" stroke-width="4"/></mask><mask id="cV2"><rect width="100" height="100" fill="white"/><use href="#bH1" fill="black" stroke="black" stroke-width="4"/></mask><mask id="cH2"><rect width="100" height="100" fill="white"/><use href="#bV2" fill="black" stroke="black" stroke-width="4"/></mask><mask id="cV1"><rect width="100" height="100" fill="white"/><use href="#bH2" fill="black" stroke="black" stroke-width="4"/></mask></defs><g fill="#FFFFFF" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#bH1" mask="url(#cH1)"/><use href="#bV2" mask="url(#cV2)"/><use href="#bH2" mask="url(#cH2)"/><use href="#bV1" mask="url(#cV1)"/></g></svg></span><span class="obs-word">Hyderabad Urban Observatory</span></a>
+  <nav class="obs-nav" aria-label="Observatory"><a href="/live/" class="obs-live"><i class="obs-live-dot" aria-hidden="true"></i>Live</a><a href="/maps/">Layers</a><a href="/tools/">Tools</a><a href="/stories/">Stories</a><a href="/data/">Data sources</a><a href="/about">About</a></nav>
+  <a href="/live/" class="obs-live obs-live-bar"><i class="obs-live-dot" aria-hidden="true"></i>Live</a>
+  <button type="button" class="obs-burger" aria-label="Menu" aria-expanded="false" aria-controls="obs-menu"><span></span></button>
+  <nav class="obs-menu" id="obs-menu" aria-label="Observatory" hidden><a href="/live/" class="obs-live"><i class="obs-live-dot" aria-hidden="true"></i>Live</a><a href="/maps/">Layers</a><a href="/tools/">Tools</a><a href="/stories/">Stories</a><a href="/data/">Data sources</a><a href="/about">About</a></nav>
+</header>
+
+<main class="wrap">
+  <div class="steps">
+    <div class="progress" id="progress" hidden><div class="bar"><i id="bar"></i></div><span id="count"></span></div>
+    <div class="stopcard" id="stopcard" hidden><span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="14" rx="2"/><path d="M5 11h14M8 17v3M16 17v3"/><circle cx="8.5" cy="14" r=".6" fill="currentColor"/><circle cx="15.5" cy="14" r=".6" fill="currentColor"/></svg></span><div><b id="sc-name"></b><span id="sc-ctx"></span></div></div>
+
+    <section class="step on" data-step="start">
+      <p class="eyebrow">Contribute · Bus stops</p>
+      <h1>Rate a bus stop</h1>
+      <p class="hint">Tell us what a bus stop is like: shelter, footpath, lighting, signs. It takes about two minutes, and you don't need to sign in. Anyone can update a stop later, so the picture stays current.</p>
+      <h2 class="qt" style="font-size:20px;margin-top:8px" id="q-here">Are you at the bus stop now?</h2>
+      <div class="answers" role="radiogroup" aria-labelledby="q-here" data-field="here">
+        <button type="button" class="answer" role="radio" aria-checked="false" data-val="yes"><span>Yes, I'm at the stop<small>Your phone can find the stop for you</small></span><i class="tick"></i></button>
+        <button type="button" class="answer" role="radio" aria-checked="false" data-val="no"><span>No, it's a stop I use<small>Rate it from memory; you can skip what you don't know</small></span><i class="tick"></i></button>
+      </div>
+      <p class="anon">No names, no sign-in, and we don't keep IP addresses. A nickname for the leaderboard is up to you.</p>
+      <div class="draft" id="draft" hidden>
+        <p class="eyebrow">Not sent yet</p>
+        <p id="draft-text"></p>
+        <div class="row-btns"><button type="button" class="btn btn-primary btn-lg" id="draft-send">Send it now</button><button type="button" class="btn btn-secondary btn-lg" id="draft-drop">Discard it</button></div>
+        <p class="msg" id="draft-msg" hidden></p>
+      </div>
+      <div class="intro-link">
+        <a class="btn btn-secondary" href="map/" id="see-map">See the stops map <span class="arr">→</span></a>
+        <span class="meta" id="meta"></span>
+      </div>
+    </section>
+
+    <section class="step" data-step="locate">
+      <h2 class="qt">Share your location?</h2>
+      <p class="hint">Your phone will ask whether this page may use your location. We use it only to find the bus stops near you.</p>
+      <ul class="promise">
+        <li><b>Nothing is saved until you press Send</b> at the end, after you have checked your answers.</li>
+        <li>We save the bus stop you pick, <b>not your location, name, phone number or IP address</b>.</li>
+        <li>Location is used only to list the nearest stops, then switched off.</li>
+      </ul>
+      <div class="stack">
+        <button type="button" class="btn btn-primary btn-lg" id="gps-go">Share my location</button>
+        <button type="button" class="btn btn-secondary btn-lg" id="gps-search">Search for the stop instead</button>
+      </div>
+      <p class="msg" id="gps-msg" hidden></p>
+    </section>
+
+    <section class="step" data-step="nearest">
+      <h2 class="qt" id="near-q">Which stop are you at?</h2>
+      <p class="hint">Each side of the road is a separate stop. Pick the one you are standing at.</p>
+      <div class="answers" role="radiogroup" aria-labelledby="near-q" id="near-list"></div>
+      <p class="msg" id="near-msg" hidden></p>
+      <p class="alt-link"><a href="#" class="to-missing">My stop isn't listed</a> · <a href="#" id="near-search">Search instead</a></p>
+    </section>
+
+    <section class="step" data-step="find">
+      <h2 class="qt">Which bus stop?</h2>
+      <p class="hint">Search for the stop's name, or for the area it is in.</p>
+      <div class="field">
+        <label class="field-label" for="ps-input">Bus stop or area</label>
+        <div class="search">
+          <input class="inp" type="search" id="ps-input" placeholder="For example Mehdipatnam, Ameerpet, Koti">
+          <div class="ps-results" id="ps-results" hidden></div>
+        </div>
+        <div class="inarea" id="inarea" hidden>
+          <h3 id="inarea-h"></h3>
+          <div class="answers" role="radiogroup" aria-labelledby="inarea-h" id="inarea-list"></div>
+        </div>
+        <p class="msg" id="find-msg" hidden></p>
+        <p class="alt-link"><a href="#" class="to-missing">The stop isn't in the list? Add it on a map</a></p>
+      </div>
+    </section>
+
+    <section class="step" data-step="missing">
+      <h2 class="qt">Add a missing stop</h2>
+      <p class="hint">Buses stop here but it isn't in the bus data. Mark it on the map and give it a name. Grey dots are stops we already know.</p>
+      <div class="field">
+        <span class="field-label">Spot on the map <span class="req" aria-hidden="true">*</span><span class="req-word">Required</span></span>
+        <div class="map-box"><div id="map"></div><div class="map-hint halo" id="map-hint">Tap where the bus stops</div></div>
+        <p class="picked" id="pin-info" hidden></p>
+        <p class="msg" id="pin-msg" hidden></p>
+      </div>
+      <div class="field">
+        <label class="field-label" for="m-name">What do people call this stop? <span class="req" aria-hidden="true">*</span><span class="req-word">Required</span></label>
+        <input class="inp" id="m-name" maxlength="80" autocomplete="off" placeholder="For example Gandhi Statue">
+      </div>
+      <div class="field">
+        <label class="field-label" for="m-towards">Buses from here go towards <span class="opt-word">(optional)</span></label>
+        <input class="inp" id="m-towards" maxlength="80" autocomplete="off" placeholder="For example Koti">
+      </div>
+    </section>
+
+    <div id="topics"></div>
+
+    <section class="step photo" data-step="photo">
+      <h2 class="qt">Add a photo?</h2>
+      <p class="hint" id="photo-hint">Optional. One photo of the stop helps others see it.</p>
+      <img id="photo-prev" alt="Your photo">
+      <label class="btn btn-secondary btn-lg" for="photo-in" id="photo-btn">Take or choose a photo</label>
+      <input type="file" accept="image/*" id="photo-in">
+      <p class="fine" id="photo-info" hidden></p>
+      <p class="fine">Shown on the stop's page. Try to keep people's faces and vehicle number plates out of it. Your phone makes the photo smaller and removes the location and camera details stored inside it.</p>
+    </section>
+
+    <section class="step" data-step="improve">
+      <h2 class="qt"><label for="improve">One thing you would improve?</label></h2>
+      <p class="hint">Optional. For example "a shelter", "move the parked autos", "a light".</p>
+      <textarea class="inp" id="improve" maxlength="300"></textarea>
+    </section>
+
+    <section class="step" data-step="nick">
+      <h2 class="qt">Join the leaderboard?</h2>
+      <p class="hint" id="nick-hint">Optional. Make up a nickname to collect points for your ratings. Don't use your real name. It is kept on this phone only: clearing the browser or changing phones starts you again.</p>
+      <div class="field">
+        <label class="field-label" for="nick">Nickname <span class="opt-word">(optional)</span></label>
+        <input class="inp" id="nick" maxlength="24" autocomplete="off" placeholder="For example Golconda Rider">
+      </div>
+      <p class="msg" id="nick-msg" hidden></p>
+    </section>
+
+    <section class="step" data-step="review">
+      <h2 class="qt">Check and send</h2>
+      <p class="hint">Tap "Change" to fix anything. Nothing has been saved yet.</p>
+      <dl class="review" id="review"></dl>
+      <div class="ts" id="ts-review"></div>
+      <input type="text" name="website" id="trap" tabindex="-1" autocomplete="off" aria-hidden="true" class="trap">
+      <p class="msg" id="send-msg" hidden></p>
+      <p class="anon">Your rating will be shown publicly on the stop's page. Your answers, without the photo, are shared as open data under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>. No names, no sign-in, no IP addresses.</p>
+    </section>
+
+    <section class="step" data-step="thanks">
+      <p class="eyebrow">Rating received</p>
+      <h2 class="qt">Thank you</h2>
+      <div id="pts-box">
+        <div class="points"><b id="pts">+0</b><span>points</span></div>
+        <ul class="pts-list" id="pts-list"></ul>
+      </div>
+      <p class="hint" id="thanks-text"></p>
+      <div style="display:flex;flex-wrap:wrap;gap:10px">
+        <a class="btn btn-primary btn-lg" id="to-stop" href="#">See this stop's page <span class="arr">→</span></a>
+        <button type="button" class="btn btn-secondary btn-lg" id="again">Rate another stop</button>
+      </div>
+      <p class="alt-link"><a href="map/">The map and leaderboard</a></p>
+      <div class="join">
+        <p class="eyebrow">Stay in touch</p>
+        <h3>Get updates on WhatsApp</h3>
+        <p>If you haven't joined yet, join the Observatory's WhatsApp community for news of new surveys, maps and results. Joining shares your phone number with the group's admins, not with this rating.</p>
+        <a class="btn btn-secondary btn-lg" href="https://chat.whatsapp.com/GJUFWd2UJyEImsmgxbEKlg" target="_blank" rel="noopener" id="wa">Join the WhatsApp community <span class="arr">→</span></a>
+      </div>
+    </section>
+
+    <div class="nav" id="nav" hidden>
+      <button type="button" class="btn btn-secondary btn-lg" id="back">Back</button>
+      <button type="button" class="btn btn-primary btn-lg next" id="next">Next</button>
+    </div>
+  </div>
+</main>
+
+<footer class="obs-footer">
+  <div class="obs-footer-fine">
+    <span>This website is under continuous development; you may find errors or incomplete content.
+      Feedback: <a href="mailto:hulf.observatory@gmail.com">hulf.observatory@gmail.com</a> · Bus stops from TGSRTC's open data (June 2026). Ratings are published as community data.</span>
+    <a class="obs-footer-disclaimer" href="/disclaimer">Disclaimer</a>
+  </div>
+</footer>
+
+<script src="../assets/common.js"></script>
+<script type="module" src="form.js"></script>
+</body>
+</html>
