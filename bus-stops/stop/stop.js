@@ -1,5 +1,6 @@
-// One bus stop: condition, routes, the latest answer to each question, photos, every rating with feedback.
-import { SURVEY, TOPICS, optLabel, shown, band, score, UNRATED, loadStops, loadRatings, addedStops, byStop, latest, POINTS,
+// One bus stop: what people said (shelter, crossing, lighting… as on the map), routes, the latest answer to each
+// question, photos, every contribution with feedback. No overall score (Teja, 16 Nov 2026).
+import { SURVEY, TOPICS, VIEWS, VIEW_COLORS, optLabel, shown, loadStops, loadRatings, addedStops, byStop, latest, POINTS,
   esc, player, day } from '../questions.js';
 
 const $ = (id) => document.getElementById(id);
@@ -16,9 +17,9 @@ $('ctx').textContent = [s.towards && `Towards ${s.towards}`, s.added ? 'Added by
 $('routes').innerHTML = s.nRoutes ? s.routes.slice(0, 10).map(r => `<span>${esc(r)}</span>`).join('') + (s.nRoutes > 10 ? `<em>and ${s.nRoutes - 10} more routes</em>` : '') : '';
 $('rate').href = '../?stop=' + encodeURIComponent(s.id);
 
-const { answers, from } = latest(list), sc = list.length ? score(answers) : null, b = list.length ? band(sc) : UNRATED;
-$('cond-dot').style.background = list.length && b === UNRATED ? '#7C8FA6' : b.color;
-$('cond').textContent = list.length && b === UNRATED ? 'Too few answers to judge yet' : b.label;
+const { answers, from } = latest(list);
+// the same short answers the map shows, one per topic that has an answer
+$('facts').innerHTML = VIEWS.map(v => [v, v.of(answers)]).filter(([, c]) => c).map(([v, c]) => `<li><i style="background:${VIEW_COLORS[c]}"></i>${esc(v.labels[c])}</li>`).join('');
 $('cond-meta').textContent = list.length ? `From ${list.length} contribution${list.length > 1 ? 's' : ''}, latest ${day(list[0].observed_at)}` : 'No one has sent details for this stop yet. Being first earns extra points.';
 if (!list.length) { ['state-sec', 'photo-sec', 'hist-sec', 'same'].forEach(x => { $(x).hidden = true; }); $('rate').textContent = 'Be the first to add details'; }
 
@@ -44,9 +45,8 @@ $('photo-sec').hidden = !ph.length;
 // every rating, newest first
 function drawHistory() {
   $('hist').innerHTML = list.map(r => {
-    const rb = band(score(r));
     return `<li><div class="who"><b>${r.nick ? esc(r.nick) : 'Someone'}</b><span>${day(r.observed_at)}</span>${r.here === 'yes' ? '<span class="tag">At the stop</span>' : ''}${r.place_type === 'missing' ? '<span class="tag">Added the stop</span>' : ''}${r.photo ? '<span class="tag">Photo</span>' : ''}
-      <span><i class="dot" style="background:${rb === UNRATED ? '#7C8FA6' : rb.color}"></i> ${rb === UNRATED ? 'Few answers' : rb.label}</span>${r.confirmed ? `<span>· confirmed by ${r.confirmed}</span>` : ''}</div>
+${r.confirmed ? `<span>· confirmed by ${r.confirmed}</span>` : ''}</div>
       ${r.improve ? `<p class="said">Would improve: <q>${esc(r.improve)}</q></p>` : ''}
       <button type="button" class="fb" data-r="${esc(r.id)}">Give feedback</button></li>`;
   }).join('');
@@ -103,5 +103,5 @@ $('fb-send').onclick = async () => {
 // small map
 const m = new maplibregl.Map({ container: 'map', style: 'https://tiles.openfreemap.org/styles/positron', center: [s.lng, s.lat], zoom: 16, interactive: false, attributionControl: { compact: true } });
 const el = document.createElement('div');
-el.style.cssText = `width:16px;height:16px;border-radius:50%;background:${$('cond-dot').style.background};border:3px solid #fff;box-shadow:0 0 0 1px #111827`;
+el.style.cssText = `width:16px;height:16px;border-radius:50%;background:#111827;border:3px solid #fff;box-shadow:0 0 0 1px #111827`;
 new maplibregl.Marker({ element: el }).setLngLat([s.lng, s.lat]).addTo(m);

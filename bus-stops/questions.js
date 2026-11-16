@@ -73,6 +73,22 @@ export const BANDS = [
 export const UNRATED = { id: 'none', label: 'No details yet', color: '#B8BDC6' };
 export const band = (sc) => sc == null ? UNRATED : BANDS.find(b => sc >= b.min);
 
+// map views (Teja, 16 Nov 2026: no overall score; colour stops by one answer at a time). Each view turns a stop's
+// latest answers into good / mid (there, but a problem) / bad (missing or a problem) / null (no answer yet).
+export const VIEW_COLORS = { good: '#2166AC', mid: '#EF8A62', bad: '#B2182B', none: '#B8BDC6' };
+const has = (yes, bad, a, v) => a[yes] === 'no' ? 'bad' : a[yes] === 'yes' ? (bad.includes(a[v]) ? 'mid' : 'good') : null;
+export const VIEWS = [
+  { id: 'shelter', label: 'Shelter', of: a => has('shelter', ['broken'], a, 'shelter_state'), labels: { good: 'Has a shelter', mid: 'Shelter is broken', bad: 'No shelter' } },
+  { id: 'seats', label: 'Seating', of: a => has('seats', ['poor', 'broken'], a, 'seats_state'), labels: { good: 'Has seating', mid: 'Seating uncomfortable or broken', bad: 'No seating' } },
+  { id: 'footpath', label: 'Footpath', of: a => has('footpath', ['partly', 'badly'], a, 'blocked'), labels: { good: 'Clear footpath', mid: 'Footpath blocked', bad: 'No footpath' } },
+  { id: 'crossing', label: 'Crossing', of: a => has('crossing', ['somewhat', 'no'], a, 'crossing_safe'), labels: { good: 'Crossing, feels safe', mid: 'Crossing, not safe', bad: 'No crossing' } },
+  { id: 'light', label: 'Lighting', of: a => has('light', ['poor'], a, 'light_state'), labels: { good: 'Lit at night', mid: 'Poor lighting', bad: 'No lighting' } },
+  { id: 'name_sign', label: 'Name sign', of: a => has('name_sign', ['faded'], a, 'name_state'), labels: { good: 'Name easy to read', mid: 'Name faded', bad: 'No name sign' } },
+  { id: 'route_info', label: 'Route info', of: a => has('route_info', ['outdated'], a, 'route_state'), labels: { good: 'Route info up to date', mid: 'Route info outdated', bad: 'No route info' } },
+  { id: 'safe_night', label: 'Safe after dark', of: a => ({ safe: 'good', somewhat: 'mid', unsafe: 'bad' })[a.safe_night] || null, labels: { good: 'Feels safe', mid: 'Somewhat safe', bad: 'Feels unsafe' } },
+  { id: 'floods', label: 'Floods', of: a => ({ no: 'good', yes: 'bad' })[a.floods] || null, labels: { good: "Doesn't flood", bad: 'Floods when it rains' } },
+];
+
 // points, as in the survey file on the server (the leaderboard itself is worked out there)
 export const POINTS = { rating: 10, first: 10, photo: 5, missing: 15, confirm: 2, flag: 2 };
 

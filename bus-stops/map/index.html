@@ -30,6 +30,9 @@
   .stat-link:hover span { text-decoration-color: var(--ink); }
   /* the leaderboard has its own page since 15 Nov 2026 */
   .chips { margin-bottom: 12px; }
+  .viewq { font: 900 11px/1.3 var(--font-ui); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 4px 0 8px; }
+  .views { margin-bottom: 10px; }
+  .legend .chip { font-size: 13px; padding: 7px 11px; }
   .chip i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
   .map-box { position: relative; height: 62vh; min-height: 380px; max-height: 680px; border: 1px solid var(--border); border-radius: var(--r-card); overflow: hidden; }
   @media (max-width: 767px) { .map-box { height: 58vh; min-height: 320px; margin: 0 -24px; border-radius: 0; border-left: 0; border-right: 0; } }
@@ -81,7 +84,7 @@
     <div>
       <p class="eyebrow"><a href="../" style="color:inherit;text-decoration:none">Contribute · Bus stops</a></p>
       <h1>Bus stops, as the people who use them see them</h1>
-      <p class="lede">Every TGSRTC stop in the Hyderabad area. Grey stops have no details yet. Tap a stop to see what people said, or to add yours.</p>
+      <p class="lede">Every TGSRTC stop in the Hyderabad area. Pick what to look at (shelter, crossing, lighting…) and the stops show what people told us. Tap a stop to see everything, or to add yours.</p>
     </div>
     <div class="actions">
       <a class="btn btn-primary btn-lg" href="../">Tell us about a bus stop</a>
@@ -100,9 +103,11 @@
   <div class="layout">
     <div>
       <div class="search"><input class="inp" type="search" id="find" placeholder="Find a stop by name" autocomplete="off"><ul class="sugg" id="sugg" hidden></ul></div>
-      <div class="chips" id="chips" role="group" aria-label="Show stops"></div>
+      <p class="viewq">Show stops by</p>
+      <div class="chips views" id="views" role="group" aria-label="Show stops by"></div>
+      <div class="chips legend" id="chips" role="group" aria-label="Filter the stops"></div>
       <div class="map-box"><div id="map"></div></div>
-      <p class="note">Condition is worked out from each stop's latest answers: shelter, seating, footpath, where buses stop, shade, lighting, safety, flooding and signs. Facilities don't count towards it.</p>
+      <p class="note">Each stop shows its latest answer to what you picked above. Tap a colour to show only those stops. Grey: no answer yet.</p>
     </div>
   </div>
 </main>

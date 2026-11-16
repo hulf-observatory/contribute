@@ -1,5 +1,6 @@
-// Bus stops map: every TGSRTC stop, grey until rated, then coloured by its latest condition. The leaderboard is its own page.
-import { SURVEY, BANDS, UNRATED, band, score, loadStops, loadRatings, addedStops, byStop, latest, esc } from '../questions.js';
+// Bus stops map: every TGSRTC stop, coloured by its latest answer to one topic at a time (shelter, crossing,
+// lighting…); grey = no answer yet. No overall score (Teja, 16 Nov 2026). The leaderboard is its own page.
+import { SURVEY, VIEWS, VIEW_COLORS, loadStops, loadRatings, addedStops, byStop, latest, esc } from '../questions.js';
 
 const C = window.CONTRIBUTE;
 const $ = (id) => document.getElementById(id);
@@ -12,43 +13,56 @@ const ratings = rs || [];
 const added = addedStops(ratings);
 const stops = base.concat(added);
 const per = byStop(ratings);
+const answersOf = new Map([...per].map(([id, list]) => [id, latest(list).answers]));
 
-const feats = stops.map(s => {
-  const list = per.get(s.id) || [], b = list.length ? band(score(latest(list).answers)) : UNRATED;
-  return { type: 'Feature', properties: { id: s.id, name: s.name, towards: s.towards || '', band: list.length && b === UNRATED ? 'few' : b.id,
-    color: b.color, n: list.length, last: list[0]?.observed_at || '', added: !!s.added }, geometry: { type: 'Point', coordinates: [s.lng, s.lat] } };
-});
-// a stop rated with too few answers to judge still counts as rated; it shows in grey-blue
-for (const f of feats) if (f.properties.band === 'few') f.properties.color = '#7C8FA6';
 $('n-rated').textContent = fmt(per.size);
 $('n-of').textContent = `of ${fmt(stops.length)} stops with details`;
 $('cover-bar').style.width = (stops.length ? per.size / stops.length * 100 : 0).toFixed(1) + '%';
 $('n-ratings').textContent = fmt(ratings.length);
 $('n-added').textContent = fmt(added.length);
 
-// filter chips double as the legend
-const counts = {}; feats.forEach(f => counts[f.properties.band] = (counts[f.properties.band] || 0) + 1);
-const CH = [{ id: 'rated', label: 'All with details', n: per.size }, ...BANDS.map(b => ({ ...b, n: counts[b.id] || 0 })), { ...UNRATED, n: counts.none || 0 }];
-let filter = 'all';
-$('chips').innerHTML = CH.map(c => `<button type="button" class="chip" aria-pressed="false" data-f="${c.id}">${c.color ? `<i style="background:${c.color}"></i>` : ''}${c.label}<span class="n">${fmt(c.n)}</span></button>`).join('');
+// ── which topic, and which answers to show ──
+let view = VIEWS[0], filter = null;
+const catOf = (s) => { const a = answersOf.get(s.id); return a ? view.of(a) || 'none' : 'none'; };
+function features() {
+  return { type: 'FeatureCollection', features: stops.map(s => {
+    const cat = catOf(s), list = per.get(s.id) || [];
+    return { type: 'Feature', properties: { id: s.id, name: s.name, towards: s.towards || '', cat, color: VIEW_COLORS[cat], n: list.length,
+      last: list[0]?.observed_at || '', added: !!s.added }, geometry: { type: 'Point', coordinates: [s.lng, s.lat] } };
+  }) };
+}
+let feats = features().features;
+function drawViews() {
+  $('views').innerHTML = VIEWS.map(v => `<button type="button" class="chip" aria-pressed="${v === view}" data-v="${v.id}">${esc(v.label)}</button>`).join('');
+}
+function drawLegend() {
+  const counts = {}; feats.forEach(f => { counts[f.properties.cat] = (counts[f.properties.cat] || 0) + 1; });
+  const cats = ['good', 'mid', 'bad'].filter(c => view.labels[c]);
+  $('chips').innerHTML = cats.concat('none').map(c => `<button type="button" class="chip" aria-pressed="${filter === c}" data-f="${c}"><i style="background:${VIEW_COLORS[c]}"></i>${esc(c === 'none' ? 'No answer yet' : view.labels[c])}<span class="n">${fmt(counts[c] || 0)}</span></button>`).join('');
+}
+$('views').addEventListener('click', (e) => {
+  const b = e.target.closest('.chip'); if (!b) return;
+  view = VIEWS.find(v => v.id === b.dataset.v); filter = null;
+  feats = features().features; drawViews(); drawLegend(); refresh();
+  if (pop) pop.remove();
+});
 $('chips').addEventListener('click', (e) => {
   const b = e.target.closest('.chip'); if (!b) return;
-  filter = filter === b.dataset.f ? 'all' : b.dataset.f;
-  $('chips').querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', x.dataset.f === filter));
-  applyFilter();
+  filter = filter === b.dataset.f ? null : b.dataset.f; drawLegend(); applyFilter();
 });
+drawViews(); drawLegend();
 
-// map
+// ── map ──
 const map = new maplibregl.Map({ container: 'map', style: 'https://tiles.openfreemap.org/styles/positron', center: [78.47, 17.40], zoom: 10.6, minZoom: 9, maxZoom: 18,
   maxBounds: [77.6, 16.6, 79.5, 18.3], attributionControl: { compact: true }, cooperativeGestures: matchMedia('(max-width: 767px)').matches });
 map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
 map.on('load', () => {
   map.addSource('stops', { type: 'geojson', data: { type: 'FeatureCollection', features: feats } });
-  map.addLayer({ id: 'unrated', type: 'circle', source: 'stops', filter: ['==', ['get', 'band'], 'none'],
-    paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 1.4, 15, 4.5], 'circle-color': UNRATED.color, 'circle-opacity': .8 } });
-  map.addLayer({ id: 'rated', type: 'circle', source: 'stops', filter: ['!=', ['get', 'band'], 'none'],
+  map.addLayer({ id: 'unanswered', type: 'circle', source: 'stops', filter: ['==', ['get', 'cat'], 'none'],
+    paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 1.4, 15, 4.5], 'circle-color': VIEW_COLORS.none, 'circle-opacity': .8 } });
+  map.addLayer({ id: 'answered', type: 'circle', source: 'stops', filter: ['!=', ['get', 'cat'], 'none'],
     paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 3.5, 15, 8], 'circle-color': ['get', 'color'], 'circle-stroke-color': '#fff', 'circle-stroke-width': 1.2 } });
-  for (const l of ['unrated', 'rated']) {
+  for (const l of ['unanswered', 'answered']) {
     map.on('click', l, (e) => popup(e.features[0]));
     map.on('mouseenter', l, () => { map.getCanvas().style.cursor = 'pointer'; });
     map.on('mouseleave', l, () => { map.getCanvas().style.cursor = ''; });
@@ -56,21 +70,22 @@ map.on('load', () => {
   document.querySelector('.maplibregl-compact-show')?.classList.remove('maplibregl-compact-show');
   applyFilter();
 });
+function refresh() { if (map.getSource('stops')) map.getSource('stops').setData({ type: 'FeatureCollection', features: feats }); applyFilter(); }
 function applyFilter() {
-  if (!map.getLayer('rated')) return;
-  map.setLayoutProperty('unrated', 'visibility', filter === 'all' || filter === 'none' ? 'visible' : 'none');
-  map.setLayoutProperty('rated', 'visibility', filter === 'none' ? 'none' : 'visible');
-  map.setFilter('rated', filter === 'all' || filter === 'rated' || filter === 'none' ? ['!=', ['get', 'band'], 'none'] : ['==', ['get', 'band'], filter]);
+  if (!map.getLayer('answered')) return;
+  map.setLayoutProperty('unanswered', 'visibility', !filter || filter === 'none' ? 'visible' : 'none');
+  map.setLayoutProperty('answered', 'visibility', filter === 'none' ? 'none' : 'visible');
+  map.setFilter('answered', !filter || filter === 'none' ? ['!=', ['get', 'cat'], 'none'] : ['==', ['get', 'cat'], filter]);
 }
 let pop = null;
 function popup(f) {
   const p = f.properties;
-  const b = p.band === 'none' ? UNRATED : p.band === 'few' ? { label: 'Too few answers to judge yet', color: p.color } : BANDS.find(x => x.id === p.band);
   const when = p.last ? new Date(p.last).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '';
+  const said = p.cat === 'none' ? (p.n ? `${view.label}: no answer yet` : '') : view.labels[p.cat];
   if (pop) pop.remove();
   pop = new maplibregl.Popup({ offset: 10, maxWidth: '280px' }).setLngLat(f.geometry.coordinates).setHTML(`<div class="pop">
     <b>${esc(p.name)}</b><span class="ctx">${p.towards ? 'towards ' + esc(p.towards) : ''}${p.added ? ' · added by someone' : ''}</span>
-    <div class="cond"><i style="background:${b.color}"></i>${b.label}</div>
+    ${said ? `<div class="cond"><i style="background:${p.color}"></i>${esc(said)}</div>` : ''}
     <div class="ctx">${p.n ? `${p.n} contribution${p.n > 1 ? 's' : ''}, latest ${when}` : 'No details yet. Be first: extra points'}</div>
     <p style="margin:8px 0 0"><a href="../stop/?id=${encodeURIComponent(p.id)}">${p.n ? 'Open the stop' : 'See the stop and add details'} →</a></p></div>`).addTo(map);
 }
