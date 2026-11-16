@@ -144,7 +144,7 @@ export async function checkPlayer(nick, pin, mode) {
 }
 export const PLAYER_SAYS = {
   taken: 'This nickname is already taken. Choose another, or log in if it is yours.',
-  unknown: 'There is no player with this nickname. Check the spelling, or create a player.',
+  unknown: 'There is no contributor with this nickname. Check the spelling, or join as a contributor.',
   wrong: 'This nickname is already taken, or the PIN is wrong. Check the PIN, or choose another nickname.',
   wrongLogin: 'Wrong PIN for this nickname. After 5 wrong tries it is locked for an hour.',
   locked: 'Too many wrong PINs for this nickname. Try again in an hour.',

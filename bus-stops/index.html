@@ -184,8 +184,8 @@
         <button type="button" class="answer" role="radio" aria-checked="false" data-val="yes"><span>Yes, I'm at the stop<small>Your phone can find the stop for you</small></span><i class="tick"></i></button>
         <button type="button" class="answer" role="radio" aria-checked="false" data-val="no"><span>No, it's a stop I use<small>Tell us from memory; you can skip what you don't know</small></span><i class="tick"></i></button>
       </div>
-      <p class="playline" id="play-box">Collect points on the <a href="leaderboard/">leaderboard</a>: <a href="#" id="play-create"><b>Create a player</b></a> · <a href="#" id="play-login"><b>Log in</b></a></p>
-      <p class="playline" id="play-in" hidden>Playing as <b id="play-name"></b> · <a href="leaderboard/">Leaderboard</a> · <a href="#" id="play-out">Log out</a></p>
+      <p class="playline" id="play-box">Collect points on the <a href="leaderboard/">leaderboard</a>: <a href="#" id="play-create"><b>Join as a contributor</b></a> · <a href="#" id="play-login"><b>Log in</b></a></p>
+      <p class="playline" id="play-in" hidden>Contributing as <b id="play-name"></b> · <a href="leaderboard/">Leaderboard</a> · <a href="#" id="play-out">Log out</a></p>
       <p class="anon">No names, no email, and we don't keep IP addresses. You can take part without a nickname too.</p>
       <div class="draft" id="draft" hidden>
         <p class="eyebrow">Not sent yet</p>
@@ -300,7 +300,7 @@
     </section>
 
     <section class="step" data-step="player">
-      <h2 class="qt" id="p-title">Create a player</h2>
+      <h2 class="qt" id="p-title">Join as a contributor</h2>
       <p class="hint" id="p-hint">Make up a nickname and a 4-digit PIN. Use them to log in on any phone.</p>
       <div class="field">
         <label class="field-label" for="p-nick">Nickname</label>
@@ -313,8 +313,8 @@
         <input class="inp pin-inp" id="p-pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="••••">
       </div>
       <p class="msg" id="p-msg" hidden></p>
-      <div class="row-btns" style="margin-top:20px"><button type="button" class="btn btn-primary btn-lg" id="p-go" disabled>Create player</button><button type="button" class="btn btn-secondary btn-lg" id="p-back">Back</button></div>
-      <p class="alt-link" id="p-switch-line"><span id="p-switch-text">Played before?</span> <a href="#" id="p-switch">Log in</a></p>
+      <div class="row-btns" style="margin-top:20px"><button type="button" class="btn btn-primary btn-lg" id="p-go" disabled>Join</button><button type="button" class="btn btn-secondary btn-lg" id="p-back">Back</button></div>
+      <p class="alt-link" id="p-switch-line"><span id="p-switch-text">Contributed before?</span> <a href="#" id="p-switch">Log in</a></p>
     </section>
 
     <section class="step" data-step="review">

@@ -33,7 +33,7 @@ function steps() {
     if (S.how === 'missing') l.push('missing');
   }
   for (const t of TOPICS) l.push('t-' + t.id);
-  l.push('photo', 'improve', 'review', 'thanks');   // players log in on the first screen only (Teja, 15 Nov 2026)
+  l.push('photo', 'improve', 'review', 'thanks');   // contributors log in on the first screen only (Teja, 15 Nov 2026)
   return l;
 }
 const filled = (id) => $(id).value.trim().length >= 2;
@@ -338,11 +338,11 @@ let mode = 'create';
 function setMode(m) {
   mode = m;
   const c = m === 'create';
-  $('p-title').textContent = c ? 'Create a player' : 'Log in';
-  $('p-hint').textContent = c ? 'Make up a nickname and a 4-digit PIN. Use them to log in on any phone.' : 'Enter the nickname and 4-digit PIN you chose when you created your player.';
-  $('p-go').textContent = c ? 'Create player' : 'Log in';
-  $('p-switch-text').textContent = c ? 'Played before?' : 'New here?';
-  $('p-switch').textContent = c ? 'Log in' : 'Create a player';
+  $('p-title').textContent = c ? 'Join as a contributor' : 'Log in';
+  $('p-hint').textContent = c ? 'Make up a nickname and a 4-digit PIN. Use them to log in on any phone.' : 'Enter the nickname and 4-digit PIN you chose when you joined.';
+  $('p-go').textContent = c ? 'Join' : 'Log in';
+  $('p-switch-text').textContent = c ? 'Contributed before?' : 'New here?';
+  $('p-switch').textContent = c ? 'Log in' : 'Join as a contributor';
   $('p-msg').hidden = true;
 }
 $('play-create').onclick = (e) => { e.preventDefault(); setMode('create'); show('player'); };
@@ -371,7 +371,7 @@ $('p-go').onclick = async () => {
   const say = (t) => { $('p-msg').textContent = t; $('p-msg').hidden = false; };
   $('p-go').disabled = true; $('p-go').textContent = 'Checking…';
   const st = await check(n, pin, say, mode);
-  $('p-go').textContent = mode === 'create' ? 'Create player' : 'Log in'; playerReady();
+  $('p-go').textContent = mode === 'create' ? 'Join' : 'Log in'; playerReady();
   if (!st) return;
   player.set(st, pin);
   history.back();                                  // back to where they came from, now signed in
@@ -444,7 +444,7 @@ function thanks(body, id) {
   $('pts').textContent = '+' + total;
   $('pts-list').innerHTML = got.map(([k, v]) => `<li>${k}<b>+${v}</b></li>`).join('');
   $('thanks-text').textContent = body.nick ? `Points go to ${body.nick} on the leaderboard. This phone remembers you; on another phone, use the same nickname and PIN.`
-    : "You weren't logged in, so these points aren't on the leaderboard. Next time, create a player or log in on the first screen.";
+    : "You weren't logged in, so these points aren't on the leaderboard. Next time, join as a contributor or log in on the first screen.";
   if (body.nick) player.set(body.nick, body.nick_pin);   // signed in for next time
   $('to-stop').href = 'stop/?id=' + encodeURIComponent(body.place_type === 'missing' ? 'new-' + id : body.stop_id);
   show('thanks');
