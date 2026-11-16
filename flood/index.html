@@ -181,12 +181,14 @@
     <section class="step on" data-step="start">
       <p class="eyebrow">Contribute · Flooding</p>
       <h1>Report flooding</h1>
-      <p class="hint">Seen water standing or running on a road? Tell us where and how deep. It takes about a minute, and you don't need to sign in.</p>
+      <p class="hint">Water standing or running on a road near you? Tell us where and how deep, while you are there. It takes about a minute, and you don't need to sign in.</p>
       <h2 class="qt" style="font-size:20px;margin-top:8px" id="q-here">Are you at the flooded place now?</h2>
       <div class="answers" role="radiogroup" aria-labelledby="q-here" data-field="here">
         <button type="button" class="answer" role="radio" aria-checked="false" data-val="yes"><span>Yes, I'm there now<small>Your phone can tell us where you are</small></span><i class="tick"></i></button>
-        <button type="button" class="answer" role="radio" aria-checked="false" data-val="no"><span>No, I'm reporting it from elsewhere<small>Flooding you saw earlier, or heard about from family, friends or neighbours</small></span><i class="tick"></i></button>
+        <button type="button" class="answer" role="radio" aria-checked="false" data-val="no"><span>No, not right now</span><i class="tick"></i></button>
       </div>
+      <p class="not-here" id="not-here" hidden>Reports come from people at the place, while they can see the water, so the map shows flooding as it happens. Meanwhile, <a href="reports/">see the reports so far</a>.</p>
+      <div class="safety-box"><b>Safety first.</b> Don't walk or drive into the water to check it: it can hide open drains and broken wires. Stand somewhere safe; you can move the dot to the water on the map. Skip anything that doesn't feel safe.</div>
       <p class="anon">Reports are anonymous: no names, no sign-in, and we don't keep IP addresses.</p>
       <div class="draft" id="draft" hidden>
         <p class="eyebrow">Not sent yet</p>
@@ -212,49 +214,17 @@
       </ul>
       <div class="stack">
         <button type="button" class="btn btn-primary btn-lg" id="gps-go">Share my location</button>
-        <button type="button" class="btn btn-secondary btn-lg" id="gps-search">Search for the place instead</button>
       </div>
       <p class="msg" id="gps-msg" hidden></p>
     </section>
 
-    <!-- place: search, then landmark -->
-    <section class="step" data-step="place">
-      <h2 class="qt" id="place-q">Where is the water?</h2>
-      <p class="hint" id="place-hint">Search for the area, then tell us the road and a landmark so we can find the exact spot.</p>
-      <p class="req-note"><span class="req" aria-hidden="true">*</span> Required</p>
-      <div class="field" id="search-field">
-        <label class="field-label" for="ps-input">Area or place <span class="req" aria-hidden="true">*</span><span class="req-word">Required</span></label>
-        <span class="field-hint">A ward, colony, road or well-known place</span>
-        <div class="search">
-          <input class="inp" type="search" id="ps-input" required aria-required="true" placeholder="For example Malakpet, Tolichowki, Hitech City">
-          <div class="ps-results" id="ps-results" hidden></div>
-        </div>
-        <div class="picked" id="picked" hidden><b id="picked-name"></b><span id="picked-ctx"></span></div>
-        <p class="alt-link"><a href="#" id="to-map">Prefer a map? Mark it on a map instead</a></p>
-      </div>
-      <div class="field" id="map-field" hidden>
-        <span class="field-label">Spot on the map <span class="req" aria-hidden="true">*</span><span class="req-word">Required</span></span>
-        <span class="field-hint">Tap where the water is. Drag the pin to adjust.</span>
-        <div class="map-box"><div id="map"></div><div class="map-hint halo" id="map-hint">Tap where the water is</div></div>
-        <div class="picked" id="pin-info" hidden><b id="pin-ward"></b><span id="pin-xy"></span></div>
-        <p class="msg" id="pin-msg" hidden></p>
-        <p class="alt-link"><a href="#" id="to-search">Use the search instead</a></p>
-      </div>
-      <div class="field">
-        <label class="field-label" for="street">Street or road name <span class="if-req"><span class="req" aria-hidden="true">*</span><span class="req-word">Required</span></span><span class="if-opt" hidden style="font-weight:400;color:var(--muted)">(optional)</span></label>
-        <span class="field-hint">The road where the water is</span>
-        <input class="inp spot" id="street" required aria-required="true" maxlength="120" autocomplete="off" placeholder="For example Malakpet Main Road">
-      </div>
-      <div class="field">
-        <label class="field-label" for="landmark">Nearest landmark <span class="req" aria-hidden="true">*</span><span class="req-word">Required</span></label>
-        <span class="field-hint">Something people know: a temple, school, bus stop, shop, bridge</span>
-        <input class="inp spot" id="landmark" required aria-required="true" maxlength="120" autocomplete="off" placeholder="For example under the railway bridge">
-      </div>
-      <div class="field">
-        <label class="field-label" for="spot">Other address details <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
-        <span class="field-hint">Lane, colony, building, PIN code</span>
-        <textarea class="inp spot" id="spot" maxlength="300" style="min-height:72px"></textarea>
-      </div>
+    <!-- spot: the phone's location; the dot moves up to 100 m (standing somewhere safe nearby) -->
+    <section class="step" data-step="spot">
+      <h2 class="qt">Where is the water?</h2>
+      <p class="hint">The dot is where you are. Standing away from the water, somewhere safe? Drag the dot to the water (up to 100 m).</p>
+      <div class="map-box"><div id="map"></div><div class="map-hint halo" id="map-hint">Drag the dot to the water</div></div>
+      <div class="picked" id="pin-info" hidden><b id="pin-ward"></b><span id="pin-xy"></span></div>
+      <p class="msg" id="pin-msg" hidden></p>
     </section>
 
     <!-- depth -->
@@ -296,16 +266,6 @@
         <button type="button" class="answer check" role="checkbox" aria-checked="false" data-val="sewage"><span>Sewage<small>Dark, smells of drains</small></span><i class="tick"></i></button>
         <button type="button" class="answer check" role="checkbox" aria-checked="false" data-val="cant_say"><span>Can't say</span><i class="tick"></i></button>
       </div>
-    </section>
-
-    <section class="step" data-step="when">
-      <h2 class="qt">When was it flooded?</h2>
-      <p class="hint">Roughly is fine. If someone told you, give the time it happened, not when you heard.</p>
-      <div class="when">
-        <input class="inp" type="date" id="date" aria-label="Date">
-        <input class="inp" type="time" id="time" aria-label="Time">
-      </div>
-      <p class="msg" id="when-msg" hidden>That time hasn't come yet. Pick a time up to now.</p>
     </section>
 
     <section class="step photo" data-step="photo">
@@ -389,9 +349,9 @@
 
 <script src="../assets/common.js"></script>
 <script type="module">
-import { createPlaceSearch } from '../assets/place-search.js';   // the maps viewer's place search, unchanged
-
+// Report flooding, at the place (Teja, 16 Nov 2026): phones only, the phone's location (the dot moves up to 100 m), time = now.
 const $ = (id) => document.getElementById(id);
+Contribute.phoneOnly({ what: 'Flooding', mapHref: 'reports/', mapLabel: 'See the reports so far' });
 
 // ── depth pictures: a house door, a person and a car to one scale (1 px = 3 cm, ground at y = 82);
 //    the water is the reservoir pages' two drifting wave layers (stills under reduced motion) ──
@@ -476,11 +436,9 @@ const S = { here: null, mode: null, loc: null, acc: null, ward: null, pick: null
 let cur = 'start', watchId = null, gotFirst = false;
 function steps() {
   const l = ['start'];
-  if (S.here === 'yes') { l.push('locate'); if (S.mode === 'search') l.push('place'); } else l.push('place');
-  l.push('depth'); if (S.exact) l.push('exact');
-  l.push('flow', 'quality');
-  if (S.here === 'no') l.push('when');
-  l.push('photo', 'note');
+  if (S.here !== 'yes') return l;
+  l.push('locate', 'spot', 'depth'); if (S.exact) l.push('exact');
+  l.push('flow', 'quality', 'photo', 'note');
   if (rough()) l.push('gpsspot');            // phone location worse than 100 m: ask for road and landmark
   l.push('review', 'thanks');
   return l;
@@ -488,7 +446,7 @@ function steps() {
 const OPTIONAL = new Set(['photo', 'note']);
 const filled = (id) => $(id).value.trim().length >= 2;
 function ready(s) {
-  const need = { start: S.here, place: S.byMap ? (S.loc && filled('landmark')) : (S.pick && filled('street') && filled('landmark')), depth: S.depth || S.exact, exact: S.touched, flow: S.flow, quality: S.quality, when: !future(),
+  const need = { start: S.here === 'yes', spot: S.loc, depth: S.depth || S.exact, exact: S.touched, flow: S.flow, quality: S.quality,
     gpsspot: filled('g-street') && filled('g-landmark'), review: !sending };
   return s in need ? !!need[s] : true;
 }
@@ -502,9 +460,7 @@ function show(s, push = true) {
   $('nav').hidden = s === 'start' || s === 'thanks';
   $('next').hidden = s === 'locate';            // the locate screen has its own two buttons
   updateNext();
-  if (s === 'place') $('place-q').textContent = S.here === 'yes' ? 'Where are you?' : 'Where was the flooding?';
-  if (s === 'photo') $('photo-hint').textContent = S.here === 'yes' ? 'Optional. A photo helps others see how bad it is.'
-    : 'Optional. A photo you took, or one someone sent you of this flooding.';
+  if (s === 'spot') openMap();
   if (s === 'review') drawReview();
   if (s === 'exact') hint();
   if (push) history.pushState({ s }, '', '#' + s);
@@ -532,7 +488,11 @@ document.querySelectorAll('[data-field]').forEach(g => g.addEventListener('click
     S.exact = b.dataset.val === 'exact';
     S.depth = S.exact ? (S.touched ? S.depth : null) : +b.dataset.val;
   } else S[f] = b.dataset.val;
-  if (f === 'here') { stopGps(); S.mode = S.here === 'no' ? 'search' : null; S.loc = null; S.acc = null; }
+  if (f === 'here') {
+    $('not-here').hidden = S.here !== 'no';       // not at the place: nothing to report now
+    if (S.here !== 'yes') return updateNext();
+    stopGps(); S.mode = null; S.loc = null; S.fix = null; S.acc = null; S.moved = false;
+  }
   updateNext();
   setTimeout(() => go(1), 220);
 }));
@@ -610,8 +570,8 @@ $('gps-go').onclick = () => {
   S.mode = 'gps'; gotFirst = false;
   $('gps-go').textContent = 'Waiting for your phone…'; $('gps-go').disabled = true; $('gps-msg').hidden = true;
   watchId = navigator.geolocation.watchPosition(onFix, (err) => { if (!gotFirst) gpsFailed(err.code === 1
-      ? "Your phone didn't share its location. You can allow it in your browser's settings, or search for the place instead."
-      : "We couldn't get a location from your phone. Try again outside, or search for the place instead."); },
+      ? "Your phone didn't share its location. This form needs it: allow location for this page in your browser's settings, then try again."
+      : "We couldn't get a location from your phone. Try again in a moment, ideally in the open."); },
     { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 });
 };
 const HMDA = [78.00, 16.96, 79.05, 17.90];
@@ -621,11 +581,14 @@ const rough = () => S.mode === 'gps' && S.acc != null && S.acc > ROUGH_M;
 function onFix(p) {
   const { latitude: lat, longitude: lng, accuracy: acc } = p.coords;
   if (!inHmda(lng, lat)) {            // outside the HMDA area: this form is for Hyderabad
-    if (!gotFirst) gpsFailed("Your phone places you outside the Hyderabad area (HMDA). This form is for flooding in Hyderabad. If you are in Hyderabad, search for the place instead.");
+    if (!gotFirst) gpsFailed("Your phone places you outside the Hyderabad area (HMDA). This form is for flooding in Hyderabad.");
     return;
   }
-  if (S.acc == null || acc <= S.acc) { S.loc = { lat, lng }; S.acc = acc; S.ward = wardAt(lng, lat); }
-  if (!gotFirst) { gotFirst = true; $('gps-go').textContent = 'Share my location'; $('gps-go').disabled = false; go(1); }
+  if (S.acc == null || acc <= S.acc) {           // sharper: follows the dot too, unless they moved it
+    S.fix = { lat, lng }; S.acc = acc;
+    if (!S.moved) { S.loc = { lat, lng }; S.ward = wardAt(lng, lat); if (pin) pin.setLngLat([lng, lat]); }
+  }
+  if (!gotFirst) { gotFirst = true; S.at = new Date(); $('gps-go').textContent = 'Share my location'; $('gps-go').disabled = false; go(1); }
   if (cur === 'review') drawReview();
 }
 function gpsFailed(text) {
@@ -634,22 +597,10 @@ function gpsFailed(text) {
   $('gps-msg').textContent = text; $('gps-msg').hidden = false;
 }
 function stopGps() { if (watchId != null) navigator.geolocation.clearWatch(watchId); watchId = null; }
-$('gps-search').onclick = () => { stopGps(); S.mode = 'search'; S.loc = null; S.acc = null; go(1); };
 
-// ── place search: the maps viewer's module, without a map ──
-createPlaceSearch({
-  input: $('ps-input'), results: $('ps-results'), local: () => LOCAL, getMap: () => null,
-  onSelect: (p) => {
-    S.pick = p; S.lastPick = p; S.loc = { lat: p.center[1], lng: p.center[0] }; S.acc = null;
-    S.ward = p.kind.startsWith('Ward') ? { name: p.name, zone: (p.context || '').replace(/ zone$/, '') } : wardAt(p.center[0], p.center[1]);
-    $('picked').hidden = false; $('picked-name').textContent = p.name;
-    $('picked-ctx').textContent = [p.kind, p.context].filter(Boolean).join(' · ');
-    updateNext();
-  },
-});
-$('ps-input').addEventListener('input', () => { if (S.pick && $('ps-input').value !== S.pick.name) { S.pick = null; $('picked').hidden = true; updateNext(); } });
-
-// ── map option on the search screen: load MapLibre only when asked ──
+// ── where the water is: the phone's location on a map; the dot can move up to 100 m from it ──
+const MAX_MOVE = 100;
+const metres = (a, b) => { const k = Math.PI / 180, x = (b.lng - a.lng) * Math.cos((a.lat + b.lat) / 2 * k), y = b.lat - a.lat; return Math.hypot(x, y) * k * 6371000; };
 let map = null, pin = null;
 function loadMapLib() {
   if (window.maplibregl) return Promise.resolve();
@@ -658,50 +609,37 @@ function loadMapLib() {
     const js = document.createElement('script'); js.src = 'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js'; js.onload = ok; js.onerror = fail; document.head.append(js);
   });
 }
-function setByMap(on) {
-  S.byMap = on;
-  $('search-field').hidden = on; $('map-field').hidden = !on;
-  document.querySelector('label[for="street"] .if-req').hidden = on;
-  document.querySelector('label[for="street"] .if-opt').hidden = !on;
-  $('street').required = !on; $('street').setAttribute('aria-required', String(!on));
-  $('place-hint').textContent = on ? 'Mark the spot on the map, then tell us a landmark near it.' : 'Search for the area, then tell us the road and a landmark so we can find the exact spot.';
-  if (on) { S.pick = null; S.loc = null; S.ward = null; openMap(); }
-  else { if (pin) { pin.remove(); pin = null; } S.loc = S.pick ? { lat: S.pick.center[1], lng: S.pick.center[0] } : null; $('pin-info').hidden = true; $('map-hint').classList.remove('off'); }
-  updateNext();
-}
-$('to-map').onclick = (e) => { e.preventDefault(); setByMap(true); };
-$('to-search').onclick = (e) => { e.preventDefault(); setByMap(false); };
 async function openMap() {
-  try { await loadMapLib(); } catch { $('pin-msg').textContent = "The map couldn't load. Use the search instead."; $('pin-msg').hidden = false; return; }
-  const start = S.lastPick;   // start on the area picked in the search, if any
+  try { await loadMapLib(); } catch { $('pin-msg').textContent = "The map couldn't load. You can go on: your phone's location is used."; $('pin-msg').hidden = false; return; }
+  const c = S.loc;
   if (!map) {
-    map = new maplibregl.Map({ container: 'map', style: 'https://tiles.openfreemap.org/styles/positron',
-      center: start ? start.center : [78.475, 17.405], zoom: start ? 15 : 11, minZoom: 9, maxZoom: 18,
-      maxBounds: [77.6, 16.6, 79.5, 18.3], attributionControl: { compact: true } });
+    map = new maplibregl.Map({ container: 'map', style: 'https://tiles.openfreemap.org/styles/positron', center: [c.lng, c.lat], zoom: 18, minZoom: 12, maxZoom: 19,
+      attributionControl: { compact: true } });
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
     map.on('load', () => document.querySelector('.maplibregl-compact-show')?.classList.remove('maplibregl-compact-show'));
     map.on('click', (e) => placePin(e.lngLat.lng, e.lngLat.lat));
-  } else { map.resize(); if (start) map.jumpTo({ center: start.center, zoom: 15 }); }
+  } else { map.resize(); map.jumpTo({ center: [c.lng, c.lat] }); }
+  placePin(c.lng, c.lat);
 }
 function placePin(lng, lat) {
-  if (!inHmda(lng, lat)) { $('pin-msg').textContent = 'That spot is outside the Hyderabad area (HMDA). Tap a place inside it.'; $('pin-msg').hidden = false; return; }
+  const moved = metres(S.fix, { lat, lng });
+  if (moved > MAX_MOVE) {
+    if (pin) pin.setLngLat([S.loc.lng, S.loc.lat]);
+    $('pin-msg').textContent = `The dot can be up to ${MAX_MOVE} m from where you are. Walk closer, if it's safe, and try again.`; $('pin-msg').hidden = false; return;
+  }
   $('pin-msg').hidden = true;
   if (!pin) { const el = document.createElement('div'); el.className = 'pin';
     pin = new maplibregl.Marker({ element: el, draggable: true }).setLngLat([lng, lat]).addTo(map);
     pin.on('dragend', () => { const q = pin.getLngLat(); placePin(q.lng, q.lat); }); }
   else pin.setLngLat([lng, lat]);
-  S.loc = { lat, lng }; S.acc = null; S.ward = wardAt(lng, lat);
+  S.loc = { lat, lng }; S.moved = moved >= 3; S.ward = wardAt(lng, lat);
   $('map-hint').classList.add('off');
-  $('pin-info').hidden = false; $('pin-ward').textContent = wardText(S.ward); $('pin-xy').textContent = `${lat.toFixed(5)}° N, ${lng.toFixed(5)}° E`;
+  $('pin-info').hidden = false; $('pin-ward').textContent = wardText(S.ward);
+  $('pin-xy').textContent = S.moved ? `Moved ${Math.round(moved)} m from where you are` : 'Where you are';
   updateNext();
 }
 
-// ── when, photo, note ──
-(() => { const n = new Date(), p = (x) => String(x).padStart(2, '0');
-  const d = $('date'); d.value = d.max = `${n.getFullYear()}-${p(n.getMonth() + 1)}-${p(n.getDate())}`;
-  $('time').value = `${p(n.getHours())}:${p(n.getMinutes())}`; })();
-function future() { const t = new Date(`${$('date').value}T${$('time').value || '00:00'}`); return t > new Date(); }
-['date', 'time'].forEach(id => $(id).addEventListener('input', () => { $('when-msg').hidden = !future(); updateNext(); }));
+// ── photo, note ──
 const PHOTO_MAX = 1600, PHOTO_Q = 0.82;
 $('photo-in').addEventListener('change', async (e) => {
   const f = e.target.files[0]; if (!f) return;
@@ -733,21 +671,16 @@ function drawReview() {
   if (S.mode === 'gps' && S.loc) {
     const acc = Math.round(S.acc);
     const g = rough() ? [$('g-street').value.trim(), 'Near ' + $('g-landmark').value.trim(), $('g-spot').value.trim()].filter(x => x && x !== 'Near ') : [];
-    where = `${esc(wardText(S.ward))}${g.map(l => `<small>${esc(l)}</small>`).join('')}<small>Your phone's location, accurate to about ${acc} m${watchId != null && acc > 30 ? ' — still sharpening' : ''}</small>`;
-  } else if (S.byMap && S.loc) {
-    const lines = [$('street').value.trim(), 'Near ' + $('landmark').value.trim(), $('spot').value.trim()].filter(x => x && x !== 'Near ');
-    where = `${esc(wardText(S.ward))}${lines.map(l => `<small>${esc(l)}</small>`).join('')}<small>Marked on the map</small>`;
-  } else if (S.pick) {
-    const lines = [$('street').value.trim(), 'Near ' + $('landmark').value.trim(), $('spot').value.trim()].filter(x => x && x !== 'Near ');
-    where = `${esc(S.pick.name)}${lines.map(l => `<small>${esc(l)}</small>`).join('')}<small>${esc([S.pick.kind, S.pick.context].filter(Boolean).join(' · '))}</small>`;
+    const mv = S.moved && S.fix ? `, moved ${Math.round(metres(S.fix, S.loc))} m to the water` : '';
+    where = `${esc(wardText(S.ward))}${g.map(l => `<small>${esc(l)}</small>`).join('')}<small>Your phone's location, accurate to about ${acc} m${watchId != null && acc > 30 && !S.moved ? ' — still sharpening' : ''}${mv}</small>`;
   } else where = 'Not set';
-  const when = S.here === 'yes' ? 'Now' : new Date(`${$('date').value}T${$('time').value}`).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+  const when = 'Now';
   const rows = [
-    ['Where', where, S.mode === 'gps' ? (rough() ? 'gpsspot' : 'locate') : 'place', true],
+    ['Where', where, rough() ? 'gpsspot' : 'spot', true],
     ['Depth', d ? d.label : '', S.exact ? 'exact' : 'depth'],
     ['Moving', lab('flow'), 'flow'],
     ['Looks', looks, 'quality'],
-    ['When', when, S.here === 'yes' ? null : 'when'],
+    ['When', when, null],
     ['Photo', S.photo ? 'Added' : 'None', 'photo'],
     ['Note', $('note').value.trim() || 'None', 'note'],
   ];
@@ -764,12 +697,11 @@ const store = { get() { try { return JSON.parse(localStorage.getItem(DRAFT)); } 
   set(v) { try { localStorage.setItem(DRAFT, JSON.stringify(v)); return true; } catch { return false; } },
   drop() { try { localStorage.removeItem(DRAFT); } catch { /* ignore */ } } };
 function payload() {
-  const t = S.here === 'yes' ? new Date() : new Date(`${$('date').value}T${$('time').value}`);
-  return { survey: 'flood', version: 2, here: S.here, place_type: S.mode === 'gps' ? 'gps' : S.byMap ? 'map' : 'search',
-    lat: S.loc?.lat, lng: S.loc?.lng, accuracy_m: S.acc != null ? Math.round(S.acc) : null, ward: S.ward?.name || null,
-    place: S.pick?.name || null, street: (rough() ? $('g-street') : $('street')).value.trim() || null,
-    landmark: (rough() ? $('g-landmark') : $('landmark')).value.trim() || null, address_more: (rough() ? $('g-spot') : $('spot')).value.trim() || null,
-    depth_cm: S.depth, depth_exact: !!S.exact, flow: S.flow, quality: S.quality, observed_at: t.toISOString(),
+  const g = (id) => rough() ? $(id).value.trim() || null : null;   // road and landmark only when the location is rough
+  return { survey: 'flood', version: 3, here: 'yes', place_type: 'gps',
+    lat: S.loc?.lat, lng: S.loc?.lng, accuracy_m: S.acc != null ? Math.round(S.acc) : null, moved_m: S.fix && S.loc ? Math.round(metres(S.fix, S.loc)) : 0,
+    ward: S.ward?.name || null, place: null, street: g('g-street'), landmark: g('g-landmark'), address_more: g('g-spot'),
+    depth_cm: S.depth, depth_exact: !!S.exact, flow: S.flow, quality: S.quality, observed_at: (S.at || new Date()).toISOString(),
     note: $('note').value.trim() || null, photo: S.photo || null };
 }
 const spam = Contribute.spamCheck($('ts-review'));
@@ -818,7 +750,7 @@ fetch(`${window.CONTRIBUTE.API}/flood/reports.json`, { cache: 'no-cache' }).then
   if (f.length) $('see-reports').firstChild.textContent = `See ${f.length} reports so far `;
   if (last) $('reports-meta').textContent = `Latest ${new Date(last).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' })}`;
 }).catch(() => {});
-if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__test = { S, show, onFix, wardAt, setExact, store, placePin, setByMap };   // local checks only
+if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__test = { S, show, onFix, wardAt, setExact, store, placePin };   // local checks only
 </script>
 </body>
 </html>

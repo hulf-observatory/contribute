@@ -1,12 +1,15 @@
-// Rate a bus stop: pick a stop (nearest to the phone, search by stop or area, or add a missing one), answer the
-// topic screens, optional photo, improvement and nickname, check and send. Talks to contribute-api.
-import { createPlaceSearch } from '../assets/place-search.js';
+// Tell us about a bus stop, at the stop (Teja, 16 Nov 2026): the phone's location lists the nearest stops (or a
+// missing one is added within 100 m of it), then the topic screens, optional photo and improvement, check and send.
+// Phones only; a laptop sees a QR code. Talks to contribute-api.
 import { SURVEY, TOPICS, QUESTIONS, MIN_ANSWERS, optLabel, shown, answered, POINTS, loadStops, loadRatings, addedStops,
   byStop, metres, stopLabel, esc, player, checkPlayer, PLAYER_SAYS } from './questions.js';
 
 const C = window.CONTRIBUTE;
 const $ = (id) => document.getElementById(id);
 const inHmda = (lng, lat) => lng >= C.HMDA[0] && lng <= C.HMDA[2] && lat >= C.HMDA[1] && lat <= C.HMDA[3];
+const NEAR_M = 500, MAX_MOVE = 100;   // the chosen stop within 500 m of the phone; a new stop's pin within 100 m of it
+const far = (d) => d < 1000 ? `${Math.round(d / 10) * 10} m` : `${(d / 1000).toFixed(1)} km`;
+Contribute.phoneOnly({ what: 'Bus stops', mapHref: 'map/', mapLabel: 'See the stops map' });
 
 // ── topic screens, drawn from the question list ──
 $('topics').innerHTML = TOPICS.map(t => `<section class="step" data-step="t-${t.id}">
@@ -27,10 +30,10 @@ const PRESET = new URLSearchParams(location.search).get('stop');
 // ── steps ──
 function steps() {
   const l = ['start'];
-  if (!S.preset) {
-    if (S.here === 'yes' && S.how !== 'search' && S.how !== 'missing') l.push('locate', 'nearest', 'where');   // at the stop: check its place
-    else if (S.how !== 'missing') l.push('find');
-    if (S.how === 'missing') l.push('missing');
+  if (S.here === 'yes') {                          // always at the stop: the phone's location first
+    if (S.preset) l.push('locate', 'where');
+    else if (S.how === 'missing') l.push('locate', 'missing');
+    else l.push('locate', 'nearest', 'where');
   }
   for (const t of TOPICS) l.push('t-' + t.id);
   l.push('photo', 'improve', 'review', 'thanks');   // contributors log in on the first screen only (Teja, 15 Nov 2026)
@@ -38,7 +41,7 @@ function steps() {
 }
 const filled = (id) => $(id).value.trim().length >= 2;
 function ready(s) {
-  if (s === 'nearest' || s === 'find') return !!S.stop;
+  if (s === 'nearest') return !!S.stop;
   if (s === 'missing') return !!(S.missing && filled('m-name'));
   if (s === 'where') return !!S.where;
   if (s === 'player') return true;
@@ -89,7 +92,9 @@ document.querySelector('[data-field="here"]').addEventListener('click', (e) => {
   const b = e.target.closest('[role=radio]'); if (!b) return;
   b.parentElement.querySelectorAll('[role=radio]').forEach(x => x.setAttribute('aria-checked', x === b));
   S.here = b.dataset.val;
-  if (!S.preset) { S.how = S.here === 'yes' ? 'gps' : 'search'; S.stop = null; S.missing = null; }
+  $('not-here').hidden = S.here !== 'no';          // not at a stop: nothing to fill in now
+  if (S.here !== 'yes') return;
+  if (!S.preset) { S.how = 'gps'; S.stop = null; S.missing = null; }
   setTimeout(() => go(1), 220);
 });
 
@@ -131,37 +136,43 @@ const stopButton = (s, d) => `<button type="button" class="answer" role="radio" 
 function pickFrom(listEl) {
   listEl.addEventListener('click', (e) => {
     const b = e.target.closest('[data-id]'); if (!b) return;
+    const st = BY_ID.get(b.dataset.id), d = metres(S.phone, st);
+    if (d > NEAR_M) { $('near-msg').textContent = `${st.name} is about ${far(d)} from you. Pick the stop you are standing at, or add it if it isn't listed.`; $('near-msg').hidden = false; return; }
     listEl.querySelectorAll('[role=radio]').forEach(x => x.setAttribute('aria-checked', x === b));
-    if (S.stop !== BY_ID.get(b.dataset.id)) { S.where = null; S.whereAt = null; }
-    S.stop = BY_ID.get(b.dataset.id); S.missing = null; updateNext();
+    if (S.stop !== st) { S.where = null; S.whereAt = null; }
+    S.stop = st; S.missing = null; updateNext();
     setTimeout(() => go(1), 220);
   });
 }
-pickFrom($('near-list')); pickFrom($('inarea-list'));
+pickFrom($('near-list'));
 
-// ── location: only to list the nearest stops; never sent ──
+// ── location: lists the nearest stops and checks you are at the stop; the location itself is never sent ──
 $('gps-go').onclick = () => {
   if (!('geolocation' in navigator)) return gpsFailed('This browser cannot share a location.');
   $('gps-go').textContent = 'Waiting for your phone…'; $('gps-go').disabled = true; $('gps-msg').hidden = true;
   navigator.geolocation.getCurrentPosition(onFix, (err) => gpsFailed(err.code === 1
-      ? "Your phone didn't share its location. You can allow it in your browser's settings, or search for the stop instead."
-      : "We couldn't get a location from your phone. Try again, or search for the stop instead."),
+      ? "Your phone didn't share its location. This survey needs it: allow location for this page in your browser's settings, then try again."
+      : "We couldn't get a location from your phone. Try again in a moment, ideally in the open."),
     { enableHighAccuracy: true, maximumAge: 30000, timeout: 20000 });
 };
 function onFix(p) {
   const { latitude: lat, longitude: lng, accuracy: acc } = p.coords;
   $('gps-go').textContent = 'Share my location'; $('gps-go').disabled = false;
-  if (!inHmda(lng, lat)) return gpsFailed('Your phone places you outside the Hyderabad area (HMDA). This survey is for bus stops in Hyderabad. Search for the stop instead.');
+  if (!inHmda(lng, lat)) return gpsFailed('Your phone places you outside the Hyderabad area (HMDA). This survey is for bus stops in Hyderabad.');
   if (!STOPS.length) return gpsFailed('The list of bus stops has not loaded yet. Check your connection and try again.');
+  S.phone = { lat, lng, acc };
+  if (S.preset) {                                  // from a stop's page: only at that stop
+    const d = metres(S.phone, S.stop);
+    if (d > NEAR_M) return gpsFailed(`Your phone places you about ${far(d)} from ${S.stop.name}. Details are added at the stop itself: come back when you are there.`);
+    return go(1);
+  }
   const near = STOPS.map(s => [s, metres({ lat, lng }, s)]).sort((a, b) => a[1] - b[1]).slice(0, 4);
   $('near-list').innerHTML = near.map(([s, d]) => stopButton(s, d)).join('');
   $('near-msg').hidden = near[0][1] < 400;
   $('near-msg').textContent = `The nearest stop we know is ${Math.round(near[0][1])} m away${acc > 100 ? ", and your phone's location is rough" : ''}. If you are at a stop, it may be missing from the bus data: add it.`;
-  S.phone = { lat, lng, acc }; S.stop = null; go(1);
+  S.stop = null; go(1);
 }
 function gpsFailed(t) { $('gps-go').textContent = 'Try again'; $('gps-go').disabled = false; $('gps-msg').textContent = t; $('gps-msg').hidden = false; }
-$('gps-search').onclick = () => { S.how = 'search'; go(1); };
-$('near-search').onclick = (e) => { e.preventDefault(); S.how = 'search'; S.stop = null; show('find'); };
 document.querySelectorAll('.to-missing').forEach(a => a.onclick = (e) => { e.preventDefault(); S.how = 'missing'; S.stop = null; show('missing'); });
 
 // ── at the stop: is it where the bus data puts it? (only the phone's location if they say "where I am") ──
@@ -197,85 +208,7 @@ $('where-opts').addEventListener('click', (e) => {
   if (!marking) setTimeout(() => go(1), 220);
 });
 
-// ── search: stop names and areas in one box ──
-let AREAS = null;
-const LOCAL = [], STOP_AT = new Map();
-const KEY = (c) => c[0].toFixed(6) + ',' + c[1].toFixed(6);
-function inRing(x, y, r) { let i2 = false; for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) { const xi = r[i], yi = r[i + 1], xj = r[j], yj = r[j + 1]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) i2 = !i2; } return i2; }
-const search = createPlaceSearch({
-  input: $('ps-input'), results: $('ps-results'), local: () => LOCAL, getMap: () => null,
-  onSelect: (p) => {
-    $('find-msg').hidden = true;
-    if (p.kind === 'Bus stop') {
-      S.stop = STOP_AT.get(KEY(p.center)); $('inarea').hidden = false; lastArea = { center: p.center };
-      const twins = STOPS.filter(s => s.name === S.stop.name && metres(s, S.stop) < 400).sort((a, b) => (a.id === S.stop.id ? -1 : b.id === S.stop.id ? 1 : 0));
-      $('inarea-h').textContent = twins.length > 1 ? 'Which side of the road?' : 'Is this the one?';
-      $('inarea-list').innerHTML = twins.map(s => stopButton(s)).join('');
-      updateNext(); return;
-    }
-    // an area: list its stops, nearest the middle first (and the map, if opened, starts there)
-    S.stop = null; lastArea = p;
-    const ward = p.kind.startsWith('Ward') && AREAS ? AREAS.wards.find(w => w.name === p.name) : null;
-    const box = p.bbox || [p.center[0] - .006, p.center[1] - .006, p.center[0] + .006, p.center[1] + .006];
-    let list = STOPS.filter(s => s.lng >= box[0] && s.lng <= box[2] && s.lat >= box[1] && s.lat <= box[3]);
-    if (ward) list = list.filter(s => (ward.poly || []).reduce((acc, r) => acc !== inRing(s.lng, s.lat, r), false));
-    const c = { lng: p.center[0], lat: p.center[1] };
-    list = list.map(s => [s, metres(c, s)]).sort((a, b) => a[1] - b[1]).slice(0, 40).map(x => x[0]);
-    $('inarea').hidden = !list.length;
-    $('inarea-h').textContent = `Bus stops in ${p.name}${list.length === 40 ? ' (nearest 40)' : ''}`;
-    $('inarea-list').innerHTML = list.map(s => stopButton(s)).join('');
-    if (!list.length) { $('find-msg').textContent = `We don't know any bus stops in ${p.name}. Search nearby, or add the stop on a map.`; $('find-msg').hidden = false; }
-    updateNext();
-  },
-});
-$('ps-input').addEventListener('input', () => { if (!$('ps-input').value) { $('inarea').hidden = true; S.stop = null; updateNext(); } });
-
-// ── or pick the stop on a map: every stop a dot; tap one (a finger-sized area around the tap counts) ──
-let pickMap = null, lastArea = null;
-function setPickMap(on) {
-  $('search-field').hidden = on; $('pickmap-field').hidden = !on;
-  $('find-hint').textContent = on ? 'Find your stop on the map and tap it.' : "Search for the stop's name, or for the area it is in.";
-  if (on) openPickMap();
-}
-$('to-pickmap').onclick = (e) => { e.preventDefault(); setPickMap(true); };
-$('to-search').onclick = (e) => { e.preventDefault(); setPickMap(false); };
-function pickedStop(s) {
-  S.stop = s; S.missing = null;
-  $('picked-stop').hidden = false;
-  $('picked-stop').innerHTML = `<b>${esc(s.name)}</b><span>${s.towards ? 'towards ' + esc(s.towards) + ' · ' : ''}${esc(routeText(s))}</span>`;
-  $('pickmap-hint').classList.add('off');
-  if (pickMap && pickMap.getLayer('chosen')) pickMap.setFilter('chosen', ['==', ['get', 'id'], s.id]);
-  updateNext();
-}
-async function openPickMap() {
-  try { await loadMapLib(); } catch { $('pickmap-msg').textContent = "The map couldn't load. Check your connection, or use the search."; $('pickmap-msg').hidden = false; return; }
-  const fit = () => { if (lastArea?.bbox) pickMap.fitBounds(lastArea.bbox, { padding: 30, maxZoom: 16, duration: 0 }); else if (lastArea) pickMap.jumpTo({ center: lastArea.center, zoom: 15 }); };
-  if (pickMap) { pickMap.resize(); fit(); return; }
-  pickMap = new maplibregl.Map({ container: 'pickmap', style: 'https://tiles.openfreemap.org/styles/positron', center: [78.475, 17.405], zoom: 11, minZoom: 9, maxZoom: 18,
-    maxBounds: [77.6, 16.6, 79.5, 18.3], attributionControl: { compact: true } });
-  pickMap.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
-  fit();
-  pickMap.on('load', () => {
-    document.querySelectorAll('.maplibregl-compact-show').forEach(x => x.classList.remove('maplibregl-compact-show'));
-    pickMap.addSource('pstops', { type: 'geojson', data: { type: 'FeatureCollection', features: STOPS.map(s => ({ type: 'Feature', properties: { id: s.id }, geometry: { type: 'Point', coordinates: [s.lng, s.lat] } })) } });
-    pickMap.addLayer({ id: 'pstops', type: 'circle', source: 'pstops', paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 2, 14, 5, 17, 9],
-      'circle-color': '#3F76B0', 'circle-stroke-color': '#fff', 'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 12, 0, 15, 1.5] } });
-    pickMap.addLayer({ id: 'chosen', type: 'circle', source: 'pstops', filter: ['==', ['get', 'id'], S.stop?.id || ''],
-      paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 6, 17, 13], 'circle-color': '#111827', 'circle-stroke-color': '#fff', 'circle-stroke-width': 3 } });
-  });
-  pickMap.on('click', (e) => {
-    const p = e.point, near = pickMap.queryRenderedFeatures([[p.x - 14, p.y - 14], [p.x + 14, p.y + 14]], { layers: ['pstops'] });
-    if (!near.length) { $('pickmap-msg').textContent = pickMap.getZoom() < 14 ? 'Zoom in and tap a dot: each dot is a bus stop.' : 'No stop there. Tap a dot, or add a missing stop.'; $('pickmap-msg').hidden = false; return; }
-    $('pickmap-msg').hidden = true;
-    const gap = (f) => { const q = pickMap.project(f.geometry.coordinates); return Math.hypot(q.x - p.x, q.y - p.y); };
-    const best = near.reduce((a, b) => (gap(b) < gap(a) ? b : a));
-    pickedStop(BY_ID.get(best.properties.id));
-  });
-  pickMap.on('mouseenter', 'pstops', () => { pickMap.getCanvas().style.cursor = 'pointer'; });
-  pickMap.on('mouseleave', 'pstops', () => { pickMap.getCanvas().style.cursor = ''; });
-}
-
-// ── missing stop: a pin on a map, known stops as grey dots ──
+// ── missing stop: a pin that starts where you are and moves up to 100 m; known stops as grey dots ──
 let map = null, pin = null;
 function loadMapLib() {
   if (window.maplibregl) return Promise.resolve();
@@ -287,7 +220,8 @@ function loadMapLib() {
 async function openMap() {
   try { await loadMapLib(); } catch { $('pin-msg').textContent = "The map couldn't load. Check your connection and try again."; $('pin-msg').hidden = false; return; }
   if (map) { map.resize(); return; }
-  map = new maplibregl.Map({ container: 'map', style: 'https://tiles.openfreemap.org/styles/positron', center: [78.475, 17.405], zoom: 11, minZoom: 9, maxZoom: 18,
+  const me = S.phone;
+  map = new maplibregl.Map({ container: 'map', style: 'https://tiles.openfreemap.org/styles/positron', center: [me.lng, me.lat], zoom: 18, minZoom: 12, maxZoom: 19,
     maxBounds: [77.6, 16.6, 79.5, 18.3], attributionControl: { compact: true } });
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
   map.on('load', () => {
@@ -296,14 +230,19 @@ async function openMap() {
     map.addLayer({ id: 'stops', type: 'circle', source: 'stops', paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 1.5, 16, 5], 'circle-color': '#9CA3AF', 'circle-stroke-color': '#fff', 'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 12, 0, 16, 1] } });
   });
   map.on('click', (e) => placePin(e.lngLat.lng, e.lngLat.lat));
+  placePin(me.lng, me.lat);
 }
 function placePin(lng, lat) {
-  if (!inHmda(lng, lat)) { $('pin-msg').textContent = 'That spot is outside the Hyderabad area (HMDA).'; $('pin-msg').hidden = false; return; }
+  const moved = metres(S.phone, { lat, lng });
+  if (moved > MAX_MOVE || !inHmda(lng, lat)) {
+    if (pin && S.missing) pin.setLngLat([S.missing.lng, S.missing.lat]);
+    $('pin-msg').textContent = `The stop can be up to ${MAX_MOVE} m from where you are. Walk closer, if it's safe, and start again.`; $('pin-msg').hidden = false; return;
+  }
   $('pin-msg').hidden = true;
   if (!pin) { const el = document.createElement('div'); el.className = 'pin';
     pin = new maplibregl.Marker({ element: el, draggable: true }).setLngLat([lng, lat]).addTo(map);
     pin.on('dragend', () => { const q = pin.getLngLat(); placePin(q.lng, q.lat); }); } else pin.setLngLat([lng, lat]);
-  S.missing = { lat, lng }; $('map-hint').classList.add('off');
+  S.missing = { lat, lng, moved: Math.round(moved) }; $('map-hint').classList.add('off');
   const [n, d] = STOPS.map(s => [s, metres({ lat, lng }, s)]).sort((a, b) => a[1] - b[1])[0];
   $('pin-info').hidden = false;
   $('pin-info').textContent = d < 60 ? `${stopLabel(n)} is only ${Math.round(d)} m away. If that's the same stop, go back and pick it instead.` : `Nearest known stop: ${stopLabel(n)}, ${Math.round(d)} m away.`;
@@ -388,8 +327,8 @@ function drawReview() {
   const stopTxt = S.missing ? `${esc($('m-name').value.trim())}<small>${$('m-towards').value.trim() ? 'towards ' + esc($('m-towards').value.trim()) + ' · ' : ''}A new stop, marked on the map</small>`
     : `${esc(S.stop.name)}<small>${S.stop.towards ? 'towards ' + esc(S.stop.towards) : ''}</small>`;
   const placeTxt = { yes: 'Where the map shows it', here: 'Where I am (your location is saved for the stop)', marked: 'Where I marked it', dk: 'Not sure' }[S.where];
-  const rows = [['Stop', stopTxt, S.preset ? null : S.missing ? 'missing' : S.how === 'gps' ? 'nearest' : 'find'],
-    ...(S.where && !S.missing && S.how === 'gps' ? [['Stop place', esc(placeTxt), 'where']] : []),
+  const rows = [['Stop', stopTxt, S.preset ? null : S.missing ? 'missing' : 'nearest'],
+    ...(S.where && !S.missing ? [['Stop place', esc(placeTxt), 'where']] : []),
     ...TOPICS.map(t => [t.title.replace(' and seating', '').replace('Comfort and safety', 'Safety'), topicSummary(t), 't-' + t.id]),
     ['Photo', S.photo ? 'Added' : 'None', 'photo'], ['Improve', esc($('improve').value.trim() || 'None'), 'improve'],
     ['Points', esc(who().nick ? 'For ' + who().nick : 'None: you are not logged in'), 'player']];
@@ -413,12 +352,13 @@ function who() {
   return p ? { nick: p.nick, pin: p.pin } : { nick: null, pin: null };
 }
 function payload() {
-  const b = { here: S.here, place_type: S.missing ? 'missing' : S.preset ? 'preset' : S.how === 'gps' ? 'gps' : 'search',
+  const b = { here: S.here, place_type: S.missing ? 'missing' : 'gps',
     ...Object.fromEntries(QUESTIONS.filter(q => shown(q, S.a) && S.a[q.id] != null).map(q => [q.id, S.a[q.id]])),
     improve: $('improve').value.trim() || null, nick: who().nick, nick_pin: who().pin, photo: S.photo || null };
-  if (S.missing) Object.assign(b, { lat: S.missing.lat, lng: S.missing.lng, stop_name: $('m-name').value.trim(), towards: $('m-towards').value.trim() || null });
-  else b.stop_id = S.stop.id;               // the server takes the stop's place from TGSRTC's list, not from the phone
-  if (!S.missing && S.how === 'gps' && !S.preset && S.where) {
+  if (S.missing) Object.assign(b, { lat: S.missing.lat, lng: S.missing.lng, moved_m: S.missing.moved, stop_name: $('m-name').value.trim(), towards: $('m-towards').value.trim() || null });
+  else Object.assign(b, { stop_id: S.stop.id,    // the server takes the stop's place from TGSRTC's list, not from the phone
+    dist_m: Math.round(metres(S.phone, S.stop)) }); // how far the phone was from it: the server checks you were at the stop
+  if (!S.missing && S.where) {
     b.stop_place = S.where;                  // is the stop where the bus data puts it? a corrected place only if they gave one
     const at = S.where === 'here' ? S.phone : S.where === 'marked' ? S.whereAt : null;
     if (at) Object.assign(b, { stop_lat: +at.lat.toFixed(6), stop_lng: +at.lng.toFixed(6) });
@@ -489,22 +429,13 @@ const openPlay = { '#play': 'create', '#create': 'create', '#login': 'login' }[l
 history.replaceState({ s: 'start' }, '', location.search);
 drawPlay();
 if (openPlay && !player.get()) { setMode(openPlay); show('player'); }
-const [stops, ratings, areas] = await Promise.all([
-  loadStops().catch(() => []), loadRatings().catch(() => []), fetch(C.AREAS_URL).then(r => r.json()).catch(() => null)]);
+const [stops, ratings] = await Promise.all([loadStops().catch(() => []), loadRatings().catch(() => [])]);
 STOPS = stops.concat(addedStops(ratings));
 BY_ID = new Map(STOPS.map(s => [s.id, s]));
 RATED = byStop(ratings);
-for (const s of STOPS) { const c = [s.lng, s.lat]; STOP_AT.set(KEY(c), s); LOCAL.push({ name: s.name, kind: 'Bus stop', context: s.towards ? 'towards ' + s.towards : s.added ? 'added by someone' : '', center: c }); }
-AREAS = areas;
-if (areas) {
-  const corps = areas.corporations || [], zones = areas.zones || [];
-  for (const z of zones) LOCAL.push({ name: z.name, kind: 'Zone', context: (corps[z.corp] || {}).name, bbox: z.bounds });
-  for (const w of areas.wards || []) { const z = zones[w.zone]; LOCAL.push({ name: w.name, kind: 'Ward' + (w.no != null ? ' ' + w.no : ''), context: z ? z.name + ' zone' : '', bbox: w.bounds }); }
-}
-search.refresh?.();
 if (stops.length) $('meta').textContent = `${RATED.size.toLocaleString('en-IN')} of ${STOPS.length.toLocaleString('en-IN')} stops with details so far`;
 if (PRESET && BY_ID.get(PRESET)) {
   S.preset = true; S.stop = BY_ID.get(PRESET);
   document.querySelector('[data-step="start"] h1').textContent = 'Tell us about ' + S.stop.name;
-  document.querySelector('[data-step="start"] .hint').textContent = (S.stop.towards ? `The stop towards ${S.stop.towards}. ` : '') + "Tell us what it is like now. It takes about two minutes, and you don't need to sign in.";
+  document.querySelector('[data-step="start"] .hint').textContent = (S.stop.towards ? `The stop towards ${S.stop.towards}. ` : '') + "Tell us what it is like now, while you are at the stop. It takes about two minutes, and you don't need to sign in.";
 }

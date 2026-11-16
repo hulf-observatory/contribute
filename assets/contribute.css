@@ -88,3 +88,16 @@ h1 { font: 700 30px/1.2 var(--font-ui); letter-spacing: -.005em; margin: 0 0 10p
 .halo { text-shadow: 0 0 4px #fff, 0 0 8px #fff, 0 0 8px #fff; }
 
 @media (prefers-reduced-motion: reduce) { *, .obs-live-dot::after { animation: none !important; transition: none !important; } }
+
+/* phone only: what a laptop sees instead of a survey form */
+.steps[hidden], .phone-gate[hidden] { display: none; }
+.phone-gate { max-width: var(--measure); margin: 0 auto; }
+.phone-gate h1 { font: 700 30px/1.2 var(--font-ui); margin: 0 0 8px; }
+.phone-gate .hint { font-size: 16px; color: var(--text-2); margin: 0 0 16px; }
+.phone-gate .qr svg { display: block; width: 180px; height: 180px; margin: 0 0 8px; }
+.phone-gate .gate-url { font-size: 14px; color: var(--muted); margin: 0 0 24px; overflow-wrap: anywhere; }
+/* safety first: on the first screen of the at-the-spot surveys */
+.safety-box { margin: 18px 0 0; padding: 12px 14px; border-left: 3px solid #B2182B; background: #FDF4F3; font-size: 15px; line-height: 1.55; color: var(--text-2); }
+.safety-box b { color: var(--ink); }
+.not-here { margin: 14px 0 0; padding: 12px 14px; border: 1px solid var(--border-2); border-radius: var(--r-card); font-size: 15px; color: var(--text-2); }
+.not-here[hidden] { display: none; }

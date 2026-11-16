@@ -60,5 +60,27 @@ window.Contribute = (() => {
   }
 
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  return { spamCheck, device, post, esc };
+
+  // the survey forms are filled in on a phone (Teja, 16 Nov 2026); a laptop sees a QR code to open the page on one.
+  // Maps, results and downloads stay open anywhere. On this Mac, ?desk in the address skips it for testing.
+  function phoneOnly({ what, mapHref, mapLabel, atSpot = true }) {
+    const phone = matchMedia('(hover: none) and (pointer: coarse)').matches;
+    const local = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) && new URLSearchParams(location.search).has('desk');
+    const steps = document.querySelector('main .steps');
+    if (phone || local || !steps) return true;
+    const url = location.origin + location.pathname;
+    const gate = document.createElement('section');
+    gate.className = 'phone-gate';
+    gate.innerHTML = `<p class="eyebrow">Contribute · ${esc(what)}</p><h1>Open this on your phone</h1>
+      <p class="hint">${atSpot ? 'This survey is filled in on a phone, at the place itself, so the location is right.' : 'This survey is filled in on a phone.'} Scan the code with your phone's camera.</p>
+      <div class="qr" aria-hidden="true"></div><p class="gate-url">${esc(url.replace(/^https?:\/\//, ''))}</p>
+      <a class="btn btn-secondary btn-lg" href="${esc(mapHref)}">${esc(mapLabel)}</a>`;
+    steps.hidden = true; steps.before(gate);
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js';
+    s.onload = () => { try { const q = window.qrcode(0, 'M'); q.addData(url); q.make(); gate.querySelector('.qr').innerHTML = q.createSvgTag({ cellSize: 5, margin: 2, scalable: true }); } catch { /* the address is shown too */ } };
+    document.head.append(s);
+    return false;
+  }
+  return { spamCheck, device, post, esc, phoneOnly };
 })();

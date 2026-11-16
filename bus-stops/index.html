@@ -182,8 +182,10 @@
       <h2 class="qt" style="font-size:20px;margin-top:8px" id="q-here">Are you at the bus stop now?</h2>
       <div class="answers" role="radiogroup" aria-labelledby="q-here" data-field="here">
         <button type="button" class="answer" role="radio" aria-checked="false" data-val="yes"><span>Yes, I'm at the stop<small>Your phone can find the stop for you</small></span><i class="tick"></i></button>
-        <button type="button" class="answer" role="radio" aria-checked="false" data-val="no"><span>No, it's a stop I use<small>Tell us from memory; you can skip what you don't know</small></span><i class="tick"></i></button>
+        <button type="button" class="answer" role="radio" aria-checked="false" data-val="no"><span>No, not right now</span><i class="tick"></i></button>
       </div>
+      <p class="not-here" id="not-here" hidden>Details come from people standing at the stop, so they stay current. Come back when you're at a bus stop. Meanwhile, <a href="map/">see the stops map</a>.</p>
+      <div class="safety-box"><b>Safety first.</b> Watch for traffic and buses, and stand somewhere safe; you don't need to be right at the stop. Skip anything that doesn't feel safe.</div>
       <p class="playline" id="play-box">Collect points on the <a href="leaderboard/">leaderboard</a>: <a href="#" id="play-create"><b>Join as a contributor</b></a> · <a href="#" id="play-login"><b>Log in</b></a></p>
       <p class="playline" id="play-in" hidden>Contributing as <b id="play-name"></b> · <a href="leaderboard/">Leaderboard</a> · <a href="#" id="play-out">Log out</a></p>
       <p class="anon">No names, no email, and we don't keep IP addresses. You can take part without a nickname too.</p>
@@ -209,7 +211,6 @@
       </ul>
       <div class="stack">
         <button type="button" class="btn btn-primary btn-lg" id="gps-go">Share my location</button>
-        <button type="button" class="btn btn-secondary btn-lg" id="gps-search">Search for the stop instead</button>
       </div>
       <p class="msg" id="gps-msg" hidden></p>
     </section>
@@ -219,7 +220,7 @@
       <p class="hint">Each side of the road is a separate stop. Pick the one you are standing at.</p>
       <div class="answers" role="radiogroup" aria-labelledby="near-q" id="near-list"></div>
       <p class="msg" id="near-msg" hidden></p>
-      <p class="alt-link"><a href="#" class="to-missing">My stop isn't listed</a> · <a href="#" id="near-search">Search instead</a></p>
+      <p class="alt-link"><a href="#" class="to-missing">My stop isn't listed</a></p>
     </section>
 
     <section class="step" data-step="where">
@@ -235,39 +236,12 @@
       </div>
     </section>
 
-    <section class="step" data-step="find">
-      <h2 class="qt">Which bus stop?</h2>
-      <p class="hint" id="find-hint">Search for the stop's name, or for the area it is in.</p>
-      <div class="field" id="search-field">
-        <label class="field-label" for="ps-input">Bus stop or area</label>
-        <div class="search">
-          <input class="inp" type="search" id="ps-input" placeholder="For example Mehdipatnam, Ameerpet, Koti">
-          <div class="ps-results" id="ps-results" hidden></div>
-        </div>
-        <div class="inarea" id="inarea" hidden>
-          <h3 id="inarea-h"></h3>
-          <div class="answers" role="radiogroup" aria-labelledby="inarea-h" id="inarea-list"></div>
-        </div>
-        <p class="msg" id="find-msg" hidden></p>
-        <p class="alt-link"><a href="#" id="to-pickmap">Prefer a map? Pick the stop on the map</a></p>
-        <p class="alt-link"><a href="#" class="to-missing">The stop isn't in the list? Add it on a map</a></p>
-      </div>
-      <div class="field" id="pickmap-field" hidden>
-        <span class="field-label">Tap your bus stop</span>
-        <span class="field-hint">Zoom in until you can tell the two sides of the road apart, then tap the dot.</span>
-        <div class="map-box"><div id="pickmap" class="mapdiv"></div><div class="map-hint halo" id="pickmap-hint">Zoom in and tap a stop</div></div>
-        <div class="picked-stop" id="picked-stop" hidden></div>
-        <p class="msg" id="pickmap-msg" hidden></p>
-        <p class="alt-link"><a href="#" id="to-search">Use the search instead</a> · <a href="#" class="to-missing">Not on the map? Add a missing stop</a></p>
-      </div>
-    </section>
-
     <section class="step" data-step="missing">
       <h2 class="qt">Add a missing stop</h2>
-      <p class="hint">Buses stop here but it isn't in the bus data. Mark it on the map and give it a name. Grey dots are stops we already know.</p>
+      <p class="hint">Buses stop here but it isn't in the bus data. The dot is where you are: drag it to where the bus stops (up to 100 m), and give the stop a name. Grey dots are stops we already know.</p>
       <div class="field">
         <span class="field-label">Spot on the map <span class="req" aria-hidden="true">*</span><span class="req-word">Required</span></span>
-        <div class="map-box"><div id="map"></div><div class="map-hint halo" id="map-hint">Tap where the bus stops</div></div>
+        <div class="map-box"><div id="map"></div><div class="map-hint halo" id="map-hint">Drag the dot to where the bus stops</div></div>
         <p class="picked" id="pin-info" hidden></p>
         <p class="msg" id="pin-msg" hidden></p>
       </div>
@@ -290,7 +264,7 @@
       <label class="btn btn-secondary btn-lg" for="photo-in" id="photo-btn">Take or choose a photo</label>
       <input type="file" accept="image/*" id="photo-in">
       <p class="fine" id="photo-info" hidden></p>
-      <p class="fine">Shown on the stop's page. Try to keep people's faces and vehicle number plates out of it. Your phone makes the photo smaller and removes the location and camera details stored inside it.</p>
+      <p class="fine"><b>Step away from traffic before you take a photo.</b> Shown on the stop's page. Try to keep people's faces and vehicle number plates out of it. Your phone makes the photo smaller and removes the location and camera details stored inside it.</p>
     </section>
 
     <section class="step" data-step="improve">

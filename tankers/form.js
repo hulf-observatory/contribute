@@ -1,11 +1,13 @@
 // Tell us about a water tanker: where (phone, area search or map), how exactly to show it (exact / ~500 m / area /
 // ward only), then the order. Only as much place as the person chose is sent; the server checks it again.
+// For a home, an office or a whole building/colony (an RWA ordering); filled in from anywhere, but on a phone.
 import { createPlaceSearch } from '../assets/place-search.js';
 
 const C = window.CONTRIBUTE;
 const $ = (id) => document.getElementById(id);
 const esc = Contribute.esc;
 const inHmda = (lng, lat) => lng >= C.HMDA[0] && lng <= C.HMDA[2] && lat >= C.HMDA[1] && lat <= C.HMDA[3];
+Contribute.phoneOnly({ what: 'Water tankers', mapHref: 'orders/', mapLabel: 'See the tanker orders', atSpot: false });
 
 // ── tanker sizes, as text (Teja, 15 Nov 2026: no pictures) ──
 const SIZES = [
@@ -189,7 +191,7 @@ function drawReview() {
   const price = paidKind() === 'free' ? "Didn't pay (free)" : paidKind() === 'dk' ? "Don't know the price" : `₹${(num('price') || 0).toLocaleString('en-IN')}` + (num('extra') ? ` + ₹${num('extra').toLocaleString('en-IN')} to the driver` : '');
   const d = new Date($('odate').value + 'T12:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
   const rows = [['Where', placeText(), S.mode === 'gps' ? 'precision' : S.mode],
-    ['For', esc(`${lab('[data-g=for]', S.g.for).replace(/I look.*/, '')} · ${lab('[data-g=building]', S.g.building)}${S.g.households ? ' · ' + lab('[data-g=households]', S.g.households) + ' households' : ''}`), 'who'],
+    ['For', esc(`${lab('[data-g=for]', S.g.for).replace(/RWA.*/, '')} · ${lab('[data-g=building]', S.g.building)}${S.g.households ? ' · ' + lab('[data-g=households]', S.g.households) + ' households' : ''}`), 'who'],
     ['From', esc(lab('[data-field=source]', S.source).split(/Booked/)[0]), 'source'], ['Size', esc(sz ? sz.label : ''), 'size'],
     ['Paid', esc(price), 'paid'], ['Ordered', esc(`${d}, ${S.g.tod}`), 'ordered'], ['Came', esc(lab('[data-field=came]', S.came)), 'came'],
     ['Usual week', esc(S.nw === 0 ? 'Less than one tanker' : `${S.nw >= 30 ? '30+' : S.nw} tanker${S.nw > 1 ? 's' : ''}`), 'often'],
