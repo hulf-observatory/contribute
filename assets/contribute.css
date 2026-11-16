@@ -103,7 +103,7 @@ h1 { font: 700 30px/1.2 var(--font-ui); letter-spacing: -.005em; margin: 0 0 10p
 .not-here[hidden] { display: none; }
 /* mark on a map: a fixed pin in the centre of the map (when the phone's location fails) */
 .mm-box { position: relative; height: 52vh; min-height: 300px; max-height: 460px; border: 1px solid var(--border); border-radius: var(--r-card); overflow: hidden; }
-.mm-map { position: absolute; inset: 0; }
+.mm-box .mm-map { position: absolute; inset: 0; }   /* beats .maplibregl-map { position: relative }, which loads later and squashed the map to 0 px */
 .centre-pin { position: absolute; left: 50%; top: 50%; width: 28px; height: 28px; margin: -14px 0 0 -14px; z-index: 3; pointer-events: none;
   border: 3px solid #111827; border-radius: 50%; box-shadow: 0 0 0 2px #fff, inset 0 0 0 2px #fff; }
 .centre-pin::after { content: ''; position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: #111827; box-shadow: 0 0 0 2px #fff; }
