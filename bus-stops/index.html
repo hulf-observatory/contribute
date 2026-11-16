@@ -185,6 +185,10 @@
         <button type="button" class="answer" role="radio" aria-checked="false" data-val="no"><span>No, not right now</span><i class="tick"></i></button>
       </div>
       <p class="not-here" id="not-here" hidden>Details come from people standing at the stop, so they stay current. Come back when you're at a bus stop. Meanwhile, <a href="map/">see the stops map</a>.</p>
+      <div class="memory" id="memory-box" hidden>
+        <p><b>Know a stop really well?</b> If you can find it exactly on the map, you can add its details from memory. In the data these are marked <b>from memory</b>, so others know.</p>
+        <div class="row-btns"><button type="button" class="btn btn-secondary btn-lg" id="from-memory">Find the stop on the map</button></div>
+      </div>
       <div class="safety-box"><b>Safety first.</b> Watch for traffic and buses, and stand somewhere safe; you don't need to be right at the stop. Skip anything that doesn't feel safe.</div>
       <p class="playline" id="play-box">Collect points on the <a href="leaderboard/">leaderboard</a>: <a href="#" id="play-create"><b>Join as a contributor</b></a> · <a href="#" id="play-login"><b>Log in</b></a></p>
       <p class="playline" id="play-in" hidden>Contributing as <b id="play-name"></b> · <a href="leaderboard/">Leaderboard</a> · <a href="#" id="play-out">Log out</a></p>
@@ -212,15 +216,15 @@
       </ul>
       <div class="stack">
         <button type="button" class="btn btn-primary btn-lg" id="gps-go">Share my location</button>
+        <button type="button" class="btn btn-secondary btn-lg" id="to-mark">Location not working? Use the map</button>
       </div>
       <p class="msg" id="gps-msg" hidden></p>
-      <p class="alt-link" id="to-mark-p" hidden><a href="#" id="to-mark"><b>Location not working? Find the stop on the map instead</b></a></p>
     </section>
 
     <!-- when the phone's location fails: a map with a fixed pin in the centre; its centre stands in for the phone -->
     <section class="step" data-step="mark">
       <h2 class="qt">Find the stop on the map</h2>
-      <p class="hint">Move the map until the pin in the middle sits on the bus stop, then press Next. You still need to be at the stop.</p>
+      <p class="hint" id="mark-hint">Move the map until the pin in the middle sits on the bus stop, then press Next. You still need to be at the stop.</p>
       <div id="markbox"></div>
       <p class="msg" id="mark-msg" hidden></p>
     </section>

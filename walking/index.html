@@ -195,6 +195,10 @@
         <button type="button" class="answer" role="radio" aria-checked="false" data-val="crossing"><span>Tell us about a crossing<small>Where people cross the road here</small></span><i class="tick"></i></button>
         <button type="button" class="answer" role="radio" aria-checked="false" data-val="walk"><span>Record a walk<small>Your phone follows your route; stop and tell us about each stretch and crossing</small></span><i class="tick"></i></button>
       </div>
+      <div class="memory">
+        <p><b>Not there right now?</b> If you know a footpath or crossing really well and can find it exactly on the map, you can add it from memory. In the data these are marked <b>from memory</b>, so others know.</p>
+        <div class="row-btns"><button type="button" class="btn btn-secondary" id="mem-spot">A footpath spot</button><button type="button" class="btn btn-secondary" id="mem-crossing">A crossing</button></div>
+      </div>
       <div class="safety"><b>Safety first.</b> Watch for traffic and stand somewhere safe; you don't need to be right at the spot. Skip anything that doesn't feel safe.</div>
       <p class="playline" id="play-box">Collect points on the <a href="../bus-stops/leaderboard/">leaderboard</a>: <a href="#" id="play-create"><b>Join as a contributor</b></a> · <a href="#" id="play-login"><b>Log in</b></a></p>
       <div class="joinbox" id="joinbox" hidden>
@@ -225,17 +229,16 @@
     <section class="step" data-step="where">
       <h2 class="qt">Share your location</h2>
       <p class="hint">Your phone shows where you are. Standing a little away from the spot, somewhere safe? Drag the dot to the exact spot (up to 100 m).</p>
-      <div class="row-btns"><button type="button" class="btn btn-primary btn-lg" id="gps-go">Share my location</button></div>
+      <div class="row-btns"><button type="button" class="btn btn-primary btn-lg" id="gps-go">Share my location</button><button type="button" class="btn btn-secondary btn-lg" id="to-mark">Location not working? Use the map</button></div>
       <div class="map-box"><div id="wheremap"></div><div class="map-hint halo" id="where-hint">Your location will show here</div></div>
       <p class="picked" id="where-info" hidden></p>
       <p class="msg" id="where-msg" hidden></p>
-      <p class="alt-link" id="to-mark-p" hidden><a href="#" id="to-mark"><b>Location not working? Mark the place on the map instead</b></a></p>
     </section>
 
     <!-- when the phone's location fails: a map with a fixed pin in the centre -->
     <section class="step" data-step="mark">
       <h2 class="qt">Mark the place on the map</h2>
-      <p class="hint">Move the map until the pin in the middle sits on the place. You still need to be there.</p>
+      <p class="hint" id="mark-hint">Move the map until the pin in the middle sits on the place. You still need to be there.</p>
       <div id="markbox"></div>
     </section>
 

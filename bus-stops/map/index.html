@@ -25,6 +25,7 @@
   .cover .track i { display: block; height: 100%; background: var(--ink); }
 
   .layout { display: grid; gap: 28px; }
+  .check-nudge { margin: 0 0 12px; font-size: 14px; color: var(--text-2); }
   .stat-link { text-decoration: none; color: inherit; }
   .stat-link span { text-decoration: underline; text-decoration-color: var(--border-2); text-underline-offset: 3px; }
   .stat-link:hover span { text-decoration-color: var(--ink); }
@@ -92,11 +93,13 @@
     </div>
   </div>
 
+  <p class="check-nudge">At a stop that has details? Open it on the map and tap <b>Still the same</b>, or give feedback if something is wrong. Checking others keeps the data honest, and earns 2 points on the leaderboard.</p>
   <div class="stats">
     <div class="cover"><span class="stat"><b id="n-rated">0</b><span id="n-of">of 0 stops with details</span></span><div class="track"><i id="cover-bar"></i></div></div>
     <span class="stat"><b id="n-ratings">0</b><span>contributions</span></span>
     <a class="stat stat-link" href="../leaderboard/"><b id="n-people">0</b><span>contributors on the leaderboard <span class="arr">→</span></span></a>
     <span class="stat"><b id="n-added">0</b><span>missing stops added</span></span>
+    <span class="stat"><b id="n-checked">0</b><span id="n-checked-of">contributions checked by someone else</span></span>
     <span class="stat" id="load-msg" hidden></span>
   </div>
 

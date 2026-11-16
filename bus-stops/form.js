@@ -31,8 +31,9 @@ const PRESET = new URLSearchParams(location.search).get('stop');
 // ── steps ──
 function steps() {
   const l = ['start'];
-  if (S.here === 'yes') {                          // at the stop: the phone's location first, or the map if it fails
-    const loc = S.viaMap ? ['locate', 'mark'] : ['locate'], chk = S.viaMap ? [] : ['where'];
+  if (S.here === 'yes' || S.here === 'known') {    // at the stop: the phone's location first, or the map if it fails;
+    const mem = S.here === 'known';                 // from memory: the map only (a stop's own page: that stop)
+    const loc = mem ? (S.preset ? [] : ['mark']) : S.viaMap ? ['locate', 'mark'] : ['locate'], chk = S.viaMap ? [] : ['where'];
     if (S.preset) l.push(...loc, ...chk);
     else if (S.how === 'missing') l.push(...loc, 'missing');
     else l.push(...loc, 'nearest', ...chk);
@@ -67,7 +68,8 @@ function show(s, push = true) {
   if (s === 'review') drawReview();
   if (s === 'missing') openMap();
   if (s === 'where') openWhereMap();
-  if (s === 'mark') marker.open();
+  if (s === 'mark') { marker.open(); $('mark-hint').textContent = S.here === 'known' ? 'Move the map until the pin in the middle sits exactly on the bus stop, then press Next.'
+    : 'Move the map until the pin in the middle sits on the bus stop, then press Next. You still need to be at the stop.'; }
   if (s === 'start') drawPlay();
   if (s === 'player') { const p = player.get(); $('p-nick').value = p ? p.nick : $('p-nick').value; $('p-pin').value = ''; $('p-msg').hidden = true; playerReady(); }
   if (s === 't-facilities') document.querySelector('[data-step="t-facilities"] [data-few]').hidden = answered(S.a) >= MIN_ANSWERS;
@@ -97,7 +99,8 @@ document.querySelector('[data-field="here"]').addEventListener('click', (e) => {
   const b = e.target.closest('[role=radio]'); if (!b) return;
   b.parentElement.querySelectorAll('[role=radio]').forEach(x => x.setAttribute('aria-checked', x === b));
   S.here = b.dataset.val;
-  $('not-here').hidden = S.here !== 'no';          // not at a stop: nothing to fill in now
+  $('not-here').hidden = S.here !== 'no';          // not at a stop: from memory, if they know it well
+  $('memory-box').hidden = S.here !== 'no';
   if (S.here !== 'yes') return;
   if (!S.preset) { S.how = 'gps'; S.stop = null; S.missing = null; }
   setTimeout(() => go(1), 220);
@@ -180,12 +183,20 @@ function fromPlace(lat, lng, acc) {
   $('near-list').innerHTML = near.map(([s, d]) => stopButton(s, d)).join('');
   $('near-msg').hidden = near[0][1] < 400;
   $('near-msg').textContent = `The nearest stop we know is ${Math.round(near[0][1])} m away${acc > 100 ? ", and your phone's location is rough" : ''}. If you are at a stop, it may be missing from the bus data: add it.`;
+  $('near-q').textContent = S.here === 'known' ? 'Which stop is it?' : 'Which stop are you at?';
   S.stop = null; go(1);
 }
-function gpsFailed(t) { $('gps-go').textContent = 'Try again'; $('gps-go').disabled = false; $('gps-msg').textContent = t; $('gps-msg').hidden = false; $('to-mark-p').hidden = false; }
+function gpsFailed(t) { $('gps-go').textContent = 'Try again'; $('gps-go').disabled = false; $('gps-msg').textContent = t; $('gps-msg').hidden = false; }
 // the phone's location failed: find the stop with the pin in the middle of a map (Teja, 16 Nov 2026)
 const marker = mapMark($('markbox'), { onChange: ({ lat, lng, ok }) => { S.markAt = ok ? { lat, lng } : null; $('mark-msg').hidden = true; updateNext(); } });
 $('to-mark').onclick = (e) => { e.preventDefault(); S.viaMap = true; S.markAt = null; show('mark'); };
+// not there now, but knows the stop well: from memory, on the map (Teja, 16 Nov 2026); marked "memory" in the data
+$('from-memory').onclick = () => {
+  S.here = 'known'; S.viaMap = true; S.markAt = null;
+  if (S.preset) S.phone = { lat: S.stop.lat, lng: S.stop.lng, acc: null };   // a stop's own page: that stop
+  else { S.how = 'gps'; S.stop = null; S.missing = null; }
+  go(1);
+};
 document.querySelectorAll('.to-missing').forEach(a => a.onclick = (e) => { e.preventDefault(); S.how = 'missing'; S.stop = null; show('missing'); });
 
 // ── at the stop: is it where the bus data puts it? (only the phone's location if they say "where I am") ──

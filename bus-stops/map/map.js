@@ -20,6 +20,9 @@ $('n-of').textContent = `of ${fmt(stops.length)} stops with details`;
 $('cover-bar').style.width = (stops.length ? per.size / stops.length * 100 : 0).toFixed(1) + '%';
 $('n-ratings').textContent = fmt(ratings.length);
 $('n-added').textContent = fmt(added.length);
+const checked = ratings.filter(r => r.confirmed > 0).length;           // someone else said "still the same"
+$('n-checked').textContent = fmt(checked);
+$('n-checked-of').textContent = `of ${fmt(ratings.length)} contributions checked by someone else`;
 
 // ── which topic, and which answers to show ──
 let view = VIEWS[0], filter = null;

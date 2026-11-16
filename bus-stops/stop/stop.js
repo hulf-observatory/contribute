@@ -45,7 +45,7 @@ $('photo-sec').hidden = !ph.length;
 // every rating, newest first
 function drawHistory() {
   $('hist').innerHTML = list.map(r => {
-    return `<li><div class="who"><b>${r.nick ? esc(r.nick) : 'Someone'}</b><span>${day(r.observed_at)}</span>${r.here === 'yes' ? '<span class="tag">At the stop</span>' : ''}${r.place_type === 'missing' ? '<span class="tag">Added the stop</span>' : ''}${r.photo ? '<span class="tag">Photo</span>' : ''}
+    return `<li><div class="who"><b>${r.nick ? esc(r.nick) : 'Someone'}</b><span>${day(r.observed_at)}</span>${r.here === 'yes' ? '<span class="tag">At the stop</span>' : r.here === 'known' ? '<span class="tag">From memory</span>' : ''}${r.place_type === 'missing' ? '<span class="tag">Added the stop</span>' : ''}${r.photo ? '<span class="tag">Photo</span>' : ''}
 ${r.confirmed ? `<span>· confirmed by ${r.confirmed}</span>` : ''}</div>
       ${r.improve ? `<p class="said">Would improve: <q>${esc(r.improve)}</q></p>` : ''}
       <button type="button" class="fb" data-r="${esc(r.id)}">Give feedback</button></li>`;

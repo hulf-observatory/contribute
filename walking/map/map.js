@@ -3,6 +3,7 @@
 import { SURVEY, TOPICS, CROSS_TOPICS, VIEWS, CROSS_VIEWS, VIEW_COLORS, shown, optLabel, esc, loadReports, contributions, metres } from '../questions.js';
 const $ = (id) => document.getElementById(id);
 const NONE = '#B8BDC6';
+const MEM = ['case', ['==', ['get', 'mem'], 1], 0.45, 1];     // added from memory, not at the place: drawn faint
 
 const rows = await loadReports().catch(() => null);
 if (!rows) { $('loadmsg').hidden = false; $('loadmsg').textContent = "The map's data couldn't load just now. Please try again later."; }
@@ -19,7 +20,7 @@ function geo() {
     const foot = c.spots.filter(s => s.kind !== 'crossing');
     c.spots.forEach((s, i) => {
       const mine = (s.kind === 'crossing') === (view.g === 'x'), v = mine ? view.of(s) : null;
-      const props = { c: c.id, i, col: mine ? (v ? VIEW_COLORS[v] : NONE) : FAINT, on: mine ? 1 : 0 };
+      const props = { c: c.id, i, col: mine ? (v ? VIEW_COLORS[v] : NONE) : FAINT, on: mine ? 1 : 0, mem: s.located === 'memory' ? 1 : 0 };
       const pt = { type: 'Feature', properties: props, geometry: { type: 'Point', coordinates: [s.lng, s.lat] } };
       if (s.kind === 'crossing') { xings.push(pt); return; }
       dots.push(pt);
@@ -34,7 +35,7 @@ function drawControls() {
   const chips = (g) => ALLV.filter(v => v.g === g).map(v => `<button type="button" class="chip" aria-pressed="${v === view}" data-v="${v.g}:${v.id}">${esc(v.label)}</button>`).join('');
   $('chips').innerHTML = `<span class="grp">Footpaths</span>${chips('foot')}<span class="grp">Crossings</span>${chips('x')}`;
   $('legend').innerHTML = Object.entries(view.labels).map(([k, l]) => `<span><i style="background:${VIEW_COLORS[k]}"></i>${esc(l)}</span>`).join('') + `<span><i style="background:${NONE}"></i>Not answered</span>`
-    + `<span><b class="key-x"></b>Crossing</span><span><b class="key-f"></b>Footpath spot</span>`;
+    + `<span><b class="key-x"></b>Crossing</span><span><b class="key-f"></b>Footpath spot</span><span>Faded: added from memory</span>`;
 }
 $('chips').addEventListener('click', (e) => { const b = e.target.closest('.chip'); if (!b) return; view = ALLV.find(v => `${v.g}:${v.id}` === b.dataset.v); drawControls(); const g = geo(); for (const k of ['lines', 'dots', 'xings']) map.getSource(k)?.setData(g[k]); });
 drawControls();
@@ -46,10 +47,10 @@ map.on('load', () => {
   map.addSource('lines', { type: 'geojson', data: g.lines });
   map.addLayer({ id: 'lines', type: 'line', source: 'lines', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': ['get', 'col'], 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 2.5, 16, 7] } });
   map.addSource('dots', { type: 'geojson', data: g.dots });
-  map.addLayer({ id: 'dots', type: 'circle', source: 'dots', paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 11, 3, 16, 7], 'circle-color': ['get', 'col'], 'circle-stroke-color': '#fff', 'circle-stroke-width': 1.5 } });
+  map.addLayer({ id: 'dots', type: 'circle', source: 'dots', paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 11, 3, 16, 7], 'circle-color': ['get', 'col'], 'circle-stroke-color': '#fff', 'circle-stroke-width': 1.5, 'circle-opacity': MEM, 'circle-stroke-opacity': MEM } });
   map.addSource('xings', { type: 'geojson', data: g.xings });
   map.addLayer({ id: 'xings', type: 'circle', source: 'xings', paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 11, 4, 16, 10], 'circle-color': ['get', 'col'],
-    'circle-stroke-color': ['case', ['==', ['get', 'on'], 1], '#111827', '#9CA3AF'], 'circle-stroke-width': 2 } });
+    'circle-stroke-color': ['case', ['==', ['get', 'on'], 1], '#111827', '#9CA3AF'], 'circle-stroke-width': 2, 'circle-opacity': MEM, 'circle-stroke-opacity': MEM } });
   for (const id of ['lines', 'dots', 'xings']) {
     map.on('mouseenter', id, () => { map.getCanvas().style.cursor = 'pointer'; }); map.on('mouseleave', id, () => { map.getCanvas().style.cursor = ''; });
   }
@@ -60,7 +61,7 @@ map.on('load', () => {
     const isX = s.kind === 'crossing', a = s;
     const lines = (isX ? CROSS_TOPICS : TOPICS).flatMap(t => t.qs).filter(q => shown(q, a) && a[q.id] != null).map(q => `<li>${esc(q.s)}: ${esc(q.multi ? a[q.id].map(v => optLabel(q, v)).join(', ') : optLabel(q, a[q.id]))}</li>`).join('');
     new maplibregl.Popup({ maxWidth: '300px' }).setLngLat(e.lngLat).setHTML(`<div class="pop"><b>${isX ? (c.kind === 'walk' ? 'Crossing, on a walk' : 'Crossing') : c.kind === 'walk' ? `Walk, spot ${i + 1} of ${c.spots.length}` : 'A single spot'}</b>
-      <div class="meta">${rs ? `${rs[0].toUpperCase() + rs.slice(1)} side of the road · ` : ''}${new Date(c.at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}${c.nick ? ' · ' + esc(c.nick) : ''}</div>${s.photo ? `<a href="${esc(s.photo)}" target="_blank" rel="noopener"><img src="${esc(s.photo)}" alt="Photo" style="width:100%;max-height:140px;object-fit:cover;margin:4px 0 6px;border-radius:3px"></a>` : ''}
+      <div class="meta">${s.located === 'memory' ? 'From memory · ' : ''}${rs ? `${rs[0].toUpperCase() + rs.slice(1)} side of the road · ` : ''}${new Date(c.at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}${c.nick ? ' · ' + esc(c.nick) : ''}</div>${s.photo ? `<a href="${esc(s.photo)}" target="_blank" rel="noopener"><img src="${esc(s.photo)}" alt="Photo" style="width:100%;max-height:140px;object-fit:cover;margin:4px 0 6px;border-radius:3px"></a>` : ''}
       <ul>${lines}</ul>${s.note ? `<p style="margin:6px 0 0">“${esc(s.note)}”</p>` : ''}${s.confirmed ? `<p style="margin:4px 0 0;color:var(--muted);font-size:13px">${s.confirmed} said it's still like this</p>` : ''}<button type="button" class="fbb" data-id="${esc(s.id)}" data-photo="${s.photo ? 1 : ''}">Give feedback</button></div>`).addTo(map);
   });
 });
@@ -69,8 +70,10 @@ map.on('load', () => {
 const xs = all.flatMap(c => c.spots).filter(s => s.kind === 'crossing');
 const nSpots = all.reduce((a, c) => a + c.spots.filter(s => s.kind !== 'crossing').length, 0), walks = all.filter(c => c.kind === 'walk');
 const km = walks.reduce((a, c) => a + c.spots.reduce((d, s, i) => i ? d + metres(c.spots[i - 1], s) : 0, 0), 0) / 1000;
+const nAll = all.reduce((a, c) => a + c.spots.length, 0), checked = all.reduce((a, c) => a + c.spots.filter(s => s.confirmed > 0).length, 0);
 const noFoot = all.flatMap(c => c.spots).filter(s => s.footpath === 'no').length, unmarked = xs.filter(s => s.x_marked === 'none').length;
-$('stats').innerHTML = `<div><b>${nSpots}</b>spots</div><div><b>${walks.length}</b>walks</div><div><b>${km.toFixed(1)} km</b>walked</div><div><b>${Math.round(noFoot / Math.max(1, nSpots) * 100)}%</b>of spots have no footpath</div><div><b>${xs.length}</b>crossings</div><div><b>${Math.round(unmarked / Math.max(1, xs.length) * 100)}%</b>of crossings not marked</div>`;
+$('stats').innerHTML = `<div><b>${nSpots}</b>spots</div><div><b>${walks.length}</b>walks</div><div><b>${km.toFixed(1)} km</b>walked</div><div><b>${Math.round(noFoot / Math.max(1, nSpots) * 100)}%</b>of spots have no footpath</div><div><b>${xs.length}</b>crossings</div><div><b>${Math.round(unmarked / Math.max(1, xs.length) * 100)}%</b>of crossings not marked</div>`
+  + `<div><b>${checked} of ${nAll}</b>checked by someone else</div>`;
 
 // ── feedback: the same for every spot and crossing ──
 let kind = null, target = null;

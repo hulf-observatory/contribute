@@ -111,3 +111,8 @@ h1 { font: 700 30px/1.2 var(--font-ui); letter-spacing: -.005em; margin: 0 0 10p
 /* every survey: a public data exercise, not a complaint service */
 .not-complaint { margin: 16px 0 0; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--r-card); background: var(--band); font-size: 14px; line-height: 1.55; color: var(--text-2); }
 .not-complaint b { color: var(--ink); }
+/* not there now, but knows the place well: add it from memory on the map (16 Nov 2026) */
+.memory { margin: 14px 0 0; padding: 14px; border: 1px solid var(--border); border-radius: var(--r-card); }
+.memory[hidden] { display: none; }
+.memory p { margin: 0 0 12px; font-size: 15px; line-height: 1.5; }
+.memory .row-btns { margin: 0; }

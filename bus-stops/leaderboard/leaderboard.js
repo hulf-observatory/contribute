@@ -25,4 +25,4 @@ const P = (lb && lb.points && (lb.points['bus-stops'] || lb.points)) || POINTS;
 const W = (lb && lb.points && lb.points.walking) || { spot: 10, crossing: 10, photo: 5 };
 $('pts').innerHTML = [['Tell us about a bus stop', P.rating], ['…the first details for a stop', '+' + P.first], ['Add a missing stop', '+' + P.missing],
   ['A footpath spot or a crossing', W.spot], ['Add a photo', '+' + P.photo],
-  ['Confirm something is still the same', P.confirm], ['Flag a wrong contribution', P.flag]].map(([k, v]) => `<li><span>${k}</span><b>${v}</b></li>`).join('');
+  ['Check someone else\'s entry: still the same', P.confirm], ['Flag a wrong contribution', P.flag]].map(([k, v]) => `<li><span>${k}</span><b>${v}</b></li>`).join('');

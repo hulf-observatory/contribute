@@ -111,6 +111,7 @@
     .fb { width: 100vw; max-width: 100vw; margin: auto 0 0; border-radius: 12px 12px 0 0; border-bottom: 0; }
     .fb form { padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
   }
+  .check-line { margin: 8px 0 0; font-size: 14px; color: var(--text-2); }
 </style>
 </head>
 <body>
@@ -128,6 +129,7 @@
       <p class="eyebrow">Community data · Flooding</p>
       <h1>Flood reports</h1>
       <p class="lede">Where people have reported water on the roads, and how deep it was.</p>
+      <p class="check-line" id="check-line" hidden></p>
     </div>
     <div class="top-btns"><a class="btn btn-primary" href="../">Report flooding <span class="arr">→</span></a><a class="btn btn-secondary" href="../download/">Download the data</a></div>
   </div>
@@ -273,6 +275,9 @@ fetch(`${API}/flood/reports.json`, { cache: 'no-cache' }).then(r => { if (!r.ok)
   all = (d.features || []).map(f => (f.properties.depth_key = bucket(f.properties.depth_cm), f))
     .sort((a, b) => b.properties.observed_at.localeCompare(a.properties.observed_at));
   drawPeriods(); apply();
+  const ok = all.filter(f => f.properties.confirmed > 0).length;         // someone else said "I saw this too"
+  $('check-line').innerHTML = `<b>${ok} of ${all.length}</b> reports confirmed by someone else. Saw one of these too? Open it and tap <b>Give feedback</b> → <b>I saw this too</b>.`;
+  $('check-line').hidden = !all.length;
 }).catch(() => {
   $('fig-title').textContent = "The reports couldn't be loaded just now";
   $('fig-sub').textContent = 'Please try again in a little while.';

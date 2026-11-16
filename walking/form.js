@@ -47,7 +47,7 @@ function show(s, push = true) {
   const card = S.spot && ['dir', 'same', 'extra', ...ALL_STEPS].includes(s);
   $('spotcard').hidden = !card; if (card) drawCard();
   if (s === 'where') openWhereMap();
-  if (s === 'mark') marker.open();
+  if (s === 'mark') { marker.open(); $('mark-hint').textContent = S.memory ? 'Move the map until the pin in the middle sits exactly on the place.' : 'Move the map until the pin in the middle sits on the place. You still need to be there.'; }
   if (s === 'walk') openWalkMap();
   if (s === 'dir') drawDir();
   if (s === 'same') drawSame();
@@ -83,7 +83,7 @@ $('back').onclick = () => { const p = stack.pop(); if (p) show(p, false); };
 $('mode').addEventListener('click', (e) => {
   const b = e.target.closest('[role=radio]'); if (!b) return;
   $('mode').querySelectorAll('[role=radio]').forEach(x => x.setAttribute('aria-checked', x === b));
-  S.mode = b.dataset.val; S.spot = null; S.spots = []; S.byMap = false;
+  S.mode = b.dataset.val; S.spot = null; S.spots = []; S.byMap = false; S.memory = false;
   setTimeout(() => show(S.mode === 'walk' ? 'walk' : 'where'), 220);
 });
 // contributor line: the same nickname and PIN as bus stops, checked with the server
@@ -147,7 +147,7 @@ $('gps-go').onclick = () => {
     placeSpot(lng, lat); wmap.flyTo({ center: [lng, lat], zoom: 18 }); $('gps-go').textContent = 'Share my location again'; $('gps-go').className = 'btn btn-secondary btn-lg';
   }, (err) => { $('gps-go').disabled = false; $('gps-go').textContent = 'Try again'; $('where-msg').textContent = err.code === 1
       ? "Your phone didn't share its location. Allow location for this page in your browser's settings and try again, or mark the place on the map."
-      : "We couldn't get your location. Try again in a moment, ideally in the open, or mark the place on the map."; $('where-msg').hidden = false; $('to-mark-p').hidden = false; },
+      : "We couldn't get your location. Try again in a moment, ideally in the open, or mark the place on the map."; $('where-msg').hidden = false; },
   { enableHighAccuracy: true, timeout: 20000, maximumAge: 15000 });
 };
 // ── the phone's location failed: mark the place with the pin in the middle of a map (Teja, 16 Nov 2026) ──
@@ -156,7 +156,12 @@ const marker = mapMark($('markbox'), { onChange: ({ lat, lng, ok }) => {
   S.spot = Object.assign(S.spot && S.spot.byMap ? S.spot : newSpot(lat, lng, S.mode === 'crossing' ? 'crossing' : 'spot'), { lat, lng, accuracy_m: null, moved_m: null, byMap: true });
   updateNext();
 } });
-$('to-mark').onclick = (e) => { e.preventDefault(); S.byMap = true; S.gps = false; S.spot = null; show('mark'); };
+$('to-mark').onclick = (e) => { e.preventDefault(); S.byMap = true; S.memory = false; S.gps = false; S.spot = null; show('mark'); };
+// not there now, but knows the place well: one spot or crossing from memory, on the map (Teja, 16 Nov 2026)
+for (const k of ['spot', 'crossing']) $('mem-' + k).onclick = () => {
+  $('mode').querySelectorAll('[role=radio]').forEach(x => x.setAttribute('aria-checked', 'false'));
+  Object.assign(S, { mode: k, spot: null, spots: [], byMap: true, memory: true, gps: false }); show('mark');
+};
 
 // a walk: follow the route, mark spots
 let kmap = null, me = null;
@@ -343,9 +348,9 @@ function topicLines(t, a) {
 function drawCard() {
   const s = S.spot;
   $('sc-n').textContent = S.mode === 'walk' ? S.spots.length + 1 : isX() ? '×' : '•';
-  if (isX()) { $('sc-name').textContent = S.mode === 'walk' ? `Crossing on your walk (${S.spots.length + 1})` : 'Your crossing'; $('sc-ctx').textContent = s.byMap ? 'Marked on the map' : s.moved_m > 2 ? `Moved ${s.moved_m} m from where you are` : 'Where you are standing'; return; }
+  if (isX()) { $('sc-name').textContent = S.mode === 'walk' ? `Crossing on your walk (${S.spots.length + 1})` : 'Your crossing'; $('sc-ctx').textContent = s.byMap ? (S.memory ? 'From memory, marked on the map' : 'Marked on the map') : s.moved_m > 2 ? `Moved ${s.moved_m} m from where you are` : 'Where you are standing'; return; }
   $('sc-name').textContent = S.mode === 'walk' ? `Spot ${S.spots.length + 1} of your walk` : 'Your spot';
-  $('sc-ctx').textContent = spotTitle(s) === 'Spot' ? (S.gps ? 'Where you are standing' : 'Marked on the map') : spotTitle(s);
+  $('sc-ctx').textContent = spotTitle(s) === 'Spot' ? (S.gps ? 'Where you are standing' : S.memory ? 'From memory, marked on the map' : 'Marked on the map') : spotTitle(s);
 }
 
 // ── photo and note ──
@@ -393,7 +398,7 @@ const ANSWER_IDS = new Set(QUESTIONS.map(q => q.id));
 function payload() {
   const spots = S.mode === 'walk' ? S.spots : [S.spot], p = player.get();
   return { mode: S.mode, nick: p ? p.nick : null, nick_pin: p ? p.pin : null,
-    items: spots.map(s => ({ item: s.kind, place_type: s.byMap ? 'map' : 'gps', lat: +s.lat.toFixed(6), lng: +s.lng.toFixed(6), accuracy_m: s.accuracy_m, moved_m: s.byMap ? null : (s.moved_m || 0), observed_at: s.at,
+    items: spots.map(s => ({ item: s.kind, here: S.memory ? 'known' : 'yes', place_type: s.byMap ? 'map' : 'gps', lat: +s.lat.toFixed(6), lng: +s.lng.toFixed(6), accuracy_m: s.accuracy_m, moved_m: s.byMap ? null : (s.moved_m || 0), observed_at: s.at,
       ...(s.kind === 'spot' ? { facing: s.facing, side_how: s.how, road_deg: s.roadDeg, lr: s.lr, same: !!s.same } : {}),
       ...Object.fromEntries(Object.entries(s.answers).filter(([k, v]) => ANSWER_IDS.has(k) && v != null)),
       note: s.note || null, photo: s.photo || null })) };

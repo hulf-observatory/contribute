@@ -28,7 +28,8 @@ export function mapMark(host, { onChange, label = 'Find the area' } = {}) {
     list = zones.map(z => ({ name: z.name, kind: 'Zone', bbox: z.bounds }))
       .concat((a.wards || []).map(w => ({ name: w.name, kind: 'Ward' + (w.no != null ? ' ' + w.no : ''), context: zones[w.zone] ? zones[w.zone].name + ' zone' : '', bbox: w.bounds })));
   }).catch(() => {});
-  createPlaceSearch({ input: $('mm-q'), results: $('mm-r'), local: () => list, getMap: () => map, marker: { set() {}, clear() {} } });
+  createPlaceSearch({ input: $('mm-q'), results: $('mm-r'), local: () => list, getMap: () => map, marker: { set() {}, clear() {} },
+    onSelect: (p) => { if (map) map.jumpTo({ center: p.center, zoom: MARK_ZOOM + 1 }); } });   // street level at once: only a nudge left
   const inside = (lng, lat) => lng >= C.HMDA[0] && lng <= C.HMDA[2] && lat >= C.HMDA[1] && lat <= C.HMDA[3];
   function report() {
     const c = map.getCenter(), z = map.getZoom(), inArea = inside(c.lng, c.lat), ok = z >= MARK_ZOOM - .01 && inArea;
