@@ -24,8 +24,6 @@
   .card .go::after { content: ''; position: absolute; inset: 0; border-radius: var(--r-card); }   /* the whole card is the link */
   .card .go:focus-visible { outline: none; }
   .card:focus-within { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
-  .card .arr { display: inline-block; transition: transform .2s ease; }
-  .card:hover .arr { transform: translateX(3px); }
   .card p { color: var(--text-2); margin: 0 0 12px; font-size: 15px; }
   .card .more { position: relative; z-index: 1; font-size: 14px; color: var(--text-2); }
   .rules { max-width: var(--measure); margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--text-2); font-size: 15px; }
@@ -53,17 +51,17 @@
 
   <div class="surveys">
     <article class="card">
-      <h2><a class="go" href="flood/">Flooding <span class="arr">→</span></a></h2>
+      <h2><a class="go" href="flood/">Flooding</a></h2>
       <p>Seen water on a road? Say where and how deep.</p>
       <a class="more" href="flood/reports/">See reports</a>
     </article>
     <article class="card">
-      <h2><a class="go" href="bus-stops/">Bus stops <span class="arr">→</span></a></h2>
+      <h2><a class="go" href="bus-stops/">Bus stops</a></h2>
       <p>Shelter, seating, footpath, crossing, lighting at a stop.</p>
       <a class="more" href="bus-stops/map/">See the map</a>
     </article>
     <article class="card">
-      <h2><a class="go" href="tankers/">Water tankers <span class="arr">→</span></a></h2>
+      <h2><a class="go" href="tankers/">Water tankers</a></h2>
       <p>What you paid, the size, and how long it took to come.</p>
       <a class="more" href="tankers/orders/">See orders</a>
     </article>
