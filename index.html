@@ -16,12 +16,18 @@
   .surveys { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
   @media (min-width: 768px) { .surveys { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   @media (min-width: 1280px) { .surveys { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-  .card { border: 1px solid var(--border); border-radius: var(--r-card); padding: 22px 24px; background: #fff; display: flex; flex-direction: column; }
-  .card h2 { font: 700 19px/1.3 var(--font-ui); margin: 0 0 6px; }
-  .card p { color: var(--text-2); margin: 0 0 18px; font-size: 15px; flex: 1; }
-  .card .row { display: flex; flex-wrap: wrap; gap: 10px; }
-  .card.soon { background: var(--band); }
-  .card.soon p { color: var(--muted); }
+  /* simple cards (Teja, 16 Nov 2026): name, one line, the whole card starts the survey; results as a small link */
+  .card { position: relative; border: 1px solid var(--border); border-radius: var(--r-card); padding: 20px 22px 18px; background: #fff; transition: border-color .2s ease, background .2s ease; }
+  .card:hover { border-color: var(--ink); background: var(--band); }
+  .card h2 { font: 700 19px/1.3 var(--font-ui); margin: 0 0 4px; }
+  .card .go { color: var(--ink); text-decoration: none; }
+  .card .go::after { content: ''; position: absolute; inset: 0; border-radius: var(--r-card); }   /* the whole card is the link */
+  .card .go:focus-visible { outline: none; }
+  .card:focus-within { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+  .card .arr { display: inline-block; transition: transform .2s ease; }
+  .card:hover .arr { transform: translateX(3px); }
+  .card p { color: var(--text-2); margin: 0 0 12px; font-size: 15px; }
+  .card .more { position: relative; z-index: 1; font-size: 14px; color: var(--text-2); }
   .rules { max-width: var(--measure); margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--text-2); font-size: 15px; }
   .rules h2 { font: 700 18px/1.3 var(--font-ui); color: var(--ink); margin: 0 0 8px; }
   .rules ul { margin: 0; padding-left: 20px; }
@@ -47,22 +53,19 @@
 
   <div class="surveys">
     <article class="card">
-      <p class="eyebrow">Open now</p>
-      <h2>Flooding</h2>
-      <p>Seen water on a road? Say where and how deep. About a minute.</p>
-      <div class="row"><a class="btn btn-primary" href="flood/">Report flooding <span class="arr">→</span></a><a class="btn btn-secondary" href="flood/reports/">See reports</a></div>
+      <h2><a class="go" href="flood/">Flooding <span class="arr">→</span></a></h2>
+      <p>Seen water on a road? Say where and how deep.</p>
+      <a class="more" href="flood/reports/">See reports</a>
     </article>
     <article class="card">
-      <p class="eyebrow">Open now</p>
-      <h2>Bus stops</h2>
-      <p>Pick a bus stop and tell us about its shelter, seating, footpath and lighting. About two minutes; a nickname puts you on the leaderboard.</p>
-      <div class="row"><a class="btn btn-primary" href="bus-stops/">Tell us about a bus stop <span class="arr">→</span></a><a class="btn btn-secondary" href="bus-stops/map/">See the map</a></div>
+      <h2><a class="go" href="bus-stops/">Bus stops <span class="arr">→</span></a></h2>
+      <p>Shelter, seating, footpath, crossing, lighting at a stop.</p>
+      <a class="more" href="bus-stops/map/">See the map</a>
     </article>
     <article class="card">
-      <p class="eyebrow">Open now</p>
-      <h2>Water tankers</h2>
-      <p>Ordered a tanker? Tell us what you paid, its size and how long it took to come. You choose how exactly the place is shown.</p>
-      <div class="row"><a class="btn btn-primary" href="tankers/">Tell us about a tanker <span class="arr">→</span></a><a class="btn btn-secondary" href="tankers/orders/">See orders</a></div>
+      <h2><a class="go" href="tankers/">Water tankers <span class="arr">→</span></a></h2>
+      <p>What you paid, the size, and how long it took to come.</p>
+      <a class="more" href="tankers/orders/">See orders</a>
     </article>
   </div>
 
@@ -70,7 +73,7 @@
     <h2>How we handle what you send</h2>
     <ul>
       <li>No names, no sign-in, and we don't keep IP addresses.</li>
-      <li>Location comes from your phone only if you agree; otherwise from a place you search for, or a pin you put on a map. For bus stops, your location only finds the nearest stops and is never sent.</li>
+      <li>Location comes from your phone only if you agree; otherwise from a place you search for, or a pin you put on a map. For bus stops, your location only finds the nearest stops; it is sent only if you say the stop is where you are.</li>
       <li>Photos are made smaller and their hidden location data is removed on your phone, before sending.</li>
       <li>Answers are shared as open data under CC BY 4.0; photos are shown on the website but not in the download.</li>
       <li>Want updates? <a href="https://chat.whatsapp.com/GJUFWd2UJyEImsmgxbEKlg" target="_blank" rel="noopener">Join the Observatory's WhatsApp community</a>.</li>

@@ -100,7 +100,11 @@
   .inarea .answers { max-height: 420px; overflow-y: auto; padding: 2px; }
 
   .map-box { position: relative; height: 46vh; min-height: 280px; max-height: 420px; border: 1px solid var(--border); border-radius: var(--r-card); overflow: hidden; }
-  #map, #pickmap { position: absolute; inset: 0; }   /* ids: MapLibre's own .maplibregl-map rule would otherwise win */
+  #map, #pickmap, #wheremap { position: absolute; inset: 0; }
+  .where-box { height: 34vh; min-height: 220px; max-height: 320px; margin-bottom: 4px; }
+  .stop-dot { width: 18px; height: 18px; border-radius: 50%; background: #111827; border: 3px solid #fff; box-shadow: 0 0 0 1px #111827; }
+  .stop-dot.drag { cursor: grab; box-shadow: 0 0 0 4px rgba(17,24,39,.25); }
+  .me-dot { width: 14px; height: 14px; border-radius: 50%; background: #2166AC; border: 3px solid #fff; box-shadow: 0 0 0 6px rgba(33,102,172,.18); }   /* ids: MapLibre's own .maplibregl-map rule would otherwise win */
   .picked-stop { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--ink); border-radius: var(--r-card); background: var(--band); }
   .picked-stop[hidden] { display: none; }
   .picked-stop b { display: block; font-size: 16px; }
@@ -200,8 +204,8 @@
       <p class="hint">Your phone will ask whether this page may use your location. We use it only to find the bus stops near you.</p>
       <ul class="promise">
         <li><b>Nothing is saved until you press Send</b> at the end, after you have checked your answers.</li>
-        <li>We save the bus stop you pick, <b>not your location, name, phone number or IP address</b>.</li>
-        <li>Location is used only to list the nearest stops, then switched off.</li>
+        <li>We save the bus stop you pick, <b>not your name, phone number or IP address</b>. Your location is saved only if you tell us the stop is really where you are standing.</li>
+        <li>Location is used to list the nearest stops and to check the stop is in the right place on the map.</li>
       </ul>
       <div class="stack">
         <button type="button" class="btn btn-primary btn-lg" id="gps-go">Share my location</button>
@@ -216,6 +220,19 @@
       <div class="answers" role="radiogroup" aria-labelledby="near-q" id="near-list"></div>
       <p class="msg" id="near-msg" hidden></p>
       <p class="alt-link"><a href="#" class="to-missing">My stop isn't listed</a> · <a href="#" id="near-search">Search instead</a></p>
+    </section>
+
+    <section class="step" data-step="where">
+      <h2 class="qt" id="where-q">Is the stop where the map shows it?</h2>
+      <p class="hint" id="where-hint">The black dot is where the bus data puts the stop; the blue dot is you.</p>
+      <div class="map-box where-box"><div id="wheremap"></div></div>
+      <p class="picked" id="where-dist"></p>
+      <div class="answers" role="radiogroup" aria-labelledby="where-q" id="where-opts">
+        <button type="button" class="answer" role="radio" aria-checked="false" data-val="yes"><span>Yes, it's right</span><i class="tick"></i></button>
+        <button type="button" class="answer" role="radio" aria-checked="false" data-val="here"><span>No, the stop is where I am<small>Your phone's location is saved as the stop's place, nothing else</small></span><i class="tick"></i></button>
+        <button type="button" class="answer" role="radio" aria-checked="false" data-val="marked"><span>No, I'll mark it<small>Drag the black dot to where the stop really is</small></span><i class="tick"></i></button>
+        <button type="button" class="answer" role="radio" aria-checked="false" data-val="dk"><span>Not sure</span><i class="tick"></i></button>
+      </div>
     </section>
 
     <section class="step" data-step="find">

@@ -28,7 +28,7 @@ const PRESET = new URLSearchParams(location.search).get('stop');
 function steps() {
   const l = ['start'];
   if (!S.preset) {
-    if (S.here === 'yes' && S.how !== 'search' && S.how !== 'missing') l.push('locate', 'nearest');
+    if (S.here === 'yes' && S.how !== 'search' && S.how !== 'missing') l.push('locate', 'nearest', 'where');   // at the stop: check its place
     else if (S.how !== 'missing') l.push('find');
     if (S.how === 'missing') l.push('missing');
   }
@@ -40,6 +40,7 @@ const filled = (id) => $(id).value.trim().length >= 2;
 function ready(s) {
   if (s === 'nearest' || s === 'find') return !!S.stop;
   if (s === 'missing') return !!(S.missing && filled('m-name'));
+  if (s === 'where') return !!S.where;
   if (s === 'player') return true;
   if (s === 'review') return !sending && answered(S.a) >= MIN_ANSWERS;
   return true;
@@ -59,6 +60,7 @@ function show(s, push = true) {
   if (s === 'photo') $('photo-hint').textContent = S.here === 'yes' ? 'Optional. One photo of the stop helps others see it.' : 'Optional. A photo you took of this stop.';
   if (s === 'review') drawReview();
   if (s === 'missing') openMap();
+  if (s === 'where') openWhereMap();
   if (s === 'start') drawPlay();
   if (s === 'player') { const p = player.get(); $('p-nick').value = p ? p.nick : $('p-nick').value; $('p-pin').value = ''; $('p-msg').hidden = true; playerReady(); }
   if (s === 't-facilities') document.querySelector('[data-step="t-facilities"] [data-few]').hidden = answered(S.a) >= MIN_ANSWERS;
@@ -130,6 +132,7 @@ function pickFrom(listEl) {
   listEl.addEventListener('click', (e) => {
     const b = e.target.closest('[data-id]'); if (!b) return;
     listEl.querySelectorAll('[role=radio]').forEach(x => x.setAttribute('aria-checked', x === b));
+    if (S.stop !== BY_ID.get(b.dataset.id)) { S.where = null; S.whereAt = null; }
     S.stop = BY_ID.get(b.dataset.id); S.missing = null; updateNext();
     setTimeout(() => go(1), 220);
   });
@@ -154,12 +157,45 @@ function onFix(p) {
   $('near-list').innerHTML = near.map(([s, d]) => stopButton(s, d)).join('');
   $('near-msg').hidden = near[0][1] < 400;
   $('near-msg').textContent = `The nearest stop we know is ${Math.round(near[0][1])} m away${acc > 100 ? ", and your phone's location is rough" : ''}. If you are at a stop, it may be missing from the bus data: add it.`;
-  S.stop = null; go(1);
+  S.phone = { lat, lng, acc }; S.stop = null; go(1);
 }
 function gpsFailed(t) { $('gps-go').textContent = 'Try again'; $('gps-go').disabled = false; $('gps-msg').textContent = t; $('gps-msg').hidden = false; }
 $('gps-search').onclick = () => { S.how = 'search'; go(1); };
 $('near-search').onclick = (e) => { e.preventDefault(); S.how = 'search'; S.stop = null; show('find'); };
 document.querySelectorAll('.to-missing').forEach(a => a.onclick = (e) => { e.preventDefault(); S.how = 'missing'; S.stop = null; show('missing'); });
+
+// ── at the stop: is it where the bus data puts it? (only the phone's location if they say "where I am") ──
+let whereMap = null, stopDot = null, meDot = null;
+async function openWhereMap() {
+  const s = S.stop, me = S.phone; if (!s || !me) return;
+  const d = Math.round(metres(me, s));
+  $('where-dist').textContent = d < 15 ? 'The map puts the stop right where you are.' : `The map puts the stop about ${d < 1000 ? Math.round(d / 5) * 5 + ' m' : (d / 1000).toFixed(1) + ' km'} from you.`;
+  try { await loadMapLib(); } catch { $('where-dist').textContent += " (The map couldn't load.)"; return; }
+  const fit = () => { const b = new maplibregl.LngLatBounds([s.lng, s.lat], [s.lng, s.lat]).extend([me.lng, me.lat]); whereMap.fitBounds(b, { padding: 60, maxZoom: 18, duration: 0 }); };
+  if (!whereMap) {
+    whereMap = new maplibregl.Map({ container: 'wheremap', style: 'https://tiles.openfreemap.org/styles/positron', center: [s.lng, s.lat], zoom: 17, minZoom: 12, maxZoom: 19, attributionControl: { compact: true } });
+    whereMap.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+    const a = document.createElement('div'); a.className = 'stop-dot'; stopDot = new maplibregl.Marker({ element: a, draggable: false }).setLngLat([s.lng, s.lat]).addTo(whereMap);
+    stopDot.on('dragend', () => { const q = stopDot.getLngLat(); S.whereAt = { lat: q.lat, lng: q.lng }; });
+    const m = document.createElement('div'); m.className = 'me-dot'; meDot = new maplibregl.Marker({ element: m }).setLngLat([me.lng, me.lat]).addTo(whereMap);
+    whereMap.on('load', () => document.querySelectorAll('#wheremap .maplibregl-compact-show').forEach(x => x.classList.remove('maplibregl-compact-show')));
+  } else { whereMap.resize(); meDot.setLngLat([me.lng, me.lat]); if (S.where !== 'marked') stopDot.setLngLat([s.lng, s.lat]); }
+  fit(); setDraggable(S.where === 'marked');
+  $('where-opts').querySelectorAll('[role=radio]').forEach(x => x.setAttribute('aria-checked', x.dataset.val === S.where));
+}
+function setDraggable(on) { if (!stopDot) return; stopDot.setDraggable(on); stopDot.getElement().classList.toggle('drag', on); }
+$('where-opts').addEventListener('click', (e) => {
+  const b = e.target.closest('[role=radio]'); if (!b) return;
+  $('where-opts').querySelectorAll('[role=radio]').forEach(x => x.setAttribute('aria-checked', x === b));
+  S.where = b.dataset.val;
+  const marking = S.where === 'marked';
+  setDraggable(marking);
+  if (!marking && stopDot) { stopDot.setLngLat([S.stop.lng, S.stop.lat]); S.whereAt = null; }
+  if (marking && stopDot && !S.whereAt) { const q = stopDot.getLngLat(); S.whereAt = { lat: q.lat, lng: q.lng }; }
+  $('where-hint').textContent = marking ? 'Drag the black dot to where the stop really is, then press Next.' : 'The black dot is where the bus data puts the stop; the blue dot is you.';
+  updateNext();
+  if (!marking) setTimeout(() => go(1), 220);
+});
 
 // ── search: stop names and areas in one box ──
 let AREAS = null;
@@ -351,7 +387,9 @@ let lastRows = [];
 function drawReview() {
   const stopTxt = S.missing ? `${esc($('m-name').value.trim())}<small>${$('m-towards').value.trim() ? 'towards ' + esc($('m-towards').value.trim()) + ' · ' : ''}A new stop, marked on the map</small>`
     : `${esc(S.stop.name)}<small>${S.stop.towards ? 'towards ' + esc(S.stop.towards) : ''}</small>`;
+  const placeTxt = { yes: 'Where the map shows it', here: 'Where I am (your location is saved for the stop)', marked: 'Where I marked it', dk: 'Not sure' }[S.where];
   const rows = [['Stop', stopTxt, S.preset ? null : S.missing ? 'missing' : S.how === 'gps' ? 'nearest' : 'find'],
+    ...(S.where && !S.missing && S.how === 'gps' ? [['Stop place', esc(placeTxt), 'where']] : []),
     ...TOPICS.map(t => [t.title.replace(' and seating', '').replace('Comfort and safety', 'Safety'), topicSummary(t), 't-' + t.id]),
     ['Photo', S.photo ? 'Added' : 'None', 'photo'], ['Improve', esc($('improve').value.trim() || 'None'), 'improve'],
     ['Points', esc(who().nick ? 'For ' + who().nick : 'None: you are not logged in'), 'player']];
@@ -380,6 +418,11 @@ function payload() {
     improve: $('improve').value.trim() || null, nick: who().nick, nick_pin: who().pin, photo: S.photo || null };
   if (S.missing) Object.assign(b, { lat: S.missing.lat, lng: S.missing.lng, stop_name: $('m-name').value.trim(), towards: $('m-towards').value.trim() || null });
   else b.stop_id = S.stop.id;               // the server takes the stop's place from TGSRTC's list, not from the phone
+  if (!S.missing && S.how === 'gps' && !S.preset && S.where) {
+    b.stop_place = S.where;                  // is the stop where the bus data puts it? a corrected place only if they gave one
+    const at = S.where === 'here' ? S.phone : S.where === 'marked' ? S.whereAt : null;
+    if (at) Object.assign(b, { stop_lat: +at.lat.toFixed(6), stop_lng: +at.lng.toFixed(6) });
+  }
   return b;
 }
 const spam = Contribute.spamCheck($('ts-review'));
