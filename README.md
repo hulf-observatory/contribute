@@ -10,7 +10,7 @@ site feature: this repo has no custom domain). Static, no build step. The answer
 | `index.html` | the list of surveys (flood and bus stops open; water to come) |
 | `flood/` | the flood report form: one question per screen; phone location (explained before asking), place search (the maps viewer's `place-search.js`, unchanged) or a map pin; depth pictures or an exact-height slider; answers kept on the phone until the server accepts them |
 | `flood/reports/` | the reports: list (table / cards) and map view, period filter, feedback on each report |
-| `flood/download/` | the download form (name, email, organisation, purpose; kept privately), then the links to the data site |
+| `flood/download/` | the download form (what the data is for; optional role and organisation; no name or email), then the links to the data site |
 | `bus-stops/` | rate a bus stop: nearest stops to the phone (location never sent), search by stop or area, or add a missing stop on a map; six topic screens; photo, one improvement, a slim "Create a player · Log in" line on the start screen (nickname + 4-digit PIN, any phone; links `#create`, `#login`) |
 | `bus-stops/map/` | every TGSRTC stop, coloured by its latest answer to one topic at a time (shelter, seating, footpath, crossing, lighting, name sign, route info, safe after dark, floods: blue good, light orange a problem, dark red missing, grey no answer); no overall score; links to the leaderboard |
 | `bus-stops/leaderboard/` | the leaderboard (all time, last 30 days), how points are earned; the map page links to it |

@@ -56,36 +56,38 @@
       about 500 m, the area, or the ward only), supplier, size, price, when it was ordered and when it came. Updated daily.</p>
 
     <section id="form-box">
-      <p class="hint">Tell us a little about yourself and the download links appear straight away. It helps us know who
-        uses the data, and lets us tell you about corrections.</p>
-      <p class="req-note"><span class="req" aria-hidden="true">*</span> Required</p>
+      <p class="hint">One quick question, and the download links appear straight away. It helps us see how the data is used.</p>
       <form id="dl-form" novalidate>
         <div class="field">
-          <label class="field-label" for="dl-name">Name <span class="req" aria-hidden="true">*</span><span class="req-word">Required</span></label>
-          <input class="inp" id="dl-name" autocomplete="name" maxlength="120" required aria-required="true">
-        </div>
-        <div class="field">
-          <label class="field-label" for="dl-email">Email <span class="req" aria-hidden="true">*</span><span class="req-word">Required</span></label>
-          <input class="inp" id="dl-email" type="email" autocomplete="email" maxlength="254" required aria-required="true">
-        </div>
-        <div class="field">
-          <label class="field-label" for="dl-org">Organisation <span class="opt">(optional)</span></label>
-          <span class="field-hint">University, NGO, government, company, or leave empty</span>
-          <input class="inp" id="dl-org" autocomplete="organization" maxlength="160">
-        </div>
-        <div class="field">
-          <span class="field-label" id="dl-purpose-label">What is it for? <span class="req" aria-hidden="true">*</span><span class="req-word">Required</span></span>
+          <span class="field-label" id="dl-purpose-label">What will you use the data for?</span>
           <div class="chips" role="radiogroup" aria-labelledby="dl-purpose-label" id="dl-purpose">
             <button type="button" class="chip" role="radio" aria-pressed="false" data-v="research">Research</button>
-            <button type="button" class="chip" role="radio" aria-pressed="false" data-v="teaching">Teaching</button>
-            <button type="button" class="chip" role="radio" aria-pressed="false" data-v="journalism">Journalism</button>
-            <button type="button" class="chip" role="radio" aria-pressed="false" data-v="planning">Planning</button>
-            <button type="button" class="chip" role="radio" aria-pressed="false" data-v="personal">Personal</button>
+            <button type="button" class="chip" role="radio" aria-pressed="false" data-v="teaching">Teaching or learning</button>
+            <button type="button" class="chip" role="radio" aria-pressed="false" data-v="journalism">News or writing</button>
+            <button type="button" class="chip" role="radio" aria-pressed="false" data-v="planning">Planning or policy</button>
+            <button type="button" class="chip" role="radio" aria-pressed="false" data-v="personal">Personal interest</button>
+            <button type="button" class="chip" role="radio" aria-pressed="false" data-v="other">Something else</button>
+          </div>
+        </div>
+        <div class="field">
+          <span class="field-label" id="dl-role-label">Your role <span class="opt">(optional)</span></span>
+          <div class="chips" role="radiogroup" aria-labelledby="dl-role-label" id="dl-role">
+            <button type="button" class="chip" role="radio" aria-pressed="false" data-v="student">Student</button>
+            <button type="button" class="chip" role="radio" aria-pressed="false" data-v="researcher">Researcher</button>
+            <button type="button" class="chip" role="radio" aria-pressed="false" data-v="government">Government</button>
+            <button type="button" class="chip" role="radio" aria-pressed="false" data-v="ngo">NGO</button>
+            <button type="button" class="chip" role="radio" aria-pressed="false" data-v="journalist">Journalist</button>
+            <button type="button" class="chip" role="radio" aria-pressed="false" data-v="company">Company</button>
+            <button type="button" class="chip" role="radio" aria-pressed="false" data-v="resident">Resident</button>
             <button type="button" class="chip" role="radio" aria-pressed="false" data-v="other">Other</button>
           </div>
         </div>
-        <p class="privacy">Your name, email and organisation are kept privately on our server. We use them only to tell
-          you about updates or corrections to this data. They are never published or shared.</p>
+        <div class="field">
+          <label class="field-label" for="dl-org">Organisation <span class="opt">(optional)</span></label>
+          <span class="field-hint">University, NGO, government office, company, or leave empty</span>
+          <input class="inp" id="dl-org" autocomplete="organization" maxlength="160">
+        </div>
+        <p class="privacy">We count what the data is used for. No name, email or other personal details.</p>
         <div class="ts" id="ts-dl"></div>
         <input type="text" name="website" id="dl-trap" tabindex="-1" autocomplete="off" aria-hidden="true" class="trap">
         <p class="msg" id="dl-msg" hidden></p>
@@ -121,19 +123,23 @@
 <script>
 const $ = (id) => document.getElementById(id);
 const KEY = 'obs-tankers-download';   // after one sign-up this browser goes straight to the links
-let purpose = null;
+let purpose = null, role = null;
 function showLinks(files) {
   $('f-csv').href = files.csv; $('f-geojson').href = files.geojson; $('f-readme').href = files.readme;
   $('form-box').hidden = true; $('links-box').hidden = false;
 }
 try { const f = JSON.parse(localStorage.getItem(KEY)); if (f && f.csv) showLinks(f); } catch { /* first visit */ }
-const filled = () => $('dl-name').value.trim() && /^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$/.test($('dl-email').value.trim()) && purpose;
+const filled = () => !!purpose;
 const update = () => { $('dl-send').disabled = !filled(); };
-['dl-name', 'dl-email', 'dl-org'].forEach((id) => $(id).addEventListener('input', update));
 $('dl-purpose').addEventListener('click', (e) => {
   const b = e.target.closest('.chip'); if (!b) return;
   document.querySelectorAll('#dl-purpose .chip').forEach((x) => x.setAttribute('aria-pressed', x === b));
   purpose = b.dataset.v; update();
+});
+$('dl-role').addEventListener('click', (e) => {          // optional: tap again to clear
+  const b = e.target.closest('.chip'); if (!b) return;
+  role = role === b.dataset.v ? null : b.dataset.v;
+  document.querySelectorAll('#dl-role .chip').forEach((x) => x.setAttribute('aria-pressed', x.dataset.v === role));
 });
 const spam = Contribute.spamCheck($('ts-dl'));
 $('dl-form').addEventListener('submit', async (e) => {
@@ -142,8 +148,7 @@ $('dl-form').addEventListener('submit', async (e) => {
   try {
     const token = await spam.token();
     if (token === null) throw Object.assign(new Error('The spam check did not finish. Please try again.'), { server: true });
-    const r = await Contribute.post('/tankers/download', { name: $('dl-name').value.trim(), email: $('dl-email').value.trim(),
-      organisation: $('dl-org').value.trim() || null, purpose, token, website: $('dl-trap').value });
+    const r = await Contribute.post('/tankers/download', { purpose, role, organisation: $('dl-org').value.trim() || null, token, website: $('dl-trap').value });
     try { localStorage.setItem(KEY, JSON.stringify(r.files)); } catch { /* private mode */ }
     showLinks(r.files);
   } catch (err) {
