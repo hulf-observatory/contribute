@@ -323,9 +323,9 @@ function apply() {
 const whenOf = (p) => [fmt(p.observed_at, { day: 'numeric', month: 'short', year: 'numeric' }), fmt(p.observed_at, { hour: 'numeric', minute: '2-digit' })];
 const areaOf = (p) => p.ward ? [p.ward, p.zone ? p.zone + ' zone' : ''] : [p.place || 'Outside the corporation wards', ''];
 const depthOf = (p) => p.depth_exact ? `About ${p.depth_cm >= 100 ? (p.depth_cm / 100).toFixed(2).replace(/0$/, '') + ' m' : p.depth_cm + ' cm'}` : (DEPTH[p.depth_key] || {}).label;
-const HOW = { gps: (p) => `Phone location${p.accuracy_m != null ? `, within about ${p.accuracy_m} m` : ''}`, search: () => 'Place searched by name', map: () => 'Marked on a map', 'legacy-pin': () => 'Earlier flood report form' };
+const HOW = { gps: (p) => `Phone location${p.accuracy_m != null ? `, within about ${p.accuracy_m} m` : ''}`, search: () => 'Place searched by name', map: () => 'Marked on a map', 'legacy-pin': () => 'Placed from social media reports' };
 const waterOf = (p) => `${FLOW[p.flow] || esc(p.flow)}, ${[].concat(p.quality).map(q => QUAL[q] || esc(q)).join(', ')}`;
-const extraOf = (p) => [p.photo ? 'Photo' : '', p.note ? 'Note' : '', p.confirmed ? `✓ ${p.confirmed}` : ''].filter(Boolean).join(' · ');
+const extraOf = (p) => [p.located === 'social' ? 'From social media' : '', p.photo ? 'Photo' : '', p.note ? 'Note' : '', p.confirmed ? `✓ ${p.confirmed}` : ''].filter(Boolean).join(' · ');
 function drawList() {
   if (!shown.length) { $('tbody').innerHTML = `<tr><td colspan="5" class="empty">No reports in this period. Choose a longer period.</td></tr>`; $('cards').innerHTML = '<p class="empty">No reports in this period. Choose a longer period.</p>'; return; }
   $('tbody').innerHTML = shown.map(f => { const p = f.properties, [d, t] = whenOf(p), [a, z] = areaOf(p);
