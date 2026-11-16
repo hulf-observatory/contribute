@@ -228,6 +228,14 @@
       <div class="map-box"><div id="wheremap"></div><div class="map-hint halo" id="where-hint">Your location will show here</div></div>
       <p class="picked" id="where-info" hidden></p>
       <p class="msg" id="where-msg" hidden></p>
+      <p class="alt-link" id="to-mark-p" hidden><a href="#" id="to-mark"><b>Location not working? Mark the place on the map instead</b></a></p>
+    </section>
+
+    <!-- when the phone's location fails: a map with a fixed pin in the centre -->
+    <section class="step" data-step="mark">
+      <h2 class="qt">Mark the place on the map</h2>
+      <p class="hint">Move the map until the pin in the middle sits on the place. You still need to be there.</p>
+      <div id="markbox"></div>
     </section>
 
     <!-- a walk: the phone follows the route -->

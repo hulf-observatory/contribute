@@ -1,6 +1,7 @@
 // Tell us about a bus stop, at the stop (Teja, 16 Nov 2026): the phone's location lists the nearest stops (or a
 // missing one is added within 100 m of it), then the topic screens, optional photo and improvement, check and send.
 // Phones only; a laptop sees a QR code. Talks to contribute-api.
+import { mapMark } from '../assets/map-mark.js';
 import { SURVEY, TOPICS, QUESTIONS, MIN_ANSWERS, optLabel, shown, answered, POINTS, loadStops, loadRatings, addedStops,
   byStop, metres, stopLabel, esc, player, checkPlayer, PLAYER_SAYS } from './questions.js';
 
@@ -30,10 +31,11 @@ const PRESET = new URLSearchParams(location.search).get('stop');
 // ── steps ──
 function steps() {
   const l = ['start'];
-  if (S.here === 'yes') {                          // always at the stop: the phone's location first
-    if (S.preset) l.push('locate', 'where');
-    else if (S.how === 'missing') l.push('locate', 'missing');
-    else l.push('locate', 'nearest', 'where');
+  if (S.here === 'yes') {                          // at the stop: the phone's location first, or the map if it fails
+    const loc = S.viaMap ? ['locate', 'mark'] : ['locate'], chk = S.viaMap ? [] : ['where'];
+    if (S.preset) l.push(...loc, ...chk);
+    else if (S.how === 'missing') l.push(...loc, 'missing');
+    else l.push(...loc, 'nearest', ...chk);
   }
   for (const t of TOPICS) l.push('t-' + t.id);
   l.push('photo', 'improve', 'review', 'thanks');   // contributors log in on the first screen only (Teja, 15 Nov 2026)
@@ -42,6 +44,7 @@ function steps() {
 const filled = (id) => $(id).value.trim().length >= 2;
 function ready(s) {
   if (s === 'nearest') return !!S.stop;
+  if (s === 'mark') return !!S.markAt;
   if (s === 'missing') return !!(S.missing && filled('m-name'));
   if (s === 'where') return !!S.where;
   if (s === 'player') return true;
@@ -64,6 +67,7 @@ function show(s, push = true) {
   if (s === 'review') drawReview();
   if (s === 'missing') openMap();
   if (s === 'where') openWhereMap();
+  if (s === 'mark') marker.open();
   if (s === 'start') drawPlay();
   if (s === 'player') { const p = player.get(); $('p-nick').value = p ? p.nick : $('p-nick').value; $('p-pin').value = ''; $('p-msg').hidden = true; playerReady(); }
   if (s === 't-facilities') document.querySelector('[data-step="t-facilities"] [data-few]').hidden = answered(S.a) >= MIN_ANSWERS;
@@ -82,6 +86,7 @@ function updateNext() {
 const go = (d) => { const l = steps(); show(l[Math.max(0, l.indexOf(cur) + d)]); };
 $('next').onclick = async () => {
   if (cur === 'review') return send();
+  if (cur === 'mark') return fromPlace(S.markAt.lat, S.markAt.lng, null);
   go(1);
 };
 $('back').onclick = () => history.back();
@@ -151,19 +156,24 @@ $('gps-go').onclick = () => {
   if (!('geolocation' in navigator)) return gpsFailed('This browser cannot share a location.');
   $('gps-go').textContent = 'Waiting for your phone…'; $('gps-go').disabled = true; $('gps-msg').hidden = true;
   navigator.geolocation.getCurrentPosition(onFix, (err) => gpsFailed(err.code === 1
-      ? "Your phone didn't share its location. This survey needs it: allow location for this page in your browser's settings, then try again."
-      : "We couldn't get a location from your phone. Try again in a moment, ideally in the open."),
+      ? "Your phone didn't share its location. Allow location for this page in your browser's settings and try again, or find the stop on the map."
+      : "We couldn't get a location from your phone. Try again in a moment, ideally in the open, or find the stop on the map."),
     { enableHighAccuracy: true, maximumAge: 30000, timeout: 20000 });
 };
 function onFix(p) {
   const { latitude: lat, longitude: lng, accuracy: acc } = p.coords;
   $('gps-go').textContent = 'Share my location'; $('gps-go').disabled = false;
-  if (!inHmda(lng, lat)) return gpsFailed('Your phone places you outside the Hyderabad area (HMDA). This survey is for bus stops in Hyderabad.');
-  if (!STOPS.length) return gpsFailed('The list of bus stops has not loaded yet. Check your connection and try again.');
+  S.viaMap = false; fromPlace(lat, lng, acc);
+}
+// the stops near the phone's location, or near the pin in the middle of the map when the location failed
+function fromPlace(lat, lng, acc) {
+  const fail = (t) => { if (!S.viaMap) return gpsFailed(t); $('mark-msg').textContent = t; $('mark-msg').hidden = false; };
+  if (!inHmda(lng, lat)) return fail('Your phone places you outside the Hyderabad area (HMDA). This survey is for bus stops in Hyderabad.');
+  if (!STOPS.length) return fail('The list of bus stops has not loaded yet. Check your connection and try again.');
   S.phone = { lat, lng, acc };
   if (S.preset) {                                  // from a stop's page: only at that stop
     const d = metres(S.phone, S.stop);
-    if (d > NEAR_M) return gpsFailed(`Your phone places you about ${far(d)} from ${S.stop.name}. Details are added at the stop itself: come back when you are there.`);
+    if (d > NEAR_M) return fail(`You are about ${far(d)} from ${S.stop.name}. Details are added at the stop itself: come back when you are there.`);
     return go(1);
   }
   const near = STOPS.map(s => [s, metres({ lat, lng }, s)]).sort((a, b) => a[1] - b[1]).slice(0, 4);
@@ -172,7 +182,10 @@ function onFix(p) {
   $('near-msg').textContent = `The nearest stop we know is ${Math.round(near[0][1])} m away${acc > 100 ? ", and your phone's location is rough" : ''}. If you are at a stop, it may be missing from the bus data: add it.`;
   S.stop = null; go(1);
 }
-function gpsFailed(t) { $('gps-go').textContent = 'Try again'; $('gps-go').disabled = false; $('gps-msg').textContent = t; $('gps-msg').hidden = false; }
+function gpsFailed(t) { $('gps-go').textContent = 'Try again'; $('gps-go').disabled = false; $('gps-msg').textContent = t; $('gps-msg').hidden = false; $('to-mark-p').hidden = false; }
+// the phone's location failed: find the stop with the pin in the middle of a map (Teja, 16 Nov 2026)
+const marker = mapMark($('markbox'), { onChange: ({ lat, lng, ok }) => { S.markAt = ok ? { lat, lng } : null; $('mark-msg').hidden = true; updateNext(); } });
+$('to-mark').onclick = (e) => { e.preventDefault(); S.viaMap = true; S.markAt = null; show('mark'); };
 document.querySelectorAll('.to-missing').forEach(a => a.onclick = (e) => { e.preventDefault(); S.how = 'missing'; S.stop = null; show('missing'); });
 
 // ── at the stop: is it where the bus data puts it? (only the phone's location if they say "where I am") ──
@@ -328,7 +341,7 @@ function drawReview() {
     : `${esc(S.stop.name)}<small>${S.stop.towards ? 'towards ' + esc(S.stop.towards) : ''}</small>`;
   const placeTxt = { yes: 'Where the map shows it', here: 'Where I am (your location is saved for the stop)', marked: 'Where I marked it', dk: 'Not sure' }[S.where];
   const rows = [['Stop', stopTxt, S.preset ? null : S.missing ? 'missing' : 'nearest'],
-    ...(S.where && !S.missing ? [['Stop place', esc(placeTxt), 'where']] : []),
+    ...(S.where && !S.missing && !S.viaMap ? [['Stop place', esc(placeTxt), 'where']] : []),
     ...TOPICS.map(t => [t.title.replace(' and seating', '').replace('Comfort and safety', 'Safety'), topicSummary(t), 't-' + t.id]),
     ['Photo', S.photo ? 'Added' : 'None', 'photo'], ['Improve', esc($('improve').value.trim() || 'None'), 'improve'],
     ['Points', esc(who().nick ? 'For ' + who().nick : 'None: you are not logged in'), 'player']];
@@ -352,13 +365,13 @@ function who() {
   return p ? { nick: p.nick, pin: p.pin } : { nick: null, pin: null };
 }
 function payload() {
-  const b = { here: S.here, place_type: S.missing ? 'missing' : 'gps',
+  const b = { here: S.here, place_type: S.missing ? 'missing' : S.viaMap ? 'map' : 'gps', located: S.viaMap ? 'map' : 'phone',
     ...Object.fromEntries(QUESTIONS.filter(q => shown(q, S.a) && S.a[q.id] != null).map(q => [q.id, S.a[q.id]])),
     improve: $('improve').value.trim() || null, nick: who().nick, nick_pin: who().pin, photo: S.photo || null };
   if (S.missing) Object.assign(b, { lat: S.missing.lat, lng: S.missing.lng, moved_m: S.missing.moved, stop_name: $('m-name').value.trim(), towards: $('m-towards').value.trim() || null });
   else Object.assign(b, { stop_id: S.stop.id,    // the server takes the stop's place from TGSRTC's list, not from the phone
     dist_m: Math.round(metres(S.phone, S.stop)) }); // how far the phone was from it: the server checks you were at the stop
-  if (!S.missing && S.where) {
+  if (!S.missing && S.where && !S.viaMap) {
     b.stop_place = S.where;                  // is the stop where the bus data puts it? a corrected place only if they gave one
     const at = S.where === 'here' ? S.phone : S.where === 'marked' ? S.whereAt : null;
     if (at) Object.assign(b, { stop_lat: +at.lat.toFixed(6), stop_lng: +at.lng.toFixed(6) });

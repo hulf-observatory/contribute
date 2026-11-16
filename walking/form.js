@@ -1,6 +1,7 @@
 // Walking survey: footpaths and crossings, at the place itself (Teja, 16 Nov 2026). One spot, one crossing, or a walk
 // (the phone follows the route; only the spots and crossings are sent, not the route). Side of the road by pointing
 // the phone at the road. Phones only; a laptop sees a QR code. Talks to contribute-api (/walking/reports).
+import { mapMark } from '../assets/map-mark.js';
 import { SURVEY, TOPICS, CROSS_TOPICS, QUESTIONS, DIRS, nearestDir, roadSide, sideFromRoad, sideWord, shown, optLabel, POINTS, inHmda, esc,
   metres, bearing, loadReports, contributions, player, checkPlayer, PLAYER_SAYS } from './questions.js';
 
@@ -31,7 +32,8 @@ let cur = 'start', stack = [];
 // ── moving between screens ──
 const TOPIC_STEPS = TOPICS.map(t => 't-' + t.id), CROSS_STEPS = CROSS_TOPICS.map(t => 't-' + t.id), ALL_STEPS = [...TOPIC_STEPS, ...CROSS_STEPS];
 const isX = () => S.spot && S.spot.kind === 'crossing';
-const flow = () => isX() ? ['where', ...CROSS_STEPS, 'extra', 'review'] : ['where', 'dir', ...TOPIC_STEPS, 'extra', 'review'];
+const first = () => S.byMap ? 'mark' : 'where';      // marked on the map when the phone's location failed
+const flow = () => isX() ? [first(), ...CROSS_STEPS, 'extra', 'review'] : [first(), 'dir', ...TOPIC_STEPS, 'extra', 'review'];
 const lastFoot = () => [...S.spots].reverse().find(s => s.kind !== 'crossing');
 function show(s, push = true) {
   if (push && cur !== s) stack.push(cur);
@@ -45,6 +47,7 @@ function show(s, push = true) {
   const card = S.spot && ['dir', 'same', 'extra', ...ALL_STEPS].includes(s);
   $('spotcard').hidden = !card; if (card) drawCard();
   if (s === 'where') openWhereMap();
+  if (s === 'mark') marker.open();
   if (s === 'walk') openWalkMap();
   if (s === 'dir') drawDir();
   if (s === 'same') drawSame();
@@ -58,6 +61,7 @@ function show(s, push = true) {
 }
 function ready() {
   if (cur === 'where') return !!S.spot;
+  if (cur === 'mark') return !!(S.spot && S.markOk);
   if (cur === 'dir') { const sp = S.spot; return sp.how === 'phone' ? !!sp.roadAt : sp.how === 'buttons' && (sp.lr === 'dk' || !!(sp.facing && sp.lr)); }
   return true;
 }
@@ -79,7 +83,7 @@ $('back').onclick = () => { const p = stack.pop(); if (p) show(p, false); };
 $('mode').addEventListener('click', (e) => {
   const b = e.target.closest('[role=radio]'); if (!b) return;
   $('mode').querySelectorAll('[role=radio]').forEach(x => x.setAttribute('aria-checked', x === b));
-  S.mode = b.dataset.val; S.spot = null; S.spots = [];
+  S.mode = b.dataset.val; S.spot = null; S.spots = []; S.byMap = false;
   setTimeout(() => show(S.mode === 'walk' ? 'walk' : 'where'), 220);
 });
 // contributor line: the same nickname and PIN as bus stops, checked with the server
@@ -142,10 +146,17 @@ $('gps-go').onclick = () => {
     fix = { lat, lng, acc: Math.round(accuracy) };
     placeSpot(lng, lat); wmap.flyTo({ center: [lng, lat], zoom: 18 }); $('gps-go').textContent = 'Share my location again'; $('gps-go').className = 'btn btn-secondary btn-lg';
   }, (err) => { $('gps-go').disabled = false; $('gps-go').textContent = 'Try again'; $('where-msg').textContent = err.code === 1
-      ? "Your phone didn't share its location. This survey needs it: allow location for this page in your browser's settings, then try again." : "We couldn't get your location. Try again in a moment, ideally in the open."; $('where-msg').hidden = false; },
+      ? "Your phone didn't share its location. Allow location for this page in your browser's settings and try again, or mark the place on the map."
+      : "We couldn't get your location. Try again in a moment, ideally in the open, or mark the place on the map."; $('where-msg').hidden = false; $('to-mark-p').hidden = false; },
   { enableHighAccuracy: true, timeout: 20000, maximumAge: 15000 });
 };
-let AREAS = [];
+// ── the phone's location failed: mark the place with the pin in the middle of a map (Teja, 16 Nov 2026) ──
+const marker = mapMark($('markbox'), { onChange: ({ lat, lng, ok }) => {
+  S.markOk = ok;
+  S.spot = Object.assign(S.spot && S.spot.byMap ? S.spot : newSpot(lat, lng, S.mode === 'crossing' ? 'crossing' : 'spot'), { lat, lng, accuracy_m: null, moved_m: null, byMap: true });
+  updateNext();
+} });
+$('to-mark').onclick = (e) => { e.preventDefault(); S.byMap = true; S.gps = false; S.spot = null; show('mark'); };
 
 // a walk: follow the route, mark spots
 let kmap = null, me = null;
@@ -194,7 +205,7 @@ function addFix(lat, lng, acc) {
 $('walk-start').onclick = () => {
   S.walking = true; drawWalk();
   if ('geolocation' in navigator) watch = navigator.geolocation.watchPosition((p) => addFix(p.coords.latitude, p.coords.longitude, p.coords.accuracy),
-    () => { $('walk-msg').textContent = "Your phone isn't sharing its location, so the route can't be drawn. You can allow it in your browser's settings."; $('walk-msg').hidden = false; },
+    () => { $('walk-msg').textContent = "Your phone isn't sharing its location, so the walk can't be followed. Allow location for this page in your browser's settings, or go back and send a single spot or crossing: those can be marked on the map."; $('walk-msg').hidden = false; },
     { enableHighAccuracy: true, maximumAge: 5000 });
 };
 // desk demo: walk 60 m at a time, turning when asked
@@ -332,7 +343,7 @@ function topicLines(t, a) {
 function drawCard() {
   const s = S.spot;
   $('sc-n').textContent = S.mode === 'walk' ? S.spots.length + 1 : isX() ? '×' : '•';
-  if (isX()) { $('sc-name').textContent = S.mode === 'walk' ? `Crossing on your walk (${S.spots.length + 1})` : 'Your crossing'; $('sc-ctx').textContent = s.moved_m > 2 ? `Moved ${s.moved_m} m from where you are` : 'Where you are standing'; return; }
+  if (isX()) { $('sc-name').textContent = S.mode === 'walk' ? `Crossing on your walk (${S.spots.length + 1})` : 'Your crossing'; $('sc-ctx').textContent = s.byMap ? 'Marked on the map' : s.moved_m > 2 ? `Moved ${s.moved_m} m from where you are` : 'Where you are standing'; return; }
   $('sc-name').textContent = S.mode === 'walk' ? `Spot ${S.spots.length + 1} of your walk` : 'Your spot';
   $('sc-ctx').textContent = spotTitle(s) === 'Spot' ? (S.gps ? 'Where you are standing' : 'Marked on the map') : spotTitle(s);
 }
@@ -353,13 +364,13 @@ function drawReview() {
   let rows;
   if (S.mode === 'crossing') {
     const s = S.spot;
-    rows = [['Crossing', s.moved_m > 2 ? `Moved ${s.moved_m} m from where you were` : 'Where you were standing', 'where'],
+    rows = [['Crossing', s.byMap ? 'Marked on the map' : s.moved_m > 2 ? `Moved ${s.moved_m} m from where you were` : 'Where you were standing', first()],
       ...CROSS_TOPICS.map(t => [t.title.replace('Waiting, light and safety', 'Waiting and safety'), topicLines(t, s.answers), 't-' + t.id]),
       ['Photo', s.photo ? 'Added' : 'None', 'extra'], ['Note', esc(s.note || 'None'), 'extra']];
     $('review-hint').textContent = 'Tap "Change" to fix anything. Nothing has been saved yet.';
   } else if (S.mode === 'spot') {
     const s = S.spot;
-    rows = [['Spot', S.gps ? 'Where you were standing' : 'Marked on the map', 'where'],
+    rows = [['Spot', S.gps ? 'Where you were standing' : 'Marked on the map', first()],
       ['Side', esc(spotTitle(s)), 'dir'], ...TOPICS.map(t => [t.title.replace('Shade, access and safety', 'Shade and safety'), topicLines(t, s.answers), 't-' + t.id]),
       ['Photo', s.photo ? 'Added' : 'None', 'extra'], ['Note', esc(s.note || 'None'), 'extra']];
     $('review-hint').textContent = 'Tap "Change" to fix anything. Nothing has been saved yet.';
@@ -382,7 +393,7 @@ const ANSWER_IDS = new Set(QUESTIONS.map(q => q.id));
 function payload() {
   const spots = S.mode === 'walk' ? S.spots : [S.spot], p = player.get();
   return { mode: S.mode, nick: p ? p.nick : null, nick_pin: p ? p.pin : null,
-    items: spots.map(s => ({ item: s.kind, lat: +s.lat.toFixed(6), lng: +s.lng.toFixed(6), accuracy_m: s.accuracy_m, moved_m: s.moved_m || 0, observed_at: s.at,
+    items: spots.map(s => ({ item: s.kind, place_type: s.byMap ? 'map' : 'gps', lat: +s.lat.toFixed(6), lng: +s.lng.toFixed(6), accuracy_m: s.accuracy_m, moved_m: s.byMap ? null : (s.moved_m || 0), observed_at: s.at,
       ...(s.kind === 'spot' ? { facing: s.facing, side_how: s.how, road_deg: s.roadDeg, lr: s.lr, same: !!s.same } : {}),
       ...Object.fromEntries(Object.entries(s.answers).filter(([k, v]) => ANSWER_IDS.has(k) && v != null)),
       note: s.note || null, photo: s.photo || null })) };

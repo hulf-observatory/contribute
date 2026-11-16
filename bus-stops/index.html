@@ -213,6 +213,15 @@
         <button type="button" class="btn btn-primary btn-lg" id="gps-go">Share my location</button>
       </div>
       <p class="msg" id="gps-msg" hidden></p>
+      <p class="alt-link" id="to-mark-p" hidden><a href="#" id="to-mark"><b>Location not working? Find the stop on the map instead</b></a></p>
+    </section>
+
+    <!-- when the phone's location fails: a map with a fixed pin in the centre; its centre stands in for the phone -->
+    <section class="step" data-step="mark">
+      <h2 class="qt">Find the stop on the map</h2>
+      <p class="hint">Move the map until the pin in the middle sits on the bus stop, then press Next. You still need to be at the stop.</p>
+      <div id="markbox"></div>
+      <p class="msg" id="mark-msg" hidden></p>
     </section>
 
     <section class="step" data-step="nearest">

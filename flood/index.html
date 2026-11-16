@@ -216,6 +216,14 @@
         <button type="button" class="btn btn-primary btn-lg" id="gps-go">Share my location</button>
       </div>
       <p class="msg" id="gps-msg" hidden></p>
+      <p class="alt-link" id="to-mark-p" hidden><a href="#" id="to-mark"><b>Location not working? Mark the place on the map instead</b></a></p>
+    </section>
+
+    <!-- when the phone's location fails: a map with a fixed pin in the centre -->
+    <section class="step" data-step="mark">
+      <h2 class="qt">Mark the water on the map</h2>
+      <p class="hint">Move the map until the pin in the middle sits on the water. You still need to be there.</p>
+      <div id="markbox"></div>
     </section>
 
     <!-- spot: the phone's location; the dot moves up to 100 m (standing somewhere safe nearby) -->
@@ -349,6 +357,7 @@
 
 <script src="../assets/common.js"></script>
 <script type="module">
+import { mapMark } from '../assets/map-mark.js';
 // Report flooding, at the place (Teja, 16 Nov 2026): phones only, the phone's location (the dot moves up to 100 m), time = now.
 const $ = (id) => document.getElementById(id);
 Contribute.phoneOnly({ what: 'Flooding', mapHref: 'reports/', mapLabel: 'See the reports so far' });
@@ -437,7 +446,7 @@ let cur = 'start', watchId = null, gotFirst = false;
 function steps() {
   const l = ['start'];
   if (S.here !== 'yes') return l;
-  l.push('locate', 'spot', 'depth'); if (S.exact) l.push('exact');
+  l.push('locate', S.mode === 'map' ? 'mark' : 'spot', 'depth'); if (S.exact) l.push('exact');
   l.push('flow', 'quality', 'photo', 'note');
   if (rough()) l.push('gpsspot');            // phone location worse than 100 m: ask for road and landmark
   l.push('review', 'thanks');
@@ -446,7 +455,7 @@ function steps() {
 const OPTIONAL = new Set(['photo', 'note']);
 const filled = (id) => $(id).value.trim().length >= 2;
 function ready(s) {
-  const need = { start: S.here === 'yes', spot: S.loc, depth: S.depth || S.exact, exact: S.touched, flow: S.flow, quality: S.quality,
+  const need = { start: S.here === 'yes', spot: S.loc, mark: S.loc && S.markOk, depth: S.depth || S.exact, exact: S.touched, flow: S.flow, quality: S.quality,
     gpsspot: filled('g-street') && filled('g-landmark'), review: !sending };
   return s in need ? !!need[s] : true;
 }
@@ -461,6 +470,7 @@ function show(s, push = true) {
   $('next').hidden = s === 'locate';            // the locate screen has its own two buttons
   updateNext();
   if (s === 'spot') openMap();
+  if (s === 'mark') marker.open();
   if (s === 'review') drawReview();
   if (s === 'exact') hint();
   if (push) history.pushState({ s }, '', '#' + s);
@@ -570,8 +580,8 @@ $('gps-go').onclick = () => {
   S.mode = 'gps'; gotFirst = false;
   $('gps-go').textContent = 'Waiting for your phone…'; $('gps-go').disabled = true; $('gps-msg').hidden = true;
   watchId = navigator.geolocation.watchPosition(onFix, (err) => { if (!gotFirst) gpsFailed(err.code === 1
-      ? "Your phone didn't share its location. This form needs it: allow location for this page in your browser's settings, then try again."
-      : "We couldn't get a location from your phone. Try again in a moment, ideally in the open."); },
+      ? "Your phone didn't share its location. Allow location for this page in your browser's settings and try again, or mark the place on the map."
+      : "We couldn't get a location from your phone. Try again in a moment, ideally in the open, or mark the place on the map."); },
     { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 });
 };
 const HMDA = [78.00, 16.96, 79.05, 17.90];
@@ -594,9 +604,12 @@ function onFix(p) {
 function gpsFailed(text) {
   stopGps(); S.mode = null;
   $('gps-go').textContent = 'Try again'; $('gps-go').disabled = false;
-  $('gps-msg').textContent = text; $('gps-msg').hidden = false;
+  $('gps-msg').textContent = text; $('gps-msg').hidden = false; $('to-mark-p').hidden = false;
 }
 function stopGps() { if (watchId != null) navigator.geolocation.clearWatch(watchId); watchId = null; }
+// the phone's location failed: mark the water with the pin in the middle of a map (Teja, 16 Nov 2026)
+const marker = mapMark($('markbox'), { onChange: ({ lat, lng, ok }) => { S.markOk = ok; S.loc = { lat, lng }; S.ward = wardAt(lng, lat); updateNext(); } });
+$('to-mark').onclick = (e) => { e.preventDefault(); stopGps(); S.mode = 'map'; S.fix = null; S.acc = null; S.moved = false; S.loc = null; S.at = new Date(); show('mark'); };
 
 // ── where the water is: the phone's location on a map; the dot can move up to 100 m from it ──
 const MAX_MOVE = 100;
@@ -673,10 +686,11 @@ function drawReview() {
     const g = rough() ? [$('g-street').value.trim(), 'Near ' + $('g-landmark').value.trim(), $('g-spot').value.trim()].filter(x => x && x !== 'Near ') : [];
     const mv = S.moved && S.fix ? `, moved ${Math.round(metres(S.fix, S.loc))} m to the water` : '';
     where = `${esc(wardText(S.ward))}${g.map(l => `<small>${esc(l)}</small>`).join('')}<small>Your phone's location, accurate to about ${acc} m${watchId != null && acc > 30 && !S.moved ? ' — still sharpening' : ''}${mv}</small>`;
-  } else where = 'Not set';
+  } else if (S.mode === 'map' && S.loc) where = `${esc(wardText(S.ward))}<small>Marked on the map</small>`;
+  else where = 'Not set';
   const when = 'Now';
   const rows = [
-    ['Where', where, rough() ? 'gpsspot' : 'spot', true],
+    ['Where', where, rough() ? 'gpsspot' : S.mode === 'map' ? 'mark' : 'spot', true],
     ['Depth', d ? d.label : '', S.exact ? 'exact' : 'depth'],
     ['Moving', lab('flow'), 'flow'],
     ['Looks', looks, 'quality'],
@@ -698,8 +712,8 @@ const store = { get() { try { return JSON.parse(localStorage.getItem(DRAFT)); } 
   drop() { try { localStorage.removeItem(DRAFT); } catch { /* ignore */ } } };
 function payload() {
   const g = (id) => rough() ? $(id).value.trim() || null : null;   // road and landmark only when the location is rough
-  return { survey: 'flood', version: 3, here: 'yes', place_type: 'gps',
-    lat: S.loc?.lat, lng: S.loc?.lng, accuracy_m: S.acc != null ? Math.round(S.acc) : null, moved_m: S.fix && S.loc ? Math.round(metres(S.fix, S.loc)) : 0,
+  return { survey: 'flood', version: 3, here: 'yes', place_type: S.mode === 'map' ? 'map' : 'gps',
+    lat: S.loc?.lat, lng: S.loc?.lng, accuracy_m: S.acc != null ? Math.round(S.acc) : null, moved_m: S.mode === 'map' ? null : S.fix && S.loc ? Math.round(metres(S.fix, S.loc)) : 0,
     ward: S.ward?.name || null, place: null, street: g('g-street'), landmark: g('g-landmark'), address_more: g('g-spot'),
     depth_cm: S.depth, depth_exact: !!S.exact, flow: S.flow, quality: S.quality, observed_at: (S.at || new Date()).toISOString(),
     note: $('note').value.trim() || null, photo: S.photo || null };
