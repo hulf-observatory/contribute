@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Download the walking data · Hyderabad Urban Observatory</title>
+<meta name="description" content="Download every community footpath and crossing report for Hyderabad as CSV or GeoJSON. CC BY 4.0, updated daily.">
+<link rel="icon" href="../../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../../vendor/fonts/lato.css">
+<link rel="stylesheet" href="../../vendor/fonts/outfit.css">
+<link rel="stylesheet" href="../../assets/contribute.css">
+<!-- visit counter: page, referring site, country; no cookies, no IP addresses (live-feed/visits.js) -->
+<script src="https://api.urbanobservatory.in/visits.js" defer></script>
+<script src="../../assets/config.js"></script>
+<style>
+  .dl { max-width: var(--measure); }
+  .dl .lede { margin-bottom: 24px; }
+  .hint { color: var(--text-2); margin: 0 0 16px; }
+  .req { color: #C2413B; font-weight: 700; margin-left: 2px; }
+  .req-word { font: 400 13px var(--font-ui); color: #C2413B; margin-left: 8px; }
+  .req-note { font-size: 13px; color: var(--muted); margin: 0 0 18px; }
+  .opt { font-weight: 400; color: var(--muted); }
+  .field { margin-bottom: 20px; }
+  .field-label { display: block; font: 700 16px/1.3 var(--font-ui); margin-bottom: 6px; }
+  .field-hint { display: block; font-size: 14px; color: var(--muted); margin: -2px 0 8px; }
+  .sel { appearance: none; -webkit-appearance: none; padding-right: 40px; background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5 8l5 5 5-5' fill='none' stroke='%23374151' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") right 12px center/18px no-repeat; cursor: pointer; }
+  .sel:invalid { color: var(--disabled); }
+  .confirm { display: flex; align-items: center; gap: 10px; margin: 4px 0 12px; font: 700 15px var(--font-ui); cursor: pointer; }
+  .confirm input { width: 20px; height: 20px; accent-color: var(--ink); }
+  .inp { width: 100%; height: 48px; padding: 0 14px; border: 1px solid var(--border-2); border-radius: var(--r-ctl); background: #fff; font: 400 16px var(--font-ui); color: var(--ink); }
+  .inp:focus, .chip:focus-visible, .btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .privacy { font-size: 14px; color: var(--text-2); padding: 12px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin: 8px 0 16px; }
+  .ts { margin: 0 0 12px; } .ts:empty { display: none; }
+  .trap { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+  .msg { margin: 0 0 12px; padding: 10px 0; border-top: 1px solid var(--border-2); border-bottom: 1px solid var(--border-2); color: var(--text-2); }
+  .msg[hidden] { display: none; }
+  #links-box h2 { font: 700 20px/1.3 var(--font-ui); margin: 8px 0 12px; }
+  .files { list-style: none; margin: 0 0 16px; padding: 0; border-top: 1px solid var(--border); }
+  .files li { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .files a { font-weight: 700; }
+  .files span { font-size: 14px; color: var(--muted); }
+  .fine { font-size: 13px; color: var(--muted); }
+  .back { margin-top: 32px; font-size: 14px; }
+</style>
+</head>
+<body>
+<header class="obs-header">
+  <a class="obs-brand" href="/" aria-label="Hyderabad Urban Observatory, home"><span class="obs-logo"><svg viewBox="0 0 100 100" aria-hidden="true"><defs><rect id="bH1" x="2" y="26" width="96" height="16" rx="6"/><rect id="bH2" x="2" y="58" width="96" height="16" rx="6"/><rect id="bV1" x="28" y="2" width="16" height="96" rx="6" transform="rotate(18 36 50)"/><rect id="bV2" x="56" y="2" width="16" height="96" rx="6" transform="rotate(18 64 50)"/><mask id="cH1"><rect width="100" height="100" fill="white"/><use href="#bV1" fill="black" stroke="black" stroke-width="4"/></mask><mask id="cV2"><rect width="100" height="100" fill="white"/><use href="#bH1" fill="black" stroke="black" stroke-width="4"/></mask><mask id="cH2"><rect width="100" height="100" fill="white"/><use href="#bV2" fill="black" stroke="black" stroke-width="4"/></mask><mask id="cV1"><rect width="100" height="100" fill="white"/><use href="#bH2" fill="black" stroke="black" stroke-width="4"/></mask></defs><g fill="#FFFFFF" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#bH1" mask="url(#cH1)"/><use href="#bV2" mask="url(#cV2)"/><use href="#bH2" mask="url(#cH2)"/><use href="#bV1" mask="url(#cV1)"/></g></svg></span><span class="obs-word">Hyderabad Urban Observatory</span></a>
+  <nav class="obs-nav" aria-label="Observatory"><a href="/live/" class="obs-live"><i class="obs-live-dot" aria-hidden="true"></i>Live</a><a href="/maps/">Layers</a><a href="/tools/">Tools</a><a href="/stories/">Stories</a><a href="/contribute/" aria-current="page">Contribute</a><a href="/data/">Data sources</a><a href="/about">About</a></nav>
+  <a href="/live/" class="obs-live obs-live-bar"><i class="obs-live-dot" aria-hidden="true"></i>Live</a>
+  <button type="button" class="obs-burger" aria-label="Menu" aria-expanded="false" aria-controls="obs-menu"><span></span></button>
+  <nav class="obs-menu" id="obs-menu" aria-label="Observatory" hidden><a href="/live/" class="obs-live"><i class="obs-live-dot" aria-hidden="true"></i>Live</a><a href="/maps/">Layers</a><a href="/tools/">Tools</a><a href="/stories/">Stories</a><a href="/contribute/" aria-current="page">Contribute</a><a href="/data/">Data sources</a><a href="/about">About</a></nav>
+</header>
+
+<main class="wrap">
+  <div class="dl">
+    <p class="eyebrow">Community data · Walking</p>
+    <h1>Download the walking data</h1>
+    <p class="lede">Every footpath spot and crossing residents have told us about, one row each: where (from the phone, at the
+      place), when, the side of the road, and the answers about the footpath (blocked, damaged, shade, lights, safety) or the
+      crossing (marked, signal, divider, waiting space, safety). Points sent on the same walk share a walk id. Updated daily.
+      Photos are not included.</p>
+
+    <section id="form-box">
+      <p class="hint">Two quick questions, and the download links appear straight away. It helps us see how the data is used.</p>
+      <form id="dl-form" novalidate>
+        <div class="field">
+          <label class="field-label" for="dl-purpose">What will you use the data for?</label>
+          <select class="inp sel" id="dl-purpose" required>
+            <option value="" selected disabled>Choose one</option>
+            <option value="research">Research</option>
+            <option value="teaching">Teaching or learning</option>
+            <option value="journalism">News or writing</option>
+            <option value="planning">Planning or policy</option>
+            <option value="commercial">Commercial use</option>
+            <option value="personal">Personal interest</option>
+            <option value="other">Something else</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label" for="dl-role">Your role</label>
+          <select class="inp sel" id="dl-role" required>
+            <option value="" selected disabled>Choose one</option>
+            <option value="student">Student</option>
+            <option value="researcher">Researcher or academic</option>
+            <option value="government">Government</option>
+            <option value="ngo">NGO or civil society</option>
+            <option value="journalist">Journalist</option>
+            <option value="company">Company or business</option>
+            <option value="resident">Resident</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label" for="dl-org">Organisation <span class="opt">(optional)</span></label>
+          <span class="field-hint">University, NGO, government office, company, or leave empty</span>
+          <input class="inp" id="dl-org" autocomplete="organization" maxlength="160">
+        </div>
+        <label class="confirm"><input type="checkbox" id="dl-ok"> These details are correct</label>
+        <p class="privacy">We count what the data is used for, to see who it helps. No name, email or other personal details.</p>
+        <div class="ts" id="ts-dl"></div>
+        <input type="text" name="website" id="dl-trap" tabindex="-1" autocomplete="off" aria-hidden="true" class="trap">
+        <p class="msg" id="dl-msg" hidden></p>
+        <button type="submit" class="btn btn-primary btn-lg" id="dl-send" disabled>Show the download links</button>
+      </form>
+    </section>
+
+    <section id="links-box" hidden>
+      <h2>Your download</h2>
+      <ul class="files">
+        <li><a id="f-csv" href="#">walking-reports.csv</a><span>for spreadsheets</span></li>
+        <li><a id="f-geojson" href="#">walking-reports.geojson</a><span>for maps (QGIS and similar)</span></li>
+        <li><a id="f-readme" href="#">README</a><span>what each column means</span></li>
+      </ul>
+      <p class="fine">Licence: <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>.
+        Credit "Hyderabad Urban Observatory, community walking survey". Contributions are not checked on the ground; those
+        flagged as spam are left out.</p>
+    </section>
+
+    <p class="back"><a href="../map/">← Back to the walking map</a></p>
+  </div>
+</main>
+
+<footer class="obs-footer">
+  <div class="obs-footer-fine">
+    <span>This website is under continuous development; you may find errors or incomplete content.
+      Feedback: <a href="mailto:hulf.observatory@gmail.com">hulf.observatory@gmail.com</a> · Reports are published as community data.</span>
+    <a class="obs-footer-disclaimer" href="/disclaimer">Disclaimer</a>
+  </div>
+</footer>
+
+<script src="../../assets/common.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const KEY = 'obs-walking-download';   // after one sign-up this browser goes straight to the links
+function showLinks(files) {
+  $('f-csv').href = files.csv; $('f-geojson').href = files.geojson; $('f-readme').href = files.readme;
+  $('form-box').hidden = true; $('links-box').hidden = false;
+}
+try { const f = JSON.parse(localStorage.getItem(KEY)); if (f && f.csv) showLinks(f); } catch { /* first visit */ }
+// what the data is for and the role are required, and a tick that the details are correct (Teja, 16 Nov 2026)
+const filled = () => !!$('dl-purpose').value && !!$('dl-role').value && $('dl-ok').checked;
+const update = () => { $('dl-send').disabled = !filled(); };
+['dl-purpose', 'dl-role', 'dl-ok'].forEach((id) => $(id).addEventListener('change', update));
+const spam = Contribute.spamCheck($('ts-dl'));
+$('dl-form').addEventListener('submit', async (e) => {
+  e.preventDefault(); if (!filled()) return;
+  $('dl-send').disabled = true; $('dl-send').textContent = 'Checking…'; $('dl-msg').hidden = true;
+  try {
+    const token = await spam.token();
+    if (token === null) throw Object.assign(new Error('The spam check did not finish. Please try again.'), { server: true });
+    const r = await Contribute.post('/walking/download', { purpose: $('dl-purpose').value, role: $('dl-role').value, organisation: $('dl-org').value.trim() || null, token, website: $('dl-trap').value });
+    try { localStorage.setItem(KEY, JSON.stringify(r.files)); } catch { /* private mode */ }
+    showLinks(r.files);
+  } catch (err) {
+    $('dl-msg').textContent = err.status === 429 ? 'Too many tries from this connection just now. Please wait a minute.'
+      : err.server ? err.message : "That didn't go through; the connection may be weak. Please try again.";
+    $('dl-msg').hidden = false; update();
+  } finally { $('dl-send').textContent = 'Show the download links'; spam.reset(); }
+});
+</script>
+</body>
+</html>

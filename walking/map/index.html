@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Walking map · Hyderabad Urban Observatory</title>
+<meta name="description" content="Footpaths and crossings in Hyderabad as residents found them: is there a footpath, is it blocked, can you cross safely?">
+<link rel="icon" href="../../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../../vendor/fonts/lato.css">
+<link rel="stylesheet" href="../../vendor/fonts/outfit.css">
+<link rel="stylesheet" href="../../assets/contribute.css">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<!-- visit counter: page, referring site, country; no cookies, no IP addresses (live-feed/visits.js) -->
+<script src="https://api.urbanobservatory.in/visits.js" defer></script>
+<script src="../../assets/config.js"></script>
+<style>
+  .head { max-width: 1280px; margin: 0 auto; }
+  h1 { font: 700 32px/1.2 var(--font-ui); margin: 0 0 8px; }
+  .lede { color: var(--text-2); margin: 0 0 18px; max-width: 680px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 22px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+  .chip { min-height: 36px; padding: 6px 14px; border: 1px solid var(--border-2); border-radius: var(--r-ctl); background: #fff; cursor: pointer; font: 400 14px var(--font-ui); }
+  .chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; font-weight: 700; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 14px; color: var(--text-2); margin: 0 0 12px; }
+  .chips .grp { align-self: center; font: 900 11px/1 var(--font-ui); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 0 2px 0 6px; }
+  .chips .grp:first-child { margin-left: 0; }
+  .legend .key-x, .legend .key-f { display: inline-block; width: 12px; height: 12px; border-radius: 50%; vertical-align: middle; margin-right: 6px; background: #fff; border: 2px solid #111827; }
+  .legend .key-f { width: 9px; height: 9px; border: 1.5px solid #9CA3AF; }
+  .legend i { display: inline-block; width: 22px; height: 5px; border-radius: 3px; vertical-align: middle; margin-right: 6px; }
+  .map-box { position: relative; height: 62vh; min-height: 380px; border: 1px solid var(--border); border-radius: var(--r-card); overflow: hidden; }
+  #map { position: absolute; inset: 0; }
+  .stats { display: flex; flex-wrap: wrap; gap: 24px; margin: 14px 0 0; font-size: 14px; color: var(--muted); }
+  .stats b { display: block; font-size: 22px; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .maplibregl-popup-content { font: 14px/1.5 var(--font-ui); padding: 12px 14px; border-radius: var(--r-card); max-width: 280px; }
+  .pop b { display: block; font-size: 15px; }
+  .pop .meta { color: var(--muted); font-size: 13px; margin-bottom: 6px; }
+  .pop ul { margin: 0; padding-left: 16px; }
+  .pop button.fbb { margin-top: 8px; background: none; border: 0; padding: 0; font: 400 13px var(--font-ui); text-decoration: underline; cursor: pointer; color: var(--text-2); }
+  .board { max-width: 680px; margin: 44px 0 0; }
+  .board h2 { font: 700 24px/1.3 var(--font-ui); margin: 0 0 6px; }
+  .board p { color: var(--text-2); margin: 0 0 14px; }
+  .board ol { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--border); counter-reset: r; }
+  .board li { display: flex; gap: 12px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--border); counter-increment: r; }
+  .board li::before { content: counter(r); width: 24px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .board li span { flex: 1; }
+  .board li small { color: var(--muted); margin-left: 6px; }
+  .board li b { font-variant-numeric: tabular-nums; }
+  dialog { border: 1px solid var(--border); border-radius: var(--r-card); padding: 22px; max-width: 420px; width: calc(100% - 32px); box-shadow: var(--shadow-float); }
+  dialog::backdrop { background: rgba(17,24,39,.35); }
+  dialog h3 { font: 700 19px/1.3 var(--font-ui); margin: 0 0 12px; }
+  .fbopts { display: grid; gap: 8px; margin-bottom: 12px; }
+  .fbopts button { text-align: left; padding: 12px 14px; border: 1px solid var(--border-2); border-radius: var(--r-ctl); background: #fff; font: 700 15px var(--font-ui); cursor: pointer; }
+  .fbopts button small { display: block; font-weight: 400; font-size: 13px; color: var(--muted); }
+  .fbopts button[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); background: var(--band); }
+  dialog textarea { width: 100%; min-height: 70px; padding: 10px 12px; border: 1px solid var(--border-2); border-radius: var(--r-ctl); font: 15px var(--font-ui); }
+  .dlg-btns { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; }
+  .fbmsg { font-size: 13px; color: var(--text-2); margin: 6px 0 0; }
+  .ts:empty { display: none; }
+  .board-link { margin: 32px 0 0; }
+  .loadmsg { color: var(--text-2); margin: 0 0 12px; }
+  .loadmsg[hidden] { display: none; }
+</style>
+</head>
+<body>
+<header class="obs-header">
+  <a class="obs-brand" href="/" aria-label="Hyderabad Urban Observatory, home"><span class="obs-logo"><svg viewBox="0 0 100 100" aria-hidden="true"><defs><rect id="bH1" x="2" y="26" width="96" height="16" rx="6"/><rect id="bH2" x="2" y="58" width="96" height="16" rx="6"/><rect id="bV1" x="28" y="2" width="16" height="96" rx="6" transform="rotate(18 36 50)"/><rect id="bV2" x="56" y="2" width="16" height="96" rx="6" transform="rotate(18 64 50)"/><mask id="cH1"><rect width="100" height="100" fill="white"/><use href="#bV1" fill="black" stroke="black" stroke-width="4"/></mask><mask id="cV2"><rect width="100" height="100" fill="white"/><use href="#bH1" fill="black" stroke="black" stroke-width="4"/></mask><mask id="cH2"><rect width="100" height="100" fill="white"/><use href="#bV2" fill="black" stroke="black" stroke-width="4"/></mask><mask id="cV1"><rect width="100" height="100" fill="white"/><use href="#bH2" fill="black" stroke="black" stroke-width="4"/></mask></defs><g fill="#FFFFFF" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#bH1" mask="url(#cH1)"/><use href="#bV2" mask="url(#cV2)"/><use href="#bH2" mask="url(#cH2)"/><use href="#bV1" mask="url(#cV1)"/></g></svg></span><span class="obs-word">Hyderabad Urban Observatory</span></a>
+  <nav class="obs-nav" aria-label="Observatory"><a href="/live/" class="obs-live"><i class="obs-live-dot" aria-hidden="true"></i>Live</a><a href="/maps/">Layers</a><a href="/tools/">Tools</a><a href="/stories/">Stories</a><a href="/contribute/" aria-current="page">Contribute</a><a href="/data/">Data sources</a><a href="/about">About</a></nav>
+  <a href="/live/" class="obs-live obs-live-bar"><i class="obs-live-dot" aria-hidden="true"></i>Live</a>
+  <button type="button" class="obs-burger" aria-label="Menu" aria-expanded="false" aria-controls="obs-menu"><span></span></button>
+  <nav class="obs-menu" id="obs-menu" aria-label="Observatory" hidden><a href="/live/" class="obs-live"><i class="obs-live-dot" aria-hidden="true"></i>Live</a><a href="/maps/">Layers</a><a href="/tools/">Tools</a><a href="/stories/">Stories</a><a href="/contribute/" aria-current="page">Contribute</a><a href="/data/">Data sources</a><a href="/about">About</a></nav>
+</header>
+
+<main class="wrap">
+  <div class="head">
+    <p class="eyebrow">Contribute · Walking</p>
+    <h1>Walking map</h1>
+    <p class="lede">What residents found on their walks and at single spots. Lines are walks, coloured stretch by stretch; small dots are footpath spots; larger outlined dots are crossings. Pick one thing to show at a time.</p>
+    <div class="actions">
+      <a class="btn btn-primary" href="../">Tell us about a footpath</a>
+      <a class="btn btn-secondary" href="../../bus-stops/leaderboard/">Leaderboard</a>
+      <a class="btn btn-secondary" href="../download/">Download the data</a>
+    </div>
+    <p class="loadmsg" id="loadmsg" hidden></p>
+    <div class="chips" id="chips" role="group" aria-label="Show on the map"></div>
+    <div class="legend" id="legend"></div>
+    <div class="map-box"><div id="map"></div></div>
+    <div class="stats" id="stats"></div>
+
+    <p class="board-link">Contributors collect points on <a href="../../bus-stops/leaderboard/">one leaderboard</a> for walking and bus stops: 10 a footpath spot or crossing, 5 a photo.</p>
+  </div>
+</main>
+
+<dialog id="dlg">
+  <h3>Feedback</h3>
+  <div class="fbopts" id="fbopts">
+    <button type="button" data-k="confirm">It's still like this</button>
+    <button type="button" data-k="wrong">Something is wrong<small>The answers or the place don't look right</small></button>
+    <button type="button" data-k="photo" id="fb-photo">A problem with the photo<small>A face, a number plate, or not of this place</small></button>
+    <button type="button" data-k="spam">Spam or fake</button>
+  </div>
+  <textarea id="fb-note" maxlength="300" placeholder="Optional note, only we see it"></textarea>
+  <div class="ts" id="ts-fb"></div>
+  <input type="text" name="website" id="fb-trap" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
+  <p class="fbmsg" id="fb-msg" hidden></p>
+  <div class="dlg-btns"><button type="button" class="btn btn-secondary" id="fb-cancel">Cancel</button><button type="button" class="btn btn-primary" id="fb-send" disabled>Send</button></div>
+</dialog>
+
+<footer class="obs-footer">
+  <div class="obs-footer-fine">
+    <span>This website is under continuous development; you may find errors or incomplete content.
+      Feedback: <a href="mailto:hulf.observatory@gmail.com">hulf.observatory@gmail.com</a> · Entries are published as community data under CC BY 4.0.</span>
+    <a class="obs-footer-disclaimer" href="/disclaimer">Disclaimer</a>
+  </div>
+</footer>
+
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="../../assets/common.js"></script>
+<script type="module" src="map.js"></script>
+</body>
+</html>
