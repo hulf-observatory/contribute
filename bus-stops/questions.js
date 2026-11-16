@@ -97,8 +97,9 @@ export async function loadStops(base = '') {
   const d = await (await fetch(`${base}stops.json`)).json();
   return d.stops.map(([id, name, towards, lat, lng, buses, routes, nRoutes]) => ({ id, name, towards, lat, lng, buses, routes, nRoutes }));
 }
+// always fresh (no-cache): someone may have just sent theirs
 export async function loadRatings() {
-  const d = await (await fetch(`${C.API}/${SURVEY}/reports.json`, { credentials: 'omit' })).json();
+  const d = await (await fetch(`${C.API}/${SURVEY}/reports.json`, { credentials: 'omit', cache: 'no-cache' })).json();
   return d.features.map(f => ({ ...f.properties, lng: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] }));
 }
 // a stop someone added: its first rating (place_type "missing") carries the name and the pin

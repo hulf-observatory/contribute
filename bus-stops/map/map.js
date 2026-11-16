@@ -7,7 +7,7 @@ const $ = (id) => document.getElementById(id);
 const fmt = (n) => n.toLocaleString('en-IN');
 
 const [base, rs, lb] = await Promise.all([loadStops('../').catch(() => []), loadRatings().catch(() => null),
-  fetch(`${C.API}/${SURVEY}/leaderboard.json`, { credentials: 'omit' }).then(r => r.json()).catch(() => null)]);
+  fetch(`${C.API}/${SURVEY}/leaderboard.json`, { credentials: 'omit', cache: 'no-cache' }).then(r => r.json()).catch(() => null)]);
 if (!rs) { $('load-msg').hidden = false; $('load-msg').textContent = "Contributions couldn't load just now; showing the stops only."; }
 const ratings = rs || [];
 const added = addedStops(ratings);

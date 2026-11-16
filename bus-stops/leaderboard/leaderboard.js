@@ -5,7 +5,7 @@ const C = window.CONTRIBUTE;
 const $ = (id) => document.getElementById(id);
 const fmt = (n) => n.toLocaleString('en-IN');
 const me = player.get()?.nick || '';
-const lb = await fetch(`${C.API}/${SURVEY}/leaderboard.json`, { credentials: 'omit' }).then(r => r.json()).catch(() => null);
+const lb = await fetch(`${C.API}/${SURVEY}/leaderboard.json`, { credentials: 'omit', cache: 'no-cache' }).then(r => r.json()).catch(() => null);
 
 function draw(period) {
   const list = lb ? lb[period] || [] : [];

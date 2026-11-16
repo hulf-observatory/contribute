@@ -10,7 +10,7 @@ const WAIT_TXT = ['same day', 'next day', '2 days', '3+ days'];
 const MIN_PRICES = 3;                 // a ward shows a typical price only from 3 orders
 
 const [areas, data] = await Promise.all([fetch(C.AREAS_URL).then(r => r.json()).catch(() => ({ wards: [] })),
-  fetch(`${C.API}/tankers/reports.json`, { credentials: 'omit' }).then(r => r.json()).catch(() => null)]);
+  fetch(`${C.API}/tankers/reports.json`, { credentials: 'omit', cache: 'no-cache' }).then(r => r.json()).catch(() => null)]);
 if (!data) { $('loadmsg').hidden = false; $('loadmsg').textContent = "The orders couldn't load just now. Please try again later."; }
 const wards = areas.wards || [];
 const orders = (data ? data.features : []).map(f => {

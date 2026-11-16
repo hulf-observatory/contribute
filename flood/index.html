@@ -812,7 +812,7 @@ async function send() {
 })();
 $('again').onclick = () => { location.href = location.pathname; };
 
-fetch(`${window.CONTRIBUTE.API}/flood/reports.json`).then(r => r.json()).then(d => {
+fetch(`${window.CONTRIBUTE.API}/flood/reports.json`, { cache: 'no-cache' }).then(r => r.json()).then(d => {
   const f = d.features || [];
   const last = f.map(x => x.properties.observed_at).sort().pop();
   if (f.length) $('see-reports').firstChild.textContent = `See ${f.length} reports so far `;

@@ -250,6 +250,6 @@ async function send() {
 })();
 $('again').onclick = () => { location.href = location.pathname + location.search; };
 
-fetch(`${C.API}/tankers/reports.json`, { credentials: 'omit' }).then(r => r.json()).then(d => {
+fetch(`${C.API}/tankers/reports.json`, { credentials: 'omit', cache: 'no-cache' }).then(r => r.json()).then(d => {
   const n = d.features.length; if (n) $('meta').textContent = `${n.toLocaleString('en-IN')} order${n > 1 ? 's' : ''} so far`;
 }).catch(() => {});
