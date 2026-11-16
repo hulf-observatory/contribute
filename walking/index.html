@@ -8,10 +8,10 @@
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../vendor/fonts/lato.css">
 <link rel="stylesheet" href="../vendor/fonts/outfit.css">
-<link rel="stylesheet" href="../assets/contribute.css">
+<link rel="stylesheet" href="../assets/contribute.css?v=20261116">
 <!-- visit counter: page, referring site, country; no cookies, no IP addresses (live-feed/visits.js) -->
 <script src="https://api.urbanobservatory.in/visits.js" defer></script>
-<script src="../assets/config.js"></script>
+<script src="../assets/config.js?v=20261116"></script>
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <style>
@@ -189,6 +189,15 @@
       <p class="eyebrow">Contribute · Walking</p>
       <h1>Tell us about walking here</h1>
       <p class="hint">Is there a footpath, can you walk on it, is it blocked, shaded, lit? Can you cross the road safely? Tell us about one spot or crossing in a couple of minutes, or about a whole walk.</p>
+      <div class="draft" id="draft" hidden>
+        <p class="eyebrow">Not sent yet</p>
+        <p id="draft-text"></p>
+        <div class="ts ts-draft" id="ts-draft"></div>
+        <div class="row-btns"><button type="button" class="btn btn-primary btn-lg" id="draft-send">Send it now</button><button type="button" class="btn btn-secondary btn-lg" id="draft-drop">Discard it</button></div>
+        <p class="msg" id="draft-msg" hidden></p>
+      </div>
+      <div class="safety"><b>Safety first.</b> Watch for traffic and stand somewhere safe; you don't need to be right at the spot. Skip anything that doesn't feel safe.</div>
+      <p class="not-complaint"><b>This is a public data exercise, not a complaint service.</b> What you send is shared openly so residents, researchers and city offices can see the same picture. We don't pass it on as a complaint or follow up on it. To get something fixed, contact the department responsible directly.</p>
       <h2 class="qt" style="font-size:20px;margin-top:8px" id="q-mode">What would you like to do?</h2>
       <div class="answers" role="radiogroup" aria-labelledby="q-mode" id="mode">
         <button type="button" class="answer" role="radio" aria-checked="false" data-val="spot"><span>Tell us about this spot<small>The footpath where you are standing</small></span><i class="tick"></i></button>
@@ -199,7 +208,6 @@
         <p><b>Not there right now?</b> If you know a footpath or crossing really well and can find it exactly on the map, you can add it from memory. In the data these are marked <b>from memory</b>, so others know.</p>
         <div class="row-btns"><button type="button" class="btn btn-secondary" id="mem-spot">A footpath spot</button><button type="button" class="btn btn-secondary" id="mem-crossing">A crossing</button></div>
       </div>
-      <div class="safety"><b>Safety first.</b> Watch for traffic and stand somewhere safe; you don't need to be right at the spot. Skip anything that doesn't feel safe.</div>
       <p class="playline" id="play-box">Collect points on the <a href="../bus-stops/leaderboard/">leaderboard</a>: <a href="#" id="play-create"><b>Join as a contributor</b></a> · <a href="#" id="play-login"><b>Log in</b></a></p>
       <div class="joinbox" id="joinbox" hidden>
         <p style="margin:0 0 10px;font-size:15px" id="join-say">Make up a nickname (not your real name) and a 4-digit PIN. The same nickname works for bus stops and footpaths.</p>
@@ -211,14 +219,7 @@
         <p class="msg" id="j-msg" hidden></p>
       </div>
       <p class="playline" id="play-in" hidden>Contributing as <b id="play-name"></b> · <a href="../bus-stops/leaderboard/">Leaderboard</a> · <a href="#" id="play-out">Log out</a></p>
-      <p class="not-complaint"><b>This is a public data exercise, not a complaint service.</b> What you send is shared openly so residents, researchers and city offices can see the same picture. We don't pass it on as a complaint or follow up on it. To get something fixed, contact the department responsible directly.</p>
       <p class="anon">No names, no email, and we don't keep IP addresses. You can take part without a nickname too.</p>
-      <div class="draft" id="draft" hidden>
-        <p class="eyebrow">Not sent yet</p>
-        <p id="draft-text"></p>
-        <div class="row-btns"><button type="button" class="btn btn-primary btn-lg" id="draft-send">Send it now</button><button type="button" class="btn btn-secondary btn-lg" id="draft-drop">Discard it</button></div>
-        <p class="msg" id="draft-msg" hidden></p>
-      </div>
       <div class="intro-link">
         <a class="btn btn-secondary" href="map/">See the walking map</a>
         <span class="meta" id="meta"></span>
@@ -313,12 +314,15 @@
       <p class="hint">Both optional. A photo earns 5 extra points.</p>
       <img id="photo-prev" alt="Your photo">
       <label class="btn btn-secondary btn-lg" for="photo-in" id="photo-btn">Take or choose a photo</label>
+      <p class="hint" id="photo-full" hidden>This walk already has 10 photos, the most one walk can hold.</p>
       <input type="file" accept="image/*" id="photo-in" class="photo-in">
       <p class="fine"><b>Step away from traffic before you take a photo.</b> Try to keep people's faces and number plates out of it. The phone makes the photo smaller and removes the location stored inside it.</p>
       <div class="field" style="margin-top:22px">
         <label class="field-label" for="note">A note <span class="opt-word">(optional)</span></label>
         <textarea class="inp" id="note" maxlength="300" placeholder="For example &quot;cars parked on the footpath every evening&quot;"></textarea>
+        <p class="qh">Please no names, phone numbers, addresses or flat numbers: notes are shown publicly.</p>
       </div>
+      <p class="msg" id="extra-few" hidden>Answer at least one question about this place before going on: press Back.</p>
     </section>
 
     <section class="step" data-step="review">
@@ -366,7 +370,7 @@
   </div>
 </footer>
 
-<script src="../assets/common.js"></script>
-<script type="module" src="form.js"></script>
+<script src="../assets/common.js?v=20261116"></script>
+<script type="module" src="form.js?v=20261116"></script>
 </body>
 </html>

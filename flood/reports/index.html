@@ -9,10 +9,10 @@
 <link rel="stylesheet" href="../../vendor/fonts/lato.css">
 <link rel="stylesheet" href="../../vendor/fonts/outfit.css">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
-<link rel="stylesheet" href="../../assets/contribute.css">
+<link rel="stylesheet" href="../../assets/contribute.css?v=20261116">
 <!-- visit counter: page, referring site, country; no cookies, no IP addresses (live-feed/visits.js) -->
 <script src="https://api.urbanobservatory.in/visits.js" defer></script>
-<script src="../../assets/config.js"></script>
+<script src="../../assets/config.js?v=20261116"></script>
 <style>
   .top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 32px; padding-bottom: 24px; }
   .top-btns { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -189,7 +189,7 @@
 </footer>
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-<script src="../../assets/common.js"></script>
+<script src="../../assets/common.js?v=20261116"></script>
 <script>
 const API = window.CONTRIBUTE.API;
 const $ = (id) => document.getElementById(id);
@@ -248,7 +248,7 @@ $('fb-form').addEventListener('submit', async (e) => {
     const v = fbGet(), mine = v[fbId] || {};
     if (fbKind === 'confirm') mine.confirm = true; else mine.flags = [...new Set([...(mine.flags || []), fbKind])];
     v[fbId] = mine; fbSet(v);
-    const f = all.find(x => x.properties.id === fbId); if (f && r.confirmed != null) f.properties.confirmed = r.confirmed;
+    const f = all.find(x => x.properties.id === fbId); if (f && r.confirmed != null) { f.properties.confirmed = r.confirmed; drawCheck(); }
     $('fb-done').textContent = fbKind === 'confirm' ? `Thank you. ${confText(fbId)}.` : 'Thank you. We will check this report.';
     $('fb-send').hidden = true; $('fb-cancel').textContent = 'Close';
     document.querySelectorAll(`[data-conf="${fbId}"]`).forEach(x => x.textContent = confText(fbId));
@@ -275,13 +275,16 @@ fetch(`${API}/flood/reports.json`, { cache: 'no-cache' }).then(r => { if (!r.ok)
   all = (d.features || []).map(f => (f.properties.depth_key = bucket(f.properties.depth_cm), f))
     .sort((a, b) => b.properties.observed_at.localeCompare(a.properties.observed_at));
   drawPeriods(); apply();
-  const ok = all.filter(f => f.properties.confirmed > 0).length;         // someone else said "I saw this too"
-  $('check-line').innerHTML = `<b>${ok} of ${all.length}</b> reports confirmed by someone else. Saw one of these too? Open it and tap <b>Give feedback</b> → <b>I saw this too</b>.`;
-  $('check-line').hidden = !all.length;
+  drawCheck();
 }).catch(() => {
   $('fig-title').textContent = "The reports couldn't be loaded just now";
   $('fig-sub').textContent = 'Please try again in a little while.';
 });
+function drawCheck() {
+  const ok = all.filter(f => f.properties.confirmed > 0).length;         // someone else said "I saw this too"
+  $('check-line').innerHTML = `<b>${ok} of ${all.length}</b> reports confirmed by someone else. Saw one of these too? Open it and tap <b>Give feedback</b> → <b>I saw this too</b>.`;
+  $('check-line').hidden = !all.length;
+}
 
 document.querySelectorAll('.seg button').forEach(b => b.onclick = () => setView(b.dataset.v));
 function setView(v) {

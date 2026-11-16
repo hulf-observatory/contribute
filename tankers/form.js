@@ -34,7 +34,6 @@ const search = createPlaceSearch({ input: $('ps-input'), results: $('ps-results'
     $('picked').hidden = false; $('picked-name').textContent = p.name; $('picked-ctx').textContent = [p.kind, p.context].filter(Boolean).join(' · '); updateNext(); } });
 fetch(C.AREAS_URL).then(r => r.json()).then(a => {
   AREAS = a; const corps = a.corporations || [], zones = a.zones || [];
-  for (const z of zones) LOCAL.push({ name: z.name, kind: 'Zone', context: (corps[z.corp] || {}).name, bbox: z.bounds });
   for (const w of a.wards || []) { const z = zones[w.zone]; LOCAL.push({ name: w.name, kind: 'Ward' + (w.no != null ? ' ' + w.no : ''), context: z ? z.name + ' zone' : '', bbox: w.bounds }); }
   search.refresh?.();
 }).catch(() => {});
@@ -53,12 +52,16 @@ function steps() {
 const num = (id) => { const v = $(id).value.replace(/[^0-9]/g, ''); return v ? +v : null; };
 const today = () => { const n = new Date(), p = (x) => String(x).padStart(2, '0'); return `${n.getFullYear()}-${p(n.getMonth() + 1)}-${p(n.getDate())}`; };
 const future = () => $('odate').value > today();
+const tooOld = () => !!$('odate').value && $('odate').value < $('odate').min;
+const tooMuch = () => (num('price') || 0) > 100000 || (num('extra') || 0) > 20000;
 function ready(s) {
   return ({ place: !!S.pick, map: !!S.loc, precision: !!S.prec, who: !!S.g.for && !!S.g.building, source: !!S.source, size: S.size != null,
-    paid: $('free').checked || $('pdk').checked || num('price') > 0, ordered: !!$('odate').value && !future() && !!S.g.tod, came: !!S.came, review: !sending })[s] ?? true;
+    paid: ($('free').checked || $('pdk').checked || num('price') > 0) && !tooMuch(), ordered: !!$('odate').value && !future() && !tooOld() && !!S.g.tod, came: !!S.came, review: !sending })[s] ?? true;
 }
+var DONE = false, lastList = [];                 // DONE: sent, so Back can't offer Send again
 function show(s, push = true) {
-  cur = s;
+  if (DONE && s !== 'thanks') s = 'thanks';
+  cur = s; lastList = steps();
   document.querySelectorAll('.step').forEach(x => x.classList.toggle('on', x.dataset.step === s));
   const qs = steps().filter(x => x !== 'start' && x !== 'thanks'), i = qs.indexOf(s);
   $('progress').hidden = i < 0;
@@ -78,7 +81,15 @@ function updateNext() {
   if (cur === 'review' && sending) return;
   n.textContent = cur === 'review' ? 'Send' : (cur === 'why' && !S.why.length) || (cur === 'season' && !S.season) || (cur === 'note' && !$('note').value.trim()) ? 'Skip' : 'Next';
 }
-const go = (d) => { const l = steps(); show(l[Math.max(0, l.indexOf(cur) + d)]); };
+function go(d) {
+  const l = steps(), i = l.indexOf(cur);
+  if (i < 0) {                                   // this screen dropped out of the route: carry on from where it was
+    let j = lastList.indexOf(cur) + d;
+    while (j > 0 && j < lastList.length && !l.includes(lastList[j])) j += d;
+    return show(l.includes(lastList[j]) ? lastList[j] : l[0]);
+  }
+  show(l[Math.max(0, i + d)]);
+}
 $('next').onclick = () => { if (cur === 'review') return send(); go(1); };
 $('back').onclick = () => history.back();
 window.addEventListener('popstate', (e) => show(e.state?.s || 'start', false));
@@ -89,7 +100,7 @@ document.querySelectorAll('[data-field]').forEach(g => g.addEventListener('click
   const b = e.target.closest('[role=radio]'); if (!b || b.disabled) return;
   g.querySelectorAll('[role=radio]').forEach(x => x.setAttribute('aria-checked', x === b));
   const f = g.dataset.field, v = b.dataset.val;
-  if (f === 'mode') { S.mode = v; S.loc = null; S.pick = null; S.prec = null; S.ward = null; }
+  if (f === 'mode') { S.mode = v; resetPlace(); }
   else S[f] = v;
   updateNext(); setTimeout(() => go(1), 220);
 }));
@@ -119,8 +130,15 @@ function onFix(p) {
   if (!inHmda(lng, lat)) return gpsFailed('Your phone places you outside the Hyderabad area (HMDA). Search for the area instead.');
   S.loc = { lat, lng }; S.acc = accuracy; S.ward = wardAt(lng, lat); go(1);
 }
-$('gps-search').onclick = () => { S.mode = 'search'; S.loc = null; go(1); };
-$('to-map').onclick = (e) => { e.preventDefault(); S.mode = 'map'; S.pick = null; S.loc = null; show('map'); };
+// a new way of giving the place: nothing of the old one stays on screen
+function resetPlace() {
+  S.loc = null; S.pick = null; S.prec = null; S.ward = null; S.acc = null;
+  if (pin) { pin.remove(); pin = null; }
+  $('picked').hidden = true; $('pin-info').hidden = true; $('pin-msg').hidden = true; $('map-hint').classList.remove('off');
+  try { search.clear(); } catch { /* ignore */ }
+}
+$('gps-search').onclick = () => { S.mode = 'search'; resetPlace(); go(1); };
+$('to-map').onclick = (e) => { e.preventDefault(); S.mode = 'map'; resetPlace(); show('map'); };
 
 let map = null, pin = null;
 function loadMapLib() {
@@ -146,9 +164,15 @@ function placePin(lng, lat) {
 }
 
 // ── precision: the person chooses; at least the ward is kept ──
+// a building, shop or street address found by search is never shown as "the area" (it would be an exact spot)
+const AREA_KINDS = ['Locality', 'Area', 'Village', 'Town', 'City'];
+const areaOk = (p) => !!p && (p.source === 'local' || AREA_KINDS.includes(p.kind));
 function drawPrecision() {
   const w = S.ward, opts = [];
-  if (S.mode === 'search') opts.push(['area', 'The area I searched', S.pick ? S.pick.name : '']);
+  if (S.mode === 'search') {
+    if (areaOk(S.pick)) opts.push(['area', 'The area I searched', S.pick ? S.pick.name : '']);
+    else opts.push(['500m', 'Nearby, about 500 m', `Around ${S.pick ? S.pick.name : 'the place'}, moved to the nearest half-kilometre grid`]);
+  }
   else { opts.push(['exact', 'The exact spot', S.mode === 'gps' ? `From your phone, accurate to about ${Math.round(S.acc || 0)} m` : 'Where you put the pin']);
     opts.push(['500m', 'Nearby, about 500 m', 'The point is moved to the nearest half-kilometre grid']); }
   opts.push(['ward', 'Only the ward', w ? wardText(w) : 'Not possible here: this place is outside the corporation wards', !w]);
@@ -162,7 +186,7 @@ $('prec').addEventListener('click', (e) => {
 });
 
 // ── paid, ordered, often ──
-['price', 'extra'].forEach(id => $(id).addEventListener('input', () => { $(id).value = $(id).value.replace(/[^0-9]/g, ''); updateNext(); }));
+['price', 'extra'].forEach(id => $(id).addEventListener('input', () => { $(id).value = $(id).value.replace(/[^0-9]/g, ''); $('paid-msg').hidden = !tooMuch(); updateNext(); }));
 // "free" and "don't know" exclude each other and the price
 ['free', 'pdk'].forEach(id => $(id).addEventListener('change', () => {
   if ($(id).checked) $(id === 'free' ? 'pdk' : 'free').checked = false;
@@ -173,7 +197,10 @@ $('prec').addEventListener('click', (e) => {
 const paidKind = () => $('free').checked ? 'free' : $('pdk').checked ? 'dk' : 'paid';
 $('odate').value = $('odate').max = today();
 $('odate').min = (() => { const d = new Date(); d.setDate(d.getDate() - 365); return d.toISOString().slice(0, 10); })();
-$('odate').addEventListener('input', () => { $('odate-msg').hidden = !future(); updateNext(); });
+$('odate').addEventListener('input', () => {
+  $('odate-msg').textContent = future() ? "That date is in the future." : 'Please pick a date within the last year.';
+  $('odate-msg').hidden = !future() && !tooOld(); updateNext();
+});
 const setN = (n) => { S.nw = Math.max(0, Math.min(30, n)); $('countw').textContent = S.nw >= 30 ? '30+' : S.nw; };
 $('minus').onclick = () => setN(S.nw - 1); $('plus').onclick = () => setN(S.nw + 1);
 $('note').addEventListener('input', updateNext);
@@ -191,7 +218,7 @@ function drawReview() {
   const price = paidKind() === 'free' ? "Didn't pay (free)" : paidKind() === 'dk' ? "Don't know the price" : `₹${(num('price') || 0).toLocaleString('en-IN')}` + (num('extra') ? ` + ₹${num('extra').toLocaleString('en-IN')} to the driver` : '');
   const d = new Date($('odate').value + 'T12:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
   const rows = [['Where', placeText(), S.mode === 'gps' ? 'precision' : S.mode],
-    ['For', esc(`${lab('[data-g=for]', S.g.for).replace(/RWA.*/, '')} · ${lab('[data-g=building]', S.g.building)}${S.g.households ? ' · ' + lab('[data-g=households]', S.g.households) + ' households' : ''}`), 'who'],
+    ['For', esc(`${lab('[data-g=for]', S.g.for).replace(/RWA.*/, '')} · ${lab('[data-g=building]', S.g.building)}${S.g.households ? ' · ' + (S.g.households === '1' ? 'Not shared' : S.g.households === 'dk' ? 'Sharing not known' : 'Shared by ' + lab('[data-g=households]', S.g.households)) : ''}`), 'who'],
     ['From', esc(lab('[data-field=source]', S.source).split(/Booked/)[0]), 'source'], ['Size', esc(sz ? sz.label : ''), 'size'],
     ['Paid', esc(price), 'paid'], ['Ordered', esc(`${d}, ${S.g.tod}`), 'ordered'], ['Came', esc(lab('[data-field=came]', S.came)), 'came'],
     ['Usual week', esc(S.nw === 0 ? 'Less than one tanker' : `${S.nw >= 30 ? '30+' : S.nw} tanker${S.nw > 1 ? 's' : ''}`), 'often'],
@@ -209,26 +236,25 @@ function payload() {
     came: S.came, tankers_week: S.nw, season: S.season, why: S.why.length ? S.why : null, note: $('note').value.trim() || null };
   if (S.prec === 'exact') Object.assign(b, { lat: +S.loc.lat.toFixed(6), lng: +S.loc.lng.toFixed(6), accuracy_m: S.mode === 'gps' && S.acc != null ? Math.round(S.acc) : null });
   else if (S.prec === '500m') Object.assign(b, round500(S.loc.lat, S.loc.lng));
-  else if (S.prec === 'area') Object.assign(b, { lat: +S.loc.lat.toFixed(5), lng: +S.loc.lng.toFixed(5), place: S.pick.name });
+  else if (S.prec === 'area') Object.assign(b, { lat: +S.loc.lat.toFixed(5), lng: +S.loc.lng.toFixed(5), place: S.pick.name },
+    S.ward ? { ward_name: S.ward.name, ward_no: S.ward.no ?? null } : {});   // a chosen ward is filed under that ward
   else Object.assign(b, { ward_name: S.ward.name, ward_no: S.ward.no ?? null });
   return b;
 }
 const DRAFT = 'obs-tanker-unsent';
-const store = { get() { try { return JSON.parse(localStorage.getItem(DRAFT)); } catch { return null; } },
-  set(v) { try { localStorage.setItem(DRAFT, JSON.stringify(v)); return true; } catch { return false; } },
-  drop() { try { localStorage.removeItem(DRAFT); } catch { /* ignore */ } } };
+const store = Contribute.drafts(DRAFT);          // several can wait; each is sent or discarded on its own
 const spam = Contribute.spamCheck($('ts-review'));
-async function post(body) {
-  const token = await spam.token();
+async function post(body, sc = spam) {
+  const token = await sc.token();
   if (token === null) { const e = new Error('spam check'); e.server = true; e.status = 403; throw e; }
   try { return await Contribute.post('/tankers/reports', { ...body, token, website: $('trap').value }); }
-  finally { spam.reset(); }
+  finally { sc.reset(); }
 }
 let sending = false;
 async function send() {
   const body = payload(), kept = store.set({ body, rows: lastRows, at: Date.now() });
   sending = true; $('send-msg').hidden = true; updateNext(); $('next').textContent = 'Sending…';
-  try { await post(body); store.drop(); sending = false; show('thanks'); }
+  try { await post(body); store.drop(kept); sending = false; DONE = true; show('thanks'); }
   catch (err) {
     sending = false; updateNext(); $('next').textContent = 'Try again';
     const why = err.server && err.status === 400 ? `The server could not accept this (${err.message}). Please check your answers.`
@@ -238,18 +264,28 @@ async function send() {
     $('send-msg').textContent = `${why} ${kept ? 'Your answers are saved on this phone, so nothing is lost.' : ''}`; $('send-msg').hidden = false;
   }
 }
-(() => {
-  const d = store.get(); if (!d || !d.body) return;
-  $('draft').hidden = false;
+// entries that didn't go through: offer the oldest on the start screen, with its own spam check (it must be visible)
+let draftSpam = null;
+function showDraft() {
+  const d = store.get(); $('draft').hidden = !d; if (!d) return;
+  draftSpam = draftSpam || Contribute.spamCheck($('ts-draft'));
   $('draft-text').textContent = `You have a tanker order from ${new Date(d.at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })} that didn't send.`;
+  $('draft-send').hidden = false; $('draft-send').disabled = false; $('draft-send').textContent = 'Send it now'; $('draft-drop').textContent = 'Discard it'; $('draft-msg').hidden = true;
   $('draft-send').onclick = async () => {
     $('draft-send').disabled = true; $('draft-send').textContent = 'Sending…'; $('draft-msg').hidden = true;
-    try { await post(d.body); store.drop(); show('thanks'); }
-    catch (err) { $('draft-send').disabled = false; $('draft-send').textContent = 'Try again';
-      $('draft-msg').textContent = err.status === 400 ? `The server could not accept it (${err.message}). Discard it and start again.` : "Still couldn't send it. Your answers stay saved on this phone."; $('draft-msg').hidden = false; }
+    try { const r = await post(d.body, draftSpam); store.drop(d.id); $('draft').hidden = true; DONE = true; show('thanks'); }
+    catch (err) {
+      $('draft-send').disabled = false; $('draft-send').textContent = 'Try again';
+      if (err.server && err.status === 400) {          // refused for good (too old, or no longer valid): don't offer it again
+        store.drop(d.id); $('draft-send').hidden = true; $('draft-drop').textContent = 'OK';
+        $('draft-msg').textContent = `The server could not accept it (${err.message}), so it has been removed from this phone. Please fill in the form again.`;
+      } else $('draft-msg').textContent = err.server && err.status === 403 ? 'The spam check did not finish. Please press Try again.' : "Still couldn't send it. Your answers stay saved on this phone.";
+      $('draft-msg').hidden = false;
+    }
   };
-  $('draft-drop').onclick = () => { store.drop(); $('draft').hidden = true; };
-})();
+  $('draft-drop').onclick = () => { store.drop(d.id); showDraft(); };
+}
+showDraft();
 $('again').onclick = () => { location.href = location.pathname + location.search; };
 
 fetch(`${C.API}/tankers/reports.json`, { credentials: 'omit', cache: 'no-cache' }).then(r => r.json()).then(d => {

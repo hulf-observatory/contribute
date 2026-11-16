@@ -8,10 +8,10 @@
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../vendor/fonts/lato.css">
 <link rel="stylesheet" href="../vendor/fonts/outfit.css">
-<link rel="stylesheet" href="../assets/contribute.css">
+<link rel="stylesheet" href="../assets/contribute.css?v=20261116">
 <!-- visit counter: page, referring site, country; no cookies, no IP addresses (live-feed/visits.js) -->
 <script src="https://api.urbanobservatory.in/visits.js" defer></script>
-<script src="../assets/config.js"></script>
+<script src="../assets/config.js?v=20261116"></script>
 <style>
   .steps { max-width: var(--measure); margin: 0 auto; }
   .progress { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; min-height: 20px; }
@@ -146,20 +146,21 @@
       <p class="eyebrow">Contribute · Water</p>
       <h1>Tell us about a water tanker</h1>
       <p class="hint">Ordered a tanker recently? Tell us what you paid, its size and how long it took to come. About a minute. Send one entry for every tanker you order.</p>
+      <div class="draft" id="draft" hidden>
+        <p class="eyebrow">Not sent yet</p>
+        <p id="draft-text"></p>
+        <div class="ts ts-draft" id="ts-draft"></div>
+        <div class="row-btns"><button type="button" class="btn btn-primary btn-lg" id="draft-send">Send it now</button><button type="button" class="btn btn-secondary btn-lg" id="draft-drop">Discard it</button></div>
+        <p class="msg" id="draft-msg" hidden></p>
+      </div>
+      <p class="not-complaint"><b>This is a public data exercise, not a complaint service.</b> What you send is shared openly so residents, researchers and city offices can see the same picture. We don't pass it on as a complaint or follow up on it. To get something fixed, contact the department responsible directly.</p>
       <h2 class="qt" style="font-size:20px;margin-top:8px" id="q-where">Where was it delivered?</h2>
       <div class="answers" role="radiogroup" aria-labelledby="q-where" data-field="mode">
         <button type="button" class="answer" role="radio" aria-checked="false" data-val="gps"><span>I'm there now<small>Your phone can tell us where</small></span><i class="tick"></i></button>
         <button type="button" class="answer" role="radio" aria-checked="false" data-val="search"><span>Search for the area<small>Your colony, area or ward</small></span><i class="tick"></i></button>
         <button type="button" class="answer" role="radio" aria-checked="false" data-val="map"><span>Mark it on a map</span><i class="tick"></i></button>
       </div>
-      <p class="not-complaint"><b>This is a public data exercise, not a complaint service.</b> What you send is shared openly so residents, researchers and city offices can see the same picture. We don't pass it on as a complaint or follow up on it. To get something fixed, contact the department responsible directly.</p>
       <p class="anon">No names, no sign-in, and we don't keep IP addresses. You choose how exactly the place is shown.</p>
-      <div class="draft" id="draft" hidden>
-        <p class="eyebrow">Not sent yet</p>
-        <p id="draft-text"></p>
-        <div class="row-btns"><button type="button" class="btn btn-primary btn-lg" id="draft-send">Send it now</button><button type="button" class="btn btn-secondary btn-lg" id="draft-drop">Discard it</button></div>
-        <p class="msg" id="draft-msg" hidden></p>
-      </div>
       <div class="intro-link">
         <a class="btn btn-secondary" href="orders/">See tanker orders so far <span class="arr">→</span></a>
         <span class="meta" id="meta"></span>
@@ -216,8 +217,8 @@
         <div class="opts" role="radiogroup" aria-labelledby="h-for" data-g="for"><button type="button" class="opt" role="radio" aria-checked="false" data-v="home">My home</button><button type="button" class="opt" role="radio" aria-checked="false" data-v="office">My office or shop</button><button type="button" class="opt" role="radio" aria-checked="false" data-v="building">The whole building or colony<br><small style="font-weight:400">RWA, society or building manager ordering</small></button></div></div>
       <div class="qblock"><h3 id="h-bt">Kind of building</h3>
         <div class="opts" role="radiogroup" aria-labelledby="h-bt" data-g="building"><button type="button" class="opt" role="radio" aria-checked="false" data-v="house">Independent house</button><button type="button" class="opt" role="radio" aria-checked="false" data-v="house_rented">House with rented portions</button><button type="button" class="opt" role="radio" aria-checked="false" data-v="apartment_small">Apartment, up to 20 flats</button><button type="button" class="opt" role="radio" aria-checked="false" data-v="apartment_large">Apartment complex, over 20 flats</button><button type="button" class="opt" role="radio" aria-checked="false" data-v="office">Office, shop or commercial building</button><button type="button" class="opt" role="radio" aria-checked="false" data-v="basti">Basti</button><button type="button" class="opt" role="radio" aria-checked="false" data-v="other">Other</button></div></div>
-      <div class="qblock"><h3 id="h-hh">Households or offices sharing the tank or sump</h3>
-        <div class="opts" role="radiogroup" aria-labelledby="h-hh" data-g="households"><button type="button" class="opt" role="radio" aria-checked="false" data-v="1">Just mine</button><button type="button" class="opt" role="radio" aria-checked="false" data-v="2-5">2–5</button><button type="button" class="opt" role="radio" aria-checked="false" data-v="6-20">6–20</button><button type="button" class="opt" role="radio" aria-checked="false" data-v="21-100">21–100</button><button type="button" class="opt" role="radio" aria-checked="false" data-v="100+">Over 100</button><button type="button" class="opt" role="radio" aria-checked="false" data-v="dk">Don't know</button></div></div>
+      <div class="qblock"><h3 id="h-hh">How many homes or offices share the tank or sump?</h3>
+        <div class="opts" role="radiogroup" aria-labelledby="h-hh" data-g="households"><button type="button" class="opt" role="radio" aria-checked="false" data-v="1">Only one</button><button type="button" class="opt" role="radio" aria-checked="false" data-v="2-5">2–5</button><button type="button" class="opt" role="radio" aria-checked="false" data-v="6-20">6–20</button><button type="button" class="opt" role="radio" aria-checked="false" data-v="21-100">21–100</button><button type="button" class="opt" role="radio" aria-checked="false" data-v="100+">Over 100</button><button type="button" class="opt" role="radio" aria-checked="false" data-v="dk">Don't know</button></div></div>
     </section>
 
     <section class="step" data-step="source">
@@ -226,7 +227,7 @@
       <div class="answers" role="radiogroup" aria-labelledby="src-q" data-field="source">
         <button type="button" class="answer" role="radio" aria-checked="false" data-val="hmwssb"><span>HMWSSB (water board)<small>Booked on the app, website or 155313</small></span><i class="tick"></i></button>
         <button type="button" class="answer" role="radio" aria-checked="false" data-val="private"><span>A private tanker</span><i class="tick"></i></button>
-        <button type="button" class="answer" role="radio" aria-checked="false" data-val="society"><span>Arranged by our association or society</span><i class="tick"></i></button>
+        <button type="button" class="answer" role="radio" aria-checked="false" data-val="society"><span>Arranged by our association or society<small>Their own tanker or a contract. If they booked a private tanker, choose "A private tanker".</small></span><i class="tick"></i></button>
         <button type="button" class="answer" role="radio" aria-checked="false" data-val="other"><span>Other or not sure</span><i class="tick"></i></button>
       </div>
     </section>
@@ -250,6 +251,7 @@
         <label class="field-label" for="extra">Anything extra to the driver? <span class="opt-word">(optional)</span></label>
         <span class="field-hint">A tip, or a charge for coming faster or climbing a slope</span>
         <div class="money"><span>₹</span><input class="inp" id="extra" inputmode="numeric" maxlength="5" autocomplete="off" placeholder="0"></div>
+        <p class="msg" id="paid-msg" hidden>Please check the amounts: the tanker price can be up to ₹1,00,000 and the extra to the driver up to ₹20,000.</p>
       </div>
     </section>
 
@@ -276,7 +278,7 @@
 
     <section class="step" data-step="often">
       <h2 class="qt">In a usual week, how many tankers do you order?</h2>
-      <p class="hint">For the same home or building. Choose 0 if it's less than once a week.</p>
+      <p class="hint">For the same home, office or building. Choose 0 if it's less than once a week.</p>
       <div class="stepper"><button type="button" id="minus" aria-label="Fewer">−</button><output id="countw" aria-live="polite">1</output><button type="button" id="plus" aria-label="More">+</button></div>
     </section>
 
@@ -305,7 +307,7 @@
 
     <section class="step" data-step="note">
       <h2 class="qt"><label for="note">Anything else?</label></h2>
-      <p class="hint">Optional. For example how often piped water comes, or if prices went up. Please no names or phone numbers.</p>
+      <p class="hint">Optional. For example how often piped water comes, or if prices went up. Please no names, phone numbers, addresses or flat numbers: notes are shown publicly.</p>
       <textarea class="inp" id="note" maxlength="500"></textarea>
     </section>
 
@@ -351,7 +353,7 @@
   </div>
 </footer>
 
-<script src="../assets/common.js"></script>
-<script type="module" src="form.js"></script>
+<script src="../assets/common.js?v=20261116"></script>
+<script type="module" src="form.js?v=20261116"></script>
 </body>
 </html>

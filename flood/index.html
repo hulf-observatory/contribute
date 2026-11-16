@@ -8,10 +8,10 @@
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../vendor/fonts/lato.css">
 <link rel="stylesheet" href="../vendor/fonts/outfit.css">
-<link rel="stylesheet" href="../assets/contribute.css">
+<link rel="stylesheet" href="../assets/contribute.css?v=20261116">
 <!-- visit counter: page, referring site, country; no cookies, no IP addresses (live-feed/visits.js) -->
 <script src="https://api.urbanobservatory.in/visits.js" defer></script>
-<script src="../assets/config.js"></script>
+<script src="../assets/config.js?v=20261116"></script>
 <style>
   /* one question per screen */
   .steps { max-width: var(--measure); margin: 0 auto; }
@@ -182,22 +182,23 @@
       <p class="eyebrow">Contribute · Flooding</p>
       <h1>Report flooding</h1>
       <p class="hint">Water standing or running on a road near you? Tell us where and how deep, while you are there. It takes about a minute, and you don't need to sign in.</p>
+      <div class="draft" id="draft" hidden>
+        <p class="eyebrow">Not sent yet</p>
+        <p id="draft-text"></p>
+        <dl class="review" id="draft-rows"></dl>
+        <div class="ts ts-draft" id="ts-draft"></div>
+        <div class="row-btns"><button type="button" class="btn btn-primary btn-lg" id="draft-send">Send it now</button><button type="button" class="btn btn-secondary btn-lg" id="draft-drop">Discard it</button></div>
+        <p class="msg" id="draft-msg" hidden></p>
+      </div>
+      <div class="safety-box"><b>Safety first.</b> Don't walk or drive into the water to check it: it can hide open drains and broken wires. Stand somewhere safe; you can move the dot to the water on the map. Skip anything that doesn't feel safe.</div>
+      <p class="not-complaint"><b>This is a public data exercise, not a complaint service.</b> What you send is shared openly so residents, researchers and city offices can see the same picture. We don't pass it on as a complaint or follow up on it. To get something fixed, contact the department responsible directly.</p>
       <h2 class="qt" style="font-size:20px;margin-top:8px" id="q-here">Are you at the flooded place now?</h2>
       <div class="answers" role="radiogroup" aria-labelledby="q-here" data-field="here">
         <button type="button" class="answer" role="radio" aria-checked="false" data-val="yes"><span>Yes, I'm there now<small>Your phone can tell us where you are</small></span><i class="tick"></i></button>
         <button type="button" class="answer" role="radio" aria-checked="false" data-val="no"><span>No, not right now</span><i class="tick"></i></button>
       </div>
       <p class="not-here" id="not-here" hidden>Reports come from people at the place, while they can see the water, so the map shows flooding as it happens. Meanwhile, <a href="reports/">see the reports so far</a>.</p>
-      <div class="safety-box"><b>Safety first.</b> Don't walk or drive into the water to check it: it can hide open drains and broken wires. Stand somewhere safe; you can move the dot to the water on the map. Skip anything that doesn't feel safe.</div>
-      <p class="not-complaint"><b>This is a public data exercise, not a complaint service.</b> What you send is shared openly so residents, researchers and city offices can see the same picture. We don't pass it on as a complaint or follow up on it. To get something fixed, contact the department responsible directly.</p>
       <p class="anon">Reports are anonymous: no names, no sign-in, and we don't keep IP addresses.</p>
-      <div class="draft" id="draft" hidden>
-        <p class="eyebrow">Not sent yet</p>
-        <p id="draft-text"></p>
-        <dl class="review" id="draft-rows"></dl>
-        <div class="row-btns"><button type="button" class="btn btn-primary btn-lg" id="draft-send">Send it now</button><button type="button" class="btn btn-secondary btn-lg" id="draft-drop">Discard it</button></div>
-        <p class="msg" id="draft-msg" hidden></p>
-      </div>
       <div class="intro-link">
         <a class="btn btn-secondary" href="reports/" id="see-reports">See reports so far <span class="arr">→</span></a>
         <span class="meta" id="reports-meta"></span>
@@ -210,7 +211,7 @@
       <p class="hint">Your phone will ask whether this page may use your location. We use it only to put this report in the right place.</p>
       <ul class="promise">
         <li><b>Nothing is saved until you press Send</b> at the end, after you have checked your answers.</li>
-        <li>We save only the report's location, <b>not your name, phone number or IP address</b>.</li>
+        <li>We save only the report's location, <b>not your name, phone number or IP address</b>. The point and the time are shown publicly on the flood map.</li>
         <li>Location is used only while you fill in this form. While you answer the next questions, your phone sharpens it.</li>
       </ul>
       <div class="stack">
@@ -290,7 +291,7 @@
 
     <section class="step" data-step="note">
       <h2 class="qt"><label for="note">Anything else?</label></h2>
-      <p class="hint">Optional. For example how long it has been flooded, or if traffic is stuck.</p>
+      <p class="hint">Optional. For example how long it has been flooded, or if traffic is stuck. Please no names, phone numbers, addresses or flat numbers: notes are shown publicly.</p>
       <textarea class="inp" id="note" maxlength="500"></textarea>
     </section>
 
@@ -357,9 +358,9 @@
   </div>
 </footer>
 
-<script src="../assets/common.js"></script>
+<script src="../assets/common.js?v=20261116"></script>
 <script type="module">
-import { mapMark } from '../assets/map-mark.js';
+import { mapMark } from '../assets/map-mark.js?v=20261116';
 // Report flooding, at the place (Teja, 16 Nov 2026): phones only, the phone's location (the dot moves up to 100 m), time = now.
 const $ = (id) => document.getElementById(id);
 Contribute.phoneOnly({ what: 'Flooding', mapHref: 'reports/', mapLabel: 'See the reports so far' });
@@ -462,8 +463,10 @@ function ready(s) {
   return s in need ? !!need[s] : true;
 }
 
+var DONE = false, lastList = [];                 // DONE: sent, so Back can't offer Send again
 function show(s, push = true) {
-  cur = s;
+  if (DONE && s !== 'thanks') s = 'thanks';
+  cur = s; lastList = steps();
   document.querySelectorAll('.step').forEach(x => x.classList.toggle('on', x.dataset.step === s));
   const qs = steps().filter(x => x !== 'start' && x !== 'thanks'), i = qs.indexOf(s);
   $('progress').hidden = i < 0;
@@ -485,7 +488,15 @@ function updateNext() {
   if (cur === 'review' && sending) return;
   n.textContent = cur === 'review' ? 'Send report' : (OPTIONAL.has(cur) && !(cur === 'photo' ? S.photo : $('note').value.trim()) ? 'Skip' : 'Next');
 }
-const go = (d) => { const l = steps(); show(l[Math.max(0, l.indexOf(cur) + d)]); };
+function go(d) {
+  const l = steps(), i = l.indexOf(cur);
+  if (i < 0) {                                   // this screen dropped out of the route: carry on from where it was
+    let j = lastList.indexOf(cur) + d;
+    while (j > 0 && j < lastList.length && !l.includes(lastList[j])) j += d;
+    return show(l.includes(lastList[j]) ? lastList[j] : l[0]);
+  }
+  show(l[Math.max(0, i + d)]);
+}
 $('next').onclick = () => { if (cur === 'review') return send(); go(1); };
 $('back').onclick = () => history.back();
 window.addEventListener('popstate', (e) => show(e.state?.s || 'start', false));
@@ -498,11 +509,11 @@ document.querySelectorAll('[data-field]').forEach(g => g.addEventListener('click
   const f = g.dataset.field;
   if (f === 'depth') {
     S.exact = b.dataset.val === 'exact';
-    S.depth = S.exact ? (S.touched ? S.depth : null) : +b.dataset.val;
+    S.depth = S.exact ? (S.touched ? S.exactCm : null) : +b.dataset.val;
   } else S[f] = b.dataset.val;
   if (f === 'here') {
     $('not-here').hidden = S.here !== 'no';       // not at the place: nothing to report now
-    if (S.here !== 'yes') return updateNext();
+    if (S.here !== 'yes') { stopGps(); return updateNext(); }
     stopGps(); S.mode = null; S.loc = null; S.fix = null; S.acc = null; S.moved = false;
   }
   updateNext();
@@ -542,7 +553,7 @@ function draw(cm) {   // move water and handle only
 const label = (cm) => cm >= 100 ? `${(cm / 100).toFixed(2).replace(/0$/, '')} m` : `${cm} cm`;
 function setExact(cm) {
   cm = Math.max(MIN, Math.min(MAX, Math.round(cm / 5) * 5));
-  stopHint(); S.touched = true; S.depth = cm; draw(cm);
+  stopHint(); S.touched = true; S.depth = S.exactCm = cm; draw(cm);
   $('exact-cm').textContent = label(cm); $('exact-ref').textContent = '· ' + refText(cm);
   const sl = $('vslider'); sl.setAttribute('aria-valuenow', cm); sl.setAttribute('aria-valuetext', `${label(cm)}, ${refText(cm)}`);
   updateNext();
@@ -579,7 +590,7 @@ function stopHint() { if (raf) cancelAnimationFrame(raf); raf = null; }
 // ── location from the phone: asked only after the explanation; keeps sharpening in the background ──
 $('gps-go').onclick = () => {
   if (!('geolocation' in navigator)) return gpsFailed('This browser cannot share a location.');
-  S.mode = 'gps'; gotFirst = false;
+  stopGps(); S.mode = 'gps'; gotFirst = false;
   $('gps-go').textContent = 'Waiting for your phone…'; $('gps-go').disabled = true; $('gps-msg').hidden = true;
   watchId = navigator.geolocation.watchPosition(onFix, (err) => { if (!gotFirst) gpsFailed(err.code === 1
       ? "Your phone didn't share its location. Allow location for this page in your browser's settings and try again, or mark the place on the map."
@@ -596,7 +607,7 @@ function onFix(p) {
     if (!gotFirst) gpsFailed("Your phone places you outside the Hyderabad area (HMDA). This form is for flooding in Hyderabad.");
     return;
   }
-  if (S.acc == null || acc <= S.acc) {           // sharper: follows the dot too, unless they moved it
+  if ((S.acc == null || acc <= S.acc) && (!S.moved || metres({ lat, lng }, S.loc) <= MAX_MOVE)) {   // sharper: follows the dot too, unless they moved it
     S.fix = { lat, lng }; S.acc = acc;
     if (!S.moved) { S.loc = { lat, lng }; S.ward = wardAt(lng, lat); if (pin) pin.setLngLat([lng, lat]); }
   }
@@ -608,7 +619,10 @@ function gpsFailed(text) {
   $('gps-go').textContent = 'Try again'; $('gps-go').disabled = false;
   $('gps-msg').textContent = text; $('gps-msg').hidden = false;
 }
-function stopGps() { if (watchId != null) navigator.geolocation.clearWatch(watchId); watchId = null; }
+function stopGps() {
+  if (watchId != null) navigator.geolocation.clearWatch(watchId); watchId = null;
+  const g = $('gps-go'); if (g.disabled) { g.disabled = false; g.textContent = 'Share my location'; }
+}
 // the phone's location failed: mark the water with the pin in the middle of a map (Teja, 16 Nov 2026)
 const marker = mapMark($('markbox'), { onChange: ({ lat, lng, ok }) => { S.markOk = ok; S.loc = { lat, lng }; S.ward = wardAt(lng, lat); updateNext(); } });
 $('to-mark').onclick = (e) => { e.preventDefault(); stopGps(); S.mode = 'map'; S.fix = null; S.acc = null; S.moved = false; S.loc = null; S.at = new Date(); show('mark'); };
@@ -648,7 +662,7 @@ function placePin(lng, lat) {
     pin.on('dragend', () => { const q = pin.getLngLat(); placePin(q.lng, q.lat); }); }
   else pin.setLngLat([lng, lat]);
   S.loc = { lat, lng }; S.moved = moved >= 3; S.ward = wardAt(lng, lat);
-  $('map-hint').classList.add('off');
+  $('map-hint').classList.toggle('off', S.moved);
   $('pin-info').hidden = false; $('pin-ward').textContent = wardText(S.ward);
   $('pin-xy').textContent = S.moved ? `Moved ${Math.round(moved)} m from where you are` : 'Where you are';
   updateNext();
@@ -709,9 +723,7 @@ function drawReview() {
 // ── send: answers stay on the phone until the server accepts them; location sharing stops after ──
 const DRAFT = 'obs-flood-unsent';
 let sending = false, lastRows = [];
-const store = { get() { try { return JSON.parse(localStorage.getItem(DRAFT)); } catch { return null; } },
-  set(v) { try { localStorage.setItem(DRAFT, JSON.stringify(v)); return true; } catch { return false; } },
-  drop() { try { localStorage.removeItem(DRAFT); } catch { /* ignore */ } } };
+const store = Contribute.drafts(DRAFT);          // several can wait; each is sent or discarded on its own
 function payload() {
   const g = (id) => rough() ? $(id).value.trim() || null : null;   // road and landmark only when the location is rough
   return { survey: 'flood', version: 3, here: 'yes', place_type: S.mode === 'map' ? 'map' : 'gps',
@@ -721,11 +733,11 @@ function payload() {
     note: $('note').value.trim() || null, photo: S.photo || null };
 }
 const spam = Contribute.spamCheck($('ts-review'));
-async function postReport(body) {
-  const token = await spam.token();
+async function postReport(body, sc = spam) {
+  const token = await sc.token();
   if (token === null) { const e = new Error('spam check'); e.server = true; e.status = 403; throw e; }
   try { return await Contribute.post('/flood/reports', { ...body, token, website: $('trap').value }); }
-  finally { spam.reset(); }
+  finally { sc.reset(); }
 }
 async function send() {
   const body = payload(), saved = { body, rows: lastRows, at: Date.now() };
@@ -733,7 +745,7 @@ async function send() {
   sending = true; $('send-msg').hidden = true; updateNext(); $('next').textContent = 'Sending…';
   try {
     await postReport(body);
-    store.drop(); stopGps(); sending = false; show('thanks');
+    store.drop(kept); stopGps(); sending = false; DONE = true; show('thanks');
   } catch (err) {
     sending = false; updateNext(); $('next').textContent = 'Try again';
     const why = err.server && err.status === 400 ? `The server could not accept this report (${err.message}). Please check your answers.`
@@ -744,20 +756,29 @@ async function send() {
     $('send-msg').hidden = false;
   }
 }
-// a report that didn't go through last time: offer it on the start screen
-(() => {
-  const d = store.get(); if (!d || !d.body) return;
-  $('draft').hidden = false;
+// entries that didn't go through: offer the oldest on the start screen, with its own spam check (it must be visible)
+let draftSpam = null;
+function showDraft() {
+  const d = store.get(); $('draft').hidden = !d; if (!d) return;
+  draftSpam = draftSpam || Contribute.spamCheck($('ts-draft'));
   $('draft-text').textContent = `You have a flood report from ${new Date(d.at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })} that didn't send.${d.photoDropped ? ' Its photo was too large to keep.' : ''}`;
-  $('draft-rows').innerHTML = (d.rows || []).map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd><span></span></div>`).join('');
+  $('draft-rows').innerHTML = (d.rows || []).map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(k === 'When' && d.body.observed_at ? new Date(d.body.observed_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : v)}</dd><span></span></div>`).join('');
+  $('draft-send').hidden = false; $('draft-send').disabled = false; $('draft-send').textContent = 'Send it now'; $('draft-drop').textContent = 'Discard it'; $('draft-msg').hidden = true;
   $('draft-send').onclick = async () => {
     $('draft-send').disabled = true; $('draft-send').textContent = 'Sending…'; $('draft-msg').hidden = true;
-    try { await postReport(d.body); store.drop(); show('thanks'); }
-    catch { $('draft-send').disabled = false; $('draft-send').textContent = 'Try again';
-      $('draft-msg').textContent = "Still couldn't send it. Your answers stay saved on this phone."; $('draft-msg').hidden = false; }
+    try { const r = await postReport(d.body, draftSpam); store.drop(d.id); $('draft').hidden = true; DONE = true; show('thanks'); }
+    catch (err) {
+      $('draft-send').disabled = false; $('draft-send').textContent = 'Try again';
+      if (err.server && err.status === 400) {          // refused for good (too old, or no longer valid): don't offer it again
+        store.drop(d.id); $('draft-send').hidden = true; $('draft-drop').textContent = 'OK';
+        $('draft-msg').textContent = `The server could not accept it (${err.message}), so it has been removed from this phone. Please fill in the form again.`;
+      } else $('draft-msg').textContent = err.server && err.status === 403 ? 'The spam check did not finish. Please press Try again.' : "Still couldn't send it. Your answers stay saved on this phone.";
+      $('draft-msg').hidden = false;
+    }
   };
-  $('draft-drop').onclick = () => { store.drop(); $('draft').hidden = true; };
-})();
+  $('draft-drop').onclick = () => { store.drop(d.id); showDraft(); };
+}
+showDraft();
 $('again').onclick = () => { location.href = location.pathname; };
 
 fetch(`${window.CONTRIBUTE.API}/flood/reports.json`, { cache: 'no-cache' }).then(r => r.json()).then(d => {

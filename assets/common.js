@@ -59,6 +59,18 @@ window.Contribute = (() => {
     return data;
   }
 
+  // unsent entries kept on this phone, oldest first: several can wait, and each is sent or discarded on its own.
+  // set() returns the new entry's id (null if the phone has no room); drop(id) removes that one only.
+  function drafts(key) {
+    const read = () => { try { const v = JSON.parse(localStorage.getItem(key)); return v == null ? [] : Array.isArray(v) ? v : [v]; } catch { return []; } };
+    const write = (l) => { try { if (l.length) localStorage.setItem(key, JSON.stringify(l)); else localStorage.removeItem(key); return true; } catch { return false; } };
+    return {
+      get: () => read().find((d) => d && d.body) || null,
+      set(v) { const id = Math.random().toString(36).slice(2, 10), l = read(); l.push({ ...v, id }); return write(l) ? id : null; },
+      drop(id) { write(read().filter((d) => d && d.id !== id)); },
+    };
+  }
+
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
   // the survey forms are filled in on a phone (Teja, 16 Nov 2026); a laptop sees a QR code to open the page on one.
@@ -82,5 +94,5 @@ window.Contribute = (() => {
     document.head.append(s);
     return false;
   }
-  return { spamCheck, device, post, esc, phoneOnly };
+  return { spamCheck, device, post, esc, phoneOnly, drafts };
 })();

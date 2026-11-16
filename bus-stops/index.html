@@ -8,10 +8,10 @@
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../vendor/fonts/lato.css">
 <link rel="stylesheet" href="../vendor/fonts/outfit.css">
-<link rel="stylesheet" href="../assets/contribute.css">
+<link rel="stylesheet" href="../assets/contribute.css?v=20261116">
 <!-- visit counter: page, referring site, country; no cookies, no IP addresses (live-feed/visits.js) -->
 <script src="https://api.urbanobservatory.in/visits.js" defer></script>
-<script src="../assets/config.js"></script>
+<script src="../assets/config.js?v=20261116"></script>
 <style>
   .steps { max-width: var(--measure); margin: 0 auto; }
   .progress { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; min-height: 20px; }
@@ -179,6 +179,15 @@
       <p class="eyebrow">Contribute · Bus stops</p>
       <h1>Tell us about a bus stop</h1>
       <p class="hint">Tell us what a bus stop is like: shelter, footpath, lighting, signs. It takes about two minutes. Anyone can update a stop later, so the picture stays current.</p>
+      <div class="draft" id="draft" hidden>
+        <p class="eyebrow">Not sent yet</p>
+        <p id="draft-text"></p>
+        <div class="ts ts-draft" id="ts-draft"></div>
+        <div class="row-btns"><button type="button" class="btn btn-primary btn-lg" id="draft-send">Send it now</button><button type="button" class="btn btn-secondary btn-lg" id="draft-drop">Discard it</button></div>
+        <p class="msg" id="draft-msg" hidden></p>
+      </div>
+      <div class="safety-box"><b>Safety first.</b> Watch for traffic and buses, and stand somewhere safe; you don't need to be right at the stop. Skip anything that doesn't feel safe.</div>
+      <p class="not-complaint"><b>This is a public data exercise, not a complaint service.</b> What you send is shared openly so residents, researchers and city offices can see the same picture. We don't pass it on as a complaint or follow up on it. To get something fixed, contact the department responsible directly.</p>
       <h2 class="qt" style="font-size:20px;margin-top:8px" id="q-here">Are you at the bus stop now?</h2>
       <div class="answers" role="radiogroup" aria-labelledby="q-here" data-field="here">
         <button type="button" class="answer" role="radio" aria-checked="false" data-val="yes"><span>Yes, I'm at the stop<small>Your phone can find the stop for you</small></span><i class="tick"></i></button>
@@ -189,17 +198,9 @@
         <p><b>Know a stop really well?</b> If you can find it exactly on the map, you can add its details from memory. In the data these are marked <b>from memory</b>, so others know.</p>
         <div class="row-btns"><button type="button" class="btn btn-secondary btn-lg" id="from-memory">Find the stop on the map</button></div>
       </div>
-      <div class="safety-box"><b>Safety first.</b> Watch for traffic and buses, and stand somewhere safe; you don't need to be right at the stop. Skip anything that doesn't feel safe.</div>
       <p class="playline" id="play-box">Collect points on the <a href="leaderboard/">leaderboard</a>: <a href="#" id="play-create"><b>Join as a contributor</b></a> · <a href="#" id="play-login"><b>Log in</b></a></p>
       <p class="playline" id="play-in" hidden>Contributing as <b id="play-name"></b> · <a href="leaderboard/">Leaderboard</a> · <a href="#" id="play-out">Log out</a></p>
-      <p class="not-complaint"><b>This is a public data exercise, not a complaint service.</b> What you send is shared openly so residents, researchers and city offices can see the same picture. We don't pass it on as a complaint or follow up on it. To get something fixed, contact the department responsible directly.</p>
       <p class="anon">No names, no email, and we don't keep IP addresses. You can take part without a nickname too.</p>
-      <div class="draft" id="draft" hidden>
-        <p class="eyebrow">Not sent yet</p>
-        <p id="draft-text"></p>
-        <div class="row-btns"><button type="button" class="btn btn-primary btn-lg" id="draft-send">Send it now</button><button type="button" class="btn btn-secondary btn-lg" id="draft-drop">Discard it</button></div>
-        <p class="msg" id="draft-msg" hidden></p>
-      </div>
       <div class="intro-link">
         <a class="btn btn-secondary" href="map/" id="see-map">See the stops map <span class="arr">→</span></a>
         <span class="meta" id="meta"></span>
@@ -231,7 +232,7 @@
 
     <section class="step" data-step="nearest">
       <h2 class="qt" id="near-q">Which stop are you at?</h2>
-      <p class="hint">Each side of the road is a separate stop. Pick the one you are standing at.</p>
+      <p class="hint" id="near-hint">Each side of the road is a separate stop. Pick the one you are standing at.</p>
       <div class="answers" role="radiogroup" aria-labelledby="near-q" id="near-list"></div>
       <p class="msg" id="near-msg" hidden></p>
       <p class="alt-link"><a href="#" class="to-missing">My stop isn't listed</a></p>
@@ -252,7 +253,7 @@
 
     <section class="step" data-step="missing">
       <h2 class="qt">Add a missing stop</h2>
-      <p class="hint">Buses stop here but it isn't in the bus data. The dot is where you are: drag it to where the bus stops (up to 100 m), and give the stop a name. Grey dots are stops we already know.</p>
+      <p class="hint">Buses stop here but it isn't in the bus data. <span id="miss-dot">The dot is where you are</span>: drag it to where the bus stops (up to 100 m), and give the stop a name. Grey dots are stops we already know.</p>
       <div class="field">
         <span class="field-label">Spot on the map <span class="req" aria-hidden="true">*</span><span class="req-word">Required</span></span>
         <div class="map-box"><div id="map"></div><div class="map-hint halo" id="map-hint">Drag the dot to where the bus stops</div></div>
@@ -283,7 +284,7 @@
 
     <section class="step" data-step="improve">
       <h2 class="qt"><label for="improve">One thing you would improve?</label></h2>
-      <p class="hint">Optional. For example "a shelter", "move the parked autos", "a light".</p>
+      <p class="hint">Optional. For example "a shelter", "move the parked autos", "a light". Please no names, phone numbers, addresses or flat numbers: notes are shown publicly.</p>
       <textarea class="inp" id="improve" maxlength="300"></textarea>
     </section>
 
@@ -312,7 +313,7 @@
       <div class="ts" id="ts-review"></div>
       <input type="text" name="website" id="trap" tabindex="-1" autocomplete="off" aria-hidden="true" class="trap">
       <p class="msg" id="send-msg" hidden></p>
-      <p class="anon">What you send will be shown publicly on the stop's page. Your answers, without the photo, are shared as open data under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>. No names, no sign-in, no IP addresses.</p>
+      <p class="anon">What you send will be shown publicly on the stop's page. Your answers, without the photo, are shared as open data under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>. No real names, no email, no IP addresses.</p>
     </section>
 
     <section class="step" data-step="thanks">
@@ -352,7 +353,7 @@
   </div>
 </footer>
 
-<script src="../assets/common.js"></script>
-<script type="module" src="form.js"></script>
+<script src="../assets/common.js?v=20261116"></script>
+<script type="module" src="form.js?v=20261116"></script>
 </body>
 </html>

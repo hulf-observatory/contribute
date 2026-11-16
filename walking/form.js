@@ -1,7 +1,7 @@
 // Walking survey: footpaths and crossings, at the place itself (Teja, 16 Nov 2026). One spot, one crossing, or a walk
 // (the phone follows the route; only the spots and crossings are sent, not the route). Side of the road by pointing
 // the phone at the road. Phones only; a laptop sees a QR code. Talks to contribute-api (/walking/reports).
-import { mapMark } from '../assets/map-mark.js';
+import { mapMark } from '../assets/map-mark.js?v=20261116';
 import { SURVEY, TOPICS, CROSS_TOPICS, QUESTIONS, DIRS, nearestDir, roadSide, sideFromRoad, sideWord, shown, optLabel, POINTS, inHmda, esc,
   metres, bearing, loadReports, contributions, player, checkPlayer, PLAYER_SAYS } from './questions.js';
 
@@ -42,8 +42,8 @@ function show(s, push = true) {
   const F = flow(), i = F.indexOf(s);
   $('progress').hidden = !(S.mode !== 'walk' && i >= 0);
   if (!$('progress').hidden) { $('bar').style.width = `${(i + 1) / F.length * 100}%`; $('count').textContent = s === 'review' ? 'Last step' : `${i + 1} of ${F.length - 1}`; }
-  $('nav').hidden = s === 'start' || s === 'thanks' || (s === 'walk');
-  $('next').hidden = s === 'same';
+  $('nav').hidden = s === 'start' || s === 'thanks' || (s === 'walk' && S.walking);   // Back from the walk screen until it starts
+  $('next').hidden = s === 'same' || s === 'walk';
   const card = S.spot && ['dir', 'same', 'extra', ...ALL_STEPS].includes(s);
   $('spotcard').hidden = !card; if (card) drawCard();
   if (s === 'where') openWhereMap();
@@ -59,7 +59,9 @@ function show(s, push = true) {
   window.scrollTo({ top: 0 });
   const h = document.querySelector(`.step[data-step="${s}"] .qt, .step[data-step="${s}"] h1`); if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }); }
 }
+const nAnswered = (s) => (s.kind === 'crossing' ? CROSS_TOPICS : TOPICS).flatMap(t => t.qs).filter(q => s.answers[q.id] != null).length;
 function ready() {
+  if (cur === 'extra' || (cur === 'review' && S.mode !== 'walk')) return !!S.spot && nAnswered(S.spot) > 0;
   if (cur === 'where') return !!S.spot;
   if (cur === 'mark') return !!(S.spot && S.markOk);
   if (cur === 'dir') { const sp = S.spot; return sp.how === 'phone' ? !!sp.roadAt : sp.how === 'buttons' && (sp.lr === 'dk' || !!(sp.facing && sp.lr)); }
@@ -67,6 +69,7 @@ function ready() {
 }
 function updateNext() {
   const n = $('next'); n.disabled = !ready();
+  $('extra-few').hidden = !(cur === 'extra' && S.spot && !nAnswered(S.spot));
   const topicEmpty = ALL_STEPS.includes(cur) && ![...TOPICS, ...CROSS_TOPICS].find(t => 't-' + t.id === cur).qs.some(q => S.spot.answers[q.id] != null);
   n.textContent = cur === 'review' ? 'Send' : cur === 'extra' && S.mode === 'walk' ? (isX() ? 'Add this crossing' : 'Add this spot') : (topicEmpty || (cur === 'extra' && !S.spot.photo && !$('note').value.trim())) ? 'Skip' : 'Next';
 }
@@ -138,6 +141,7 @@ function placeSpot(lng, lat) {
   updateNext();
 }
 $('gps-go').onclick = () => {
+  if (S.byMap) { S.byMap = false; S.memory = false; S.spot = null; }   // back from the map: the phone's location again
   openWhereMap(); $('gps-go').disabled = true; $('gps-go').textContent = 'Waiting for your phone…';
   navigator.geolocation.getCurrentPosition((p) => {
     $('gps-go').disabled = false; $('gps-go').textContent = 'Use my location';
@@ -185,17 +189,21 @@ function refreshWalkMap() {
   const p = S.track[S.track.length - 1];
   if (p) { if (!me) me = new maplibregl.Marker({ element: mkEl('me') }).setLngLat([p.lng, p.lat]).addTo(kmap); else me.setLngLat([p.lng, p.lat]); kmap.easeTo({ center: [p.lng, p.lat] }); }
 }
+const MAX_ITEMS = 60, MAX_PHOTOS = 10;
 const walked = () => S.track.reduce((a, p, i) => i ? a + metres(S.track[i - 1], p) : 0, 0);
 function drawWalk() {
   const on = S.walking;
   $('walk-start-box').hidden = on; $('walk-on-box').hidden = !on; $('walkstat').hidden = !on;
   $('walk-h').textContent = on ? (S.spots.length ? `Walking · ${S.spots.length} spot${S.spots.length > 1 ? 's' : ''}` : 'Walking') : 'Record a walk';
   $('walk-hint').textContent = on ? (S.spots.length ? 'Walk on, and add a spot whenever something changes. Finish when you are done.' : 'Add your first spot now, where you are standing.')
-    : 'Press Start and walk as usual. Stop somewhere safe whenever something changes (the footpath ends, gets blocked, the shade goes) and add a spot. Keep this page open, but look up while you walk.';
+    : 'Press Start and walk as usual. Stop somewhere safe whenever something changes (the footpath ends, gets blocked, the shade goes) and add a spot. Keep this page open, but look up while you walk. The spots of a walk are shown publicly, in order, so start a little away from your home.';
   const d = walked(); $('ws-dist').textContent = d < 1000 ? `${Math.round(d)} m` : `${(d / 1000).toFixed(2)} km`;
   $('ws-spots').textContent = S.spots.length;
-  $('walk-finish').disabled = !S.spots.length; $('walk-xing').disabled = !S.track.length;
-  $('spotlist').innerHTML = S.spots.map((s, i) => `<li><span class="n${s.kind === 'crossing' ? ' x' : ''}">${i + 1}</span><span><b>${esc(itemTitle(s))}</b>${esc(itemSummary(s))}${s.same ? ' · same as before' : ''}${s.photo ? ' · photo' : ''}</span><button type="button" data-del="${i}">Remove</button></li>`).join('');
+  const full = S.spots.length >= MAX_ITEMS;        // the server takes up to 60 spots and crossings a walk
+  $('walk-finish').disabled = !S.spots.length; $('walk-xing').disabled = !S.track.length || full; $('walk-add').disabled = full;
+  if (full) { $('walk-msg').textContent = `That's ${MAX_ITEMS} spots and crossings, the most one walk can hold. Finish this walk and start a new one.`; $('walk-msg').hidden = false; }
+  $('walk-start').textContent = S.spots.length ? 'Carry on walking' : 'Start the walk';
+  $('spotlist').innerHTML = S.spots.map((s, i) => `<li><span class="n${s.kind === 'crossing' ? ' x' : ''}">${i + 1}</span><span><b>${esc(itemTitle(s))}</b>${esc(itemSummary(s))}${s.same === true ? ' · same as before' : ''}${s.photo ? ' · photo' : ''}</span><button type="button" data-del="${i}">Remove</button></li>`).join('');
   refreshWalkMap();
 }
 $('spotlist').addEventListener('click', (e) => { const b = e.target.closest('[data-del]'); if (!b) return; S.spots.splice(+b.dataset.del, 1); drawWalk(); });
@@ -208,7 +216,7 @@ function addFix(lat, lng, acc) {
   drawWalk();
 }
 $('walk-start').onclick = () => {
-  S.walking = true; drawWalk();
+  S.walking = true; $('nav').hidden = true; drawWalk();
   if ('geolocation' in navigator) watch = navigator.geolocation.watchPosition((p) => addFix(p.coords.latitude, p.coords.longitude, p.coords.accuracy),
     () => { $('walk-msg').textContent = "Your phone isn't sharing its location, so the walk can't be followed. Allow location for this page in your browser's settings, or go back and send a single spot or crossing: those can be marked on the map."; $('walk-msg').hidden = false; },
     { enableHighAccuracy: true, maximumAge: 5000 });
@@ -233,7 +241,7 @@ $('walk-add').onclick = () => {
   if (prev && prev.how === 'phone' && prev.facing && prev.facing === S.spot.facing) {
     Object.assign(S.spot, { how: 'phone', roadAt: prev.roadAt, roadDeg: prev.roadDeg, lr: prev.lr });
     S.spot.aimSay = `Still the <b>${sideFromRoad(prev.roadAt)} side</b>, as at spot ${S.spots.indexOf(prev) + 1}. Crossed the road? Point again.`;
-  } else if (prev && prev.how === 'buttons' && prev.lr !== 'dk') Object.assign(S.spot, { how: 'buttons', lr: prev.lr });
+  } else if (prev && prev.how === 'buttons' && prev.lr !== 'dk') Object.assign(S.spot, { how: 'buttons', lr: prev.lr, manual: true });
   show('dir');
 };
 $('walk-xing').onclick = () => {
@@ -247,7 +255,9 @@ function finishSpot() { S.spots.push(S.spot); S.spot = null; stack = []; show('w
 const cap = (w) => w[0].toUpperCase() + w.slice(1);
 const lrOf = (facing, w) => !facing || !w ? null : roadSide(facing, 'left') === w ? 'left' : roadSide(facing, 'right') === w ? 'right' : null;
 function drawDir() {
-  const sp = S.spot, canAim = S.gps, showManual = sp.manual || !canAim;
+  const sp = S.spot, canAim = !S.memory, showManual = sp.manual || !canAim;
+  $('side-q').textContent = S.memory ? 'Which side of the road is it on?' : 'Which side of the road are you on?';
+  $('h-side').textContent = S.memory ? 'Facing that way, which side of the road is it on?' : 'Facing that way, which side of the road are you on?';
   $('aim').hidden = showManual; $('manual').hidden = !showManual; $('to-aim-p').hidden = !canAim;
   const w = sp.how === 'phone' ? sideFromRoad(sp.roadAt) : null;
   $('aim-msg').hidden = !sp.aimSay; $('aim-msg').innerHTML = sp.aimSay || '';
@@ -354,7 +364,9 @@ function drawCard() {
 }
 
 // ── photo and note ──
-function drawExtra() { const s = S.spot; $('note').value = s.note || ''; $('photo-prev').style.display = s.photo ? 'block' : 'none'; if (s.photo) $('photo-prev').src = s.photo; $('photo-btn').textContent = s.photo ? 'Use a different photo' : 'Take or choose a photo'; }
+function drawExtra() { const s = S.spot;
+  const full = S.mode === 'walk' && !s.photo && S.spots.filter(x => x.photo).length >= MAX_PHOTOS;
+  $('photo-btn').style.display = full ? 'none' : ''; $('photo-full').hidden = !full; $('note').value = s.note || ''; $('photo-prev').style.display = s.photo ? 'block' : 'none'; if (s.photo) $('photo-prev').src = s.photo; $('photo-btn').textContent = s.photo ? 'Use a different photo' : 'Take or choose a photo'; }
 $('note').addEventListener('input', () => { S.spot.note = $('note').value.trim(); updateNext(); });
 $('photo-in').addEventListener('change', async (e) => {
   const f = e.target.files[0]; if (!f) return;
@@ -369,13 +381,13 @@ function drawReview() {
   let rows;
   if (S.mode === 'crossing') {
     const s = S.spot;
-    rows = [['Crossing', s.byMap ? 'Marked on the map' : s.moved_m > 2 ? `Moved ${s.moved_m} m from where you were` : 'Where you were standing', first()],
+    rows = [['Crossing', s.byMap ? (S.memory ? 'From memory, marked on the map' : 'Marked on the map') : s.moved_m > 2 ? `Moved ${s.moved_m} m from where you were` : 'Where you were standing', first()],
       ...CROSS_TOPICS.map(t => [t.title.replace('Waiting, light and safety', 'Waiting and safety'), topicLines(t, s.answers), 't-' + t.id]),
       ['Photo', s.photo ? 'Added' : 'None', 'extra'], ['Note', esc(s.note || 'None'), 'extra']];
     $('review-hint').textContent = 'Tap "Change" to fix anything. Nothing has been saved yet.';
   } else if (S.mode === 'spot') {
     const s = S.spot;
-    rows = [['Spot', S.gps ? 'Where you were standing' : 'Marked on the map', first()],
+    rows = [['Spot', S.gps ? 'Where you were standing' : S.memory ? 'From memory, marked on the map' : 'Marked on the map', first()],
       ['Side', esc(spotTitle(s)), 'dir'], ...TOPICS.map(t => [t.title.replace('Shade, access and safety', 'Shade and safety'), topicLines(t, s.answers), 't-' + t.id]),
       ['Photo', s.photo ? 'Added' : 'None', 'extra'], ['Note', esc(s.note || 'None'), 'extra']];
     $('review-hint').textContent = 'Tap "Change" to fix anything. Nothing has been saved yet.';
@@ -383,7 +395,7 @@ function drawReview() {
     const d = walked();
     const nx = S.spots.filter(s => s.kind === 'crossing').length, ns = S.spots.length - nx;
     rows = [['Walk', `${[ns && `${ns} spot${ns > 1 ? 's' : ''}`, nx && `${nx} crossing${nx > 1 ? 's' : ''}`].filter(Boolean).join(', ')}<small>${d < 1000 ? Math.round(d) + ' m' : (d / 1000).toFixed(2) + ' km'} walked</small>`, null],
-      ...S.spots.map((s, i) => [`${i + 1}. ${s.kind === 'crossing' ? 'Crossing' : 'Spot'}`, `${esc(s.kind === 'crossing' ? itemSummary(s) : spotTitle(s))}<small>${s.kind === 'crossing' ? '' : esc(itemSummary(s))}${s.same ? ' (same as before)' : ''}${s.photo ? ' · photo' : ''}</small>`, null])];
+      ...S.spots.map((s, i) => [`${i + 1}. ${s.kind === 'crossing' ? 'Crossing' : 'Spot'}`, `${esc(s.kind === 'crossing' ? itemSummary(s) : spotTitle(s))}<small>${s.kind === 'crossing' ? '' : esc(itemSummary(s))}${s.same === true ? ' (same as before)' : ''}${s.photo ? ' · photo' : ''}</small>`, null])];
     $('review-hint').textContent = 'Nothing has been saved yet. Go back to the walk to add or remove spots.';
   }
   $('review').innerHTML = rows.map(([k, v, s]) => `<div><dt>${k}</dt><dd>${v}</dd>${s ? `<button type="button" data-go="${s}">Change</button>` : '<span></span>'}</div>`).join('');
@@ -391,24 +403,23 @@ function drawReview() {
 }
 // ── send: everything at once, with one spam check; if it fails, the answers stay on this phone ──
 const DRAFT = 'obs-walk-unsent';
-const store = { get() { try { return JSON.parse(localStorage.getItem(DRAFT)); } catch { return null; } },
-  set(v) { try { localStorage.setItem(DRAFT, JSON.stringify(v)); return true; } catch { return false; } },
-  drop() { try { localStorage.removeItem(DRAFT); } catch { /* ignore */ } } };
+const store = Contribute.drafts(DRAFT);          // several can wait; each is sent or discarded on its own
 const ANSWER_IDS = new Set(QUESTIONS.map(q => q.id));
 function payload() {
   const spots = S.mode === 'walk' ? S.spots : [S.spot], p = player.get();
-  return { mode: S.mode, nick: p ? p.nick : null, nick_pin: p ? p.pin : null,
+  const nk = p && !S.noNick;
+  return { mode: S.mode, nick: nk ? p.nick : null, nick_pin: nk ? p.pin : null,
     items: spots.map(s => ({ item: s.kind, here: S.memory ? 'known' : 'yes', place_type: s.byMap ? 'map' : 'gps', lat: +s.lat.toFixed(6), lng: +s.lng.toFixed(6), accuracy_m: s.accuracy_m, moved_m: s.byMap ? null : (s.moved_m || 0), observed_at: s.at,
-      ...(s.kind === 'spot' ? { facing: s.facing, side_how: s.how, road_deg: s.roadDeg, lr: s.lr, same: !!s.same } : {}),
+      ...(s.kind === 'spot' ? { facing: s.facing, side_how: s.how, road_deg: s.roadDeg, lr: s.lr, same: s.same === true } : {}),
       ...Object.fromEntries(Object.entries(s.answers).filter(([k, v]) => ANSWER_IDS.has(k) && v != null)),
       note: s.note || null, photo: s.photo || null })) };
 }
 const spam = Contribute.spamCheck($('ts-review'));
-async function postIt(body) {
-  const token = await spam.token();
+async function postIt(body, sc = spam) {
+  const token = await sc.token();
   if (token === null) { const e = new Error('spam check'); e.server = true; e.status = 403; throw e; }
   try { return await Contribute.post(`/${SURVEY}/reports`, { ...body, token, website: $('trap').value }); }
-  finally { spam.reset(); }
+  finally { sc.reset(); }
 }
 function thanks(body) {
   const items = body.items, photos = items.filter(s => s.photo).length, nx = items.filter(s => s.item === 'crossing').length, ns = items.length - nx, got = [];
@@ -427,29 +438,39 @@ async function send() {
   const body = payload(), saved = { body, at: Date.now(), n: body.items.length };
   const kept = store.set(saved) || store.set({ ...saved, body: { ...body, items: body.items.map(i => ({ ...i, photo: null })) }, photoDropped: true });
   sending = true; $('send-msg').hidden = true; $('next').disabled = true; $('next').textContent = 'Sending…';
-  try { await postIt(body); store.drop(); sending = false; thanks(body); }
+  try { await postIt(body); store.drop(kept); sending = false; thanks(body); }
   catch (err) {
     sending = false; $('next').disabled = false; $('next').textContent = 'Try again';
-    const why = err.server && err.status === 400 ? (/nick/.test(err.message) ? 'The nickname or PIN was not accepted. Log out and in again on the first screen, or send without a nickname.' : `The server could not accept this (${err.message}).`)
+    if (err.server && err.status === 400 && /^nick/.test(err.message)) S.noNick = true;
+    const why = err.server && err.status === 400 ? (/^nick/.test(err.message) ? 'The nickname or PIN was not accepted. Press Try again to send it without a nickname, or log in again on the first screen.' : `The server could not accept this (${err.message}).`)
       : err.server && err.status === 403 ? 'The spam check did not finish. Please press Try again.'
       : err.server && err.status === 429 ? 'Too many sends from this connection just now. Please wait a minute.'
       : "We couldn't send this; the signal may be weak.";
     $('send-msg').textContent = `${why} ${kept ? 'Your answers are saved on this phone, so nothing is lost.' : ''}`; $('send-msg').hidden = false;
   }
 }
-// something that didn't send last time: offer it on the first screen (reports up to a day old are still accepted)
-(() => {
-  const d = store.get(); if (!d || !d.body) return;
-  $('draft').hidden = false;
+// entries that didn't go through: offer the oldest on the start screen, with its own spam check (it must be visible)
+let draftSpam = null;
+function showDraft() {
+  const d = store.get(); $('draft').hidden = !d; if (!d) return;
+  draftSpam = draftSpam || Contribute.spamCheck($('ts-draft'));
   $('draft-text').textContent = `You have ${d.n > 1 ? d.n + ' spots and crossings' : 'details'} from ${new Date(d.at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })} that didn't send.${d.photoDropped ? ' The photos were too large to keep.' : ''}`;
+  $('draft-send').hidden = false; $('draft-send').disabled = false; $('draft-send').textContent = 'Send it now'; $('draft-drop').textContent = 'Discard it'; $('draft-msg').hidden = true;
   $('draft-send').onclick = async () => {
     $('draft-send').disabled = true; $('draft-send').textContent = 'Sending…'; $('draft-msg').hidden = true;
-    try { await postIt(d.body); store.drop(); thanks(d.body); }
-    catch (err) { $('draft-send').disabled = false; $('draft-send').textContent = 'Try again';
-      $('draft-msg').textContent = err.status === 400 ? `The server could not accept it (${err.message}). Discard it.` : "Still couldn't send it. Your answers stay saved on this phone."; $('draft-msg').hidden = false; }
+    try { const r = await postIt(d.body, draftSpam); store.drop(d.id); $('draft').hidden = true; thanks(d.body); }
+    catch (err) {
+      $('draft-send').disabled = false; $('draft-send').textContent = 'Try again';
+      if (err.server && err.status === 400) {          // refused for good (too old, or no longer valid): don't offer it again
+        store.drop(d.id); $('draft-send').hidden = true; $('draft-drop').textContent = 'OK';
+        $('draft-msg').textContent = `The server could not accept it (${err.message}), so it has been removed from this phone. Please fill in the form again.`;
+      } else $('draft-msg').textContent = err.server && err.status === 403 ? 'The spam check did not finish. Please press Try again.' : "Still couldn't send it. Your answers stay saved on this phone.";
+      $('draft-msg').hidden = false;
+    }
   };
-  $('draft-drop').onclick = () => { store.drop(); $('draft').hidden = true; };
-})();
+  $('draft-drop').onclick = () => { store.drop(d.id); showDraft(); };
+}
+showDraft();
 $('again').onclick = () => { location.href = location.pathname; };
 
 // ── counts for the first screen ──

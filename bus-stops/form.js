@@ -1,7 +1,7 @@
 // Tell us about a bus stop, at the stop (Teja, 16 Nov 2026): the phone's location lists the nearest stops (or a
 // missing one is added within 100 m of it), then the topic screens, optional photo and improvement, check and send.
 // Phones only; a laptop sees a QR code. Talks to contribute-api.
-import { mapMark } from '../assets/map-mark.js';
+import { mapMark } from '../assets/map-mark.js?v=20261116';
 import { SURVEY, TOPICS, QUESTIONS, MIN_ANSWERS, optLabel, shown, answered, POINTS, loadStops, loadRatings, addedStops,
   byStop, metres, stopLabel, esc, player, checkPlayer, PLAYER_SAYS } from './questions.js';
 
@@ -47,14 +47,16 @@ function ready(s) {
   if (s === 'nearest') return !!S.stop;
   if (s === 'mark') return !!S.markAt;
   if (s === 'missing') return !!(S.missing && filled('m-name'));
-  if (s === 'where') return !!S.where;
+  if (s === 'where') return !!S.where && (S.where !== 'marked' || !!S.whereAt);   // marking needs the map
   if (s === 'player') return true;
   if (s === 'review') return !sending && answered(S.a) >= MIN_ANSWERS;
   return true;
 }
 const TOPIC_STEPS = TOPICS.map(t => 't-' + t.id);
+var DONE = false, lastList = [];                 // DONE: sent, so Back can't offer Send again
 function show(s, push = true) {
-  cur = s;
+  if (DONE && s !== 'thanks') s = 'thanks';
+  cur = s; lastList = steps();
   document.querySelectorAll('.step').forEach(x => x.classList.toggle('on', x.dataset.step === s));
   const qs = steps().filter(x => x !== 'start' && x !== 'thanks'), i = qs.indexOf(s);
   $('progress').hidden = i < 0;
@@ -71,7 +73,7 @@ function show(s, push = true) {
   if (s === 'mark') { marker.open(); $('mark-hint').textContent = S.here === 'known' ? 'Move the map until the pin in the middle sits exactly on the bus stop, then press Next.'
     : 'Move the map until the pin in the middle sits on the bus stop, then press Next. You still need to be at the stop.'; }
   if (s === 'start') drawPlay();
-  if (s === 'player') { const p = player.get(); $('p-nick').value = p ? p.nick : $('p-nick').value; $('p-pin').value = ''; $('p-msg').hidden = true; playerReady(); }
+  if (s === 'player') { S.noNick = false; const p = player.get(); $('p-nick').value = p ? p.nick : $('p-nick').value; $('p-pin').value = ''; $('p-msg').hidden = true; playerReady(); }
   if (s === 't-facilities') document.querySelector('[data-step="t-facilities"] [data-few]').hidden = answered(S.a) >= MIN_ANSWERS;
   updateNext();
   if (push) history.pushState({ s }, '', location.search + '#' + s);
@@ -85,7 +87,15 @@ function updateNext() {
   const topicEmpty = TOPIC_STEPS.includes(cur) && !TOPICS.find(t => 't-' + t.id === cur).qs.some(q => S.a[q.id] != null);
   n.textContent = cur === 'review' ? 'Send' : (optional[cur] || topicEmpty) ? 'Skip' : 'Next';
 }
-const go = (d) => { const l = steps(); show(l[Math.max(0, l.indexOf(cur) + d)]); };
+function go(d) {
+  const l = steps(), i = l.indexOf(cur);
+  if (i < 0) {                                   // this screen dropped out of the route: carry on from where it was
+    let j = lastList.indexOf(cur) + d;
+    while (j > 0 && j < lastList.length && !l.includes(lastList[j])) j += d;
+    return show(l.includes(lastList[j]) ? lastList[j] : l[0]);
+  }
+  show(l[Math.max(0, i + d)]);
+}
 $('next').onclick = async () => {
   if (cur === 'review') return send();
   if (cur === 'mark') return fromPlace(S.markAt.lat, S.markAt.lng, null);
@@ -144,8 +154,9 @@ const stopButton = (s, d) => `<button type="button" class="answer" role="radio" 
 function pickFrom(listEl) {
   listEl.addEventListener('click', (e) => {
     const b = e.target.closest('[data-id]'); if (!b) return;
+    S.how = 'gps';                                 // back from "my stop isn't listed": a listed stop again
     const st = BY_ID.get(b.dataset.id), d = metres(S.phone, st);
-    if (d > NEAR_M) { $('near-msg').textContent = `${st.name} is about ${far(d)} from you. Pick the stop you are standing at, or add it if it isn't listed.`; $('near-msg').hidden = false; return; }
+    if (d > NEAR_M) { $('near-msg').textContent = `${st.name} is about ${far(d)} from ${S.viaMap ? 'the pin' : 'you'}. ${S.here === 'known' || S.viaMap ? 'Pick the stop under the pin' : 'Pick the stop you are standing at'}, or add it if it isn't listed.`; $('near-msg').hidden = false; return; }
     listEl.querySelectorAll('[role=radio]').forEach(x => x.setAttribute('aria-checked', x === b));
     if (S.stop !== st) { S.where = null; S.whereAt = null; }
     S.stop = st; S.missing = null; updateNext();
@@ -172,11 +183,11 @@ function onFix(p) {
 function fromPlace(lat, lng, acc) {
   const fail = (t) => { if (!S.viaMap) return gpsFailed(t); $('mark-msg').textContent = t; $('mark-msg').hidden = false; };
   if (!inHmda(lng, lat)) return fail('Your phone places you outside the Hyderabad area (HMDA). This survey is for bus stops in Hyderabad.');
-  if (!STOPS.length) return fail('The list of bus stops has not loaded yet. Check your connection and try again.');
+  if (!STOPS.length) { loadAll().then(() => STOPS.length ? fromPlace(lat, lng, acc) : fail('The list of bus stops could not load. Check your connection and try again.')); return; }
   S.phone = { lat, lng, acc };
   if (S.preset) {                                  // from a stop's page: only at that stop
     const d = metres(S.phone, S.stop);
-    if (d > NEAR_M) return fail(`You are about ${far(d)} from ${S.stop.name}. Details are added at the stop itself: come back when you are there.`);
+    if (d > NEAR_M) return fail(S.viaMap ? `The pin is about ${far(d)} from ${S.stop.name}. Move the map to the stop.` : `You are about ${far(d)} from ${S.stop.name}. Details are added at the stop itself: come back when you are there.`);
     return go(1);
   }
   const near = STOPS.map(s => [s, metres({ lat, lng }, s)]).sort((a, b) => a[1] - b[1]).slice(0, 4);
@@ -184,6 +195,8 @@ function fromPlace(lat, lng, acc) {
   $('near-msg').hidden = near[0][1] < 400;
   $('near-msg').textContent = `The nearest stop we know is ${Math.round(near[0][1])} m away${acc > 100 ? ", and your phone's location is rough" : ''}. If you are at a stop, it may be missing from the bus data: add it.`;
   $('near-q').textContent = S.here === 'known' ? 'Which stop is it?' : 'Which stop are you at?';
+  $('near-hint').textContent = S.viaMap ? 'Each side of the road is a separate stop. Pick the one under the pin.' : 'Each side of the road is a separate stop. Pick the one you are standing at.';
+  $('miss-dot').textContent = S.viaMap ? 'The dot is where you put the pin' : 'The dot is where you are';
   S.stop = null; go(1);
 }
 function gpsFailed(t) { $('gps-go').textContent = 'Try again'; $('gps-go').disabled = false; $('gps-msg').textContent = t; $('gps-msg').hidden = false; }
@@ -243,8 +256,12 @@ function loadMapLib() {
 }
 async function openMap() {
   try { await loadMapLib(); } catch { $('pin-msg').textContent = "The map couldn't load. Check your connection and try again."; $('pin-msg').hidden = false; return; }
-  if (map) { map.resize(); return; }
   const me = S.phone;
+  if (map) {                                       // a new place since last time: start the pin there again
+    map.resize();
+    if (!S.missing || metres(me, S.missing) > MAX_MOVE) { S.missing = null; map.jumpTo({ center: [me.lng, me.lat], zoom: 18 }); placePin(me.lng, me.lat); }
+    return;
+  }
   map = new maplibregl.Map({ container: 'map', style: 'https://tiles.openfreemap.org/styles/positron', center: [me.lng, me.lat], zoom: 18, minZoom: 12, maxZoom: 19,
     maxBounds: [77.6, 16.6, 79.5, 18.3], attributionControl: { compact: true } });
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
@@ -260,7 +277,7 @@ function placePin(lng, lat) {
   const moved = metres(S.phone, { lat, lng });
   if (moved > MAX_MOVE || !inHmda(lng, lat)) {
     if (pin && S.missing) pin.setLngLat([S.missing.lng, S.missing.lat]);
-    $('pin-msg').textContent = `The stop can be up to ${MAX_MOVE} m from where you are. Walk closer, if it's safe, and start again.`; $('pin-msg').hidden = false; return;
+    $('pin-msg').textContent = S.viaMap ? `The stop can be up to ${MAX_MOVE} m from the place you marked. Go back and move the map closer.` : `The stop can be up to ${MAX_MOVE} m from where you are. Walk closer, if it's safe, and start again.`; $('pin-msg').hidden = false; return;
   }
   $('pin-msg').hidden = true;
   if (!pin) { const el = document.createElement('div'); el.className = 'pin';
@@ -366,17 +383,15 @@ function drawReview() {
 
 // ── send; if it fails the answers stay on this phone ──
 const DRAFT = 'obs-bus-unsent';
-const store = { get() { try { return JSON.parse(localStorage.getItem(DRAFT)); } catch { return null; } },
-  set(v) { try { localStorage.setItem(DRAFT, JSON.stringify(v)); return true; } catch { return false; } },
-  drop() { try { localStorage.removeItem(DRAFT); } catch { /* ignore */ } } };
+const store = Contribute.drafts(DRAFT);          // several can wait; each is sent or discarded on its own
 let sending = false;
 // the logged-in player (from the first screen), if any
 function who() {
-  const p = player.get();
+  const p = S.noNick ? null : player.get();
   return p ? { nick: p.nick, pin: p.pin } : { nick: null, pin: null };
 }
 function payload() {
-  const b = { here: S.here, place_type: S.missing ? 'missing' : S.viaMap ? 'map' : 'gps', located: S.viaMap ? 'map' : 'phone',
+  const b = { observed_at: S.seenAt || (S.seenAt = new Date().toISOString()), here: S.here, place_type: S.missing ? 'missing' : S.viaMap ? 'map' : 'gps', located: S.viaMap ? 'map' : 'phone',
     ...Object.fromEntries(QUESTIONS.filter(q => shown(q, S.a) && S.a[q.id] != null).map(q => [q.id, S.a[q.id]])),
     improve: $('improve').value.trim() || null, nick: who().nick, nick_pin: who().pin, photo: S.photo || null };
   if (S.missing) Object.assign(b, { lat: S.missing.lat, lng: S.missing.lng, moved_m: S.missing.moved, stop_name: $('m-name').value.trim(), towards: $('m-towards').value.trim() || null });
@@ -390,11 +405,11 @@ function payload() {
   return b;
 }
 const spam = Contribute.spamCheck($('ts-review'));
-async function postRating(body) {
-  const token = await spam.token();
+async function postRating(body, sc = spam) {
+  const token = await sc.token();
   if (token === null) { const e = new Error('spam check'); e.server = true; e.status = 403; throw e; }
   try { return await Contribute.post(`/${SURVEY}/reports`, { ...body, token, website: $('trap').value }); }
-  finally { spam.reset(); }
+  finally { sc.reset(); }
 }
 function points(body) {
   const got = [['Telling us about a stop', POINTS.rating]];
@@ -411,7 +426,7 @@ function thanks(body, id) {
     : "You weren't logged in, so these points aren't on the leaderboard. Next time, join as a contributor or log in on the first screen.";
   if (body.nick) player.set(body.nick, body.nick_pin);   // signed in for next time
   $('to-stop').href = 'stop/?id=' + encodeURIComponent(body.place_type === 'missing' ? 'new-' + id : body.stop_id);
-  show('thanks');
+  DONE = true; show('thanks');
 }
 async function send() {
   if (answered(S.a) < MIN_ANSWERS) return drawReview();
@@ -420,10 +435,11 @@ async function send() {
   sending = true; $('send-msg').hidden = true; updateNext(); $('next').textContent = 'Sending…';
   try {
     const r = await postRating(body);
-    store.drop(); sending = false; thanks(body, r.id);
+    store.drop(kept); sending = false; thanks(body, r.id);
   } catch (err) {
     sending = false; updateNext(); $('next').textContent = 'Try again';
-    const why = err.server && err.status === 400 ? (/^nick:/.test(err.message) ? `${err.message.replace(/^nick: /, '').replace(/^./, c => c.toUpperCase())}. Tap "Change" next to Points to log in again.` : `The server could not accept this (${err.message}).`)
+    if (err.server && err.status === 400 && /^nick:/.test(err.message)) S.noNick = true;
+    const why = err.server && err.status === 400 ? (/^nick:/.test(err.message) ? `${err.message.replace(/^nick: /, '').replace(/^./, c => c.toUpperCase())}. Press Try again to send it without a nickname, or tap "Change" next to Points to log in again.` : `The server could not accept this (${err.message}).`)
       : err.server && err.status === 403 ? 'The spam check did not finish. Please press Try again.'
       : err.server && err.status === 429 ? 'Too many sends from this connection just now. Please wait a minute.'
       : "We couldn't send this; the signal may be weak.";
@@ -431,20 +447,28 @@ async function send() {
     $('send-msg').hidden = false;
   }
 }
-// a rating that didn't go through last time: offer it on the start screen
-(() => {
-  const d = store.get(); if (!d || !d.body) return;
-  $('draft').hidden = false;
-  const stop = (d.rows || []).find(r => r[0] === 'Stop');
-  $('draft-text').textContent = `You have details${stop ? ' for ' + stop[1].split(' · ')[0] : ''} from ${new Date(d.at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })} that didn't send.${d.photoDropped ? ' Its photo was too large to keep.' : ''}`;
+// entries that didn't go through: offer the oldest on the start screen, with its own spam check (it must be visible)
+let draftSpam = null;
+function showDraft() {
+  const d = store.get(); $('draft').hidden = !d; if (!d) return;
+  draftSpam = draftSpam || Contribute.spamCheck($('ts-draft'));
+  $('draft-text').textContent = `You have details${(() => { const s = (d.rows || []).find(r => r[0] === 'Stop'); return s ? ' for ' + s[1].split(' · ')[0] : ''; })()} from ${new Date(d.at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })} that didn't send.${d.photoDropped ? ' Its photo was too large to keep.' : ''}`;
+  $('draft-send').hidden = false; $('draft-send').disabled = false; $('draft-send').textContent = 'Send it now'; $('draft-drop').textContent = 'Discard it'; $('draft-msg').hidden = true;
   $('draft-send').onclick = async () => {
     $('draft-send').disabled = true; $('draft-send').textContent = 'Sending…'; $('draft-msg').hidden = true;
-    try { const r = await postRating(d.body); store.drop(); thanks(d.body, r.id); }
-    catch (err) { $('draft-send').disabled = false; $('draft-send').textContent = 'Try again';
-      $('draft-msg').textContent = err.status === 400 ? `The server could not accept it (${err.message}). Discard it and start again.` : "Still couldn't send it. Your answers stay saved on this phone."; $('draft-msg').hidden = false; }
+    try { const r = await postRating(d.body, draftSpam); store.drop(d.id); $('draft').hidden = true; thanks(d.body, r.id); }
+    catch (err) {
+      $('draft-send').disabled = false; $('draft-send').textContent = 'Try again';
+      if (err.server && err.status === 400) {          // refused for good (too old, or no longer valid): don't offer it again
+        store.drop(d.id); $('draft-send').hidden = true; $('draft-drop').textContent = 'OK';
+        $('draft-msg').textContent = `The server could not accept it (${err.message}), so it has been removed from this phone. Please fill in the form again.`;
+      } else $('draft-msg').textContent = err.server && err.status === 403 ? 'The spam check did not finish. Please press Try again.' : "Still couldn't send it. Your answers stay saved on this phone.";
+      $('draft-msg').hidden = false;
+    }
   };
-  $('draft-drop').onclick = () => { store.drop(); $('draft').hidden = true; };
-})();
+  $('draft-drop').onclick = () => { store.drop(d.id); showDraft(); };
+}
+showDraft();
 $('again').onclick = () => { location.href = location.pathname; };
 
 // ── load stops, ratings (for "rated before" and stops residents added) and areas ──
@@ -453,11 +477,15 @@ const openPlay = { '#play': 'create', '#create': 'create', '#login': 'login' }[l
 history.replaceState({ s: 'start' }, '', location.search);
 drawPlay();
 if (openPlay && !player.get()) { setMode(openPlay); show('player'); }
-const [stops, ratings] = await Promise.all([loadStops().catch(() => []), loadRatings().catch(() => [])]);
-STOPS = stops.concat(addedStops(ratings));
-BY_ID = new Map(STOPS.map(s => [s.id, s]));
-RATED = byStop(ratings);
-if (stops.length) $('meta').textContent = `${RATED.size.toLocaleString('en-IN')} of ${STOPS.length.toLocaleString('en-IN')} stops with details so far`;
+async function loadAll() {
+  const [stops, ratings] = await Promise.all([loadStops().catch(() => []), loadRatings().catch(() => [])]);
+  if (!stops.length) return;
+  STOPS = stops.concat(addedStops(ratings));
+  BY_ID = new Map(STOPS.map(s => [s.id, s]));
+  RATED = byStop(ratings);
+}
+await loadAll();
+if (STOPS.length) $('meta').textContent = `${RATED.size.toLocaleString('en-IN')} of ${STOPS.length.toLocaleString('en-IN')} stops with details so far`;
 if (PRESET && BY_ID.get(PRESET)) {
   S.preset = true; S.stop = BY_ID.get(PRESET);
   document.querySelector('[data-step="start"] h1').textContent = 'Tell us about ' + S.stop.name;

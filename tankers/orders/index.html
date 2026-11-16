@@ -8,11 +8,11 @@
 <link rel="icon" href="../../favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../../vendor/fonts/lato.css">
 <link rel="stylesheet" href="../../vendor/fonts/outfit.css">
-<link rel="stylesheet" href="../../assets/contribute.css">
+<link rel="stylesheet" href="../../assets/contribute.css?v=20261116">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 <!-- visit counter: page, referring site, country; no cookies, no IP addresses (live-feed/visits.js) -->
 <script src="https://api.urbanobservatory.in/visits.js" defer></script>
-<script src="../../assets/config.js"></script>
+<script src="../../assets/config.js?v=20261116"></script>
 <style>
   .top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 24px; margin-bottom: 20px; }
   .top .lede { font-size: 16px; }
@@ -98,7 +98,7 @@
       <div class="chips" id="src" role="group" aria-label="Supplier"></div>
       <div class="map-box"><div id="map"></div></div>
       <p class="legend" id="legend"></p>
-      <p class="note">Wards are shaded by the number of orders. Dots are orders whose senders allowed a spot (exact, or moved up to about 500 m). Orders sent as "ward only" count in their ward's shading and summary but have no dot.</p>
+      <p class="note">Wards are shaded by the number of orders. Dots are orders whose senders allowed a spot: exact, moved about 500 m, or the middle of the area they searched (a ward or locality). Orders sent as "ward only" count in their ward's shading and summary but have no dot.</p>
     </div>
     <aside class="side">
       <h2>By ward</h2>
@@ -135,7 +135,7 @@
 </footer>
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-<script src="../../assets/common.js"></script>
+<script src="../../assets/common.js?v=20261116"></script>
 <script type="module" src="orders.js"></script>
 </body>
 </html>
