@@ -20,7 +20,7 @@ export const TOPICS = [
     { id: 'footpath', s: 'Footpath', q: 'Is there a footpath at the stop?', opts: [['yes', 'Yes', 1], ['no', 'No', 0]] },
     { id: 'blocked', s: 'Footpath blocked', q: 'Is the footpath blocked?', hint: 'By parked vehicles, vendors, debris', if: a => a.footpath === 'yes', opts: [['no', 'No', 1], ['partly', 'Partly', .5], ['badly', 'Badly', 0]] },
     { id: 'pass', s: 'Walk past', q: 'Can you walk or wheel past the stop without stepping onto the road?', if: a => a.footpath === 'yes', opts: [['yes', 'Yes', 1], ['no', 'No', 0]] },
-    { id: 'access', s: 'Access', q: 'Which of these are there?', hint: 'Tick all you see', multi: true, opts: [['ramp', 'A working ramp'], ['tactile', 'Tactile paving'], ['none', 'None of these']] },
+    { id: 'ramp', s: 'Ramp', q: 'Is there a working ramp?', opts: [['yes', 'Yes', 1], ['no', 'No', 0]] },   // was a tick-box with tactile paving (Teja, 17 Nov 2026: too much to expect)
     { id: 'crossing', s: 'Crossing', q: 'Is there a pedestrian crossing near the stop?', hint: 'A zebra, a signal, a foot overbridge or a subway', opts: [['yes', 'Yes', 1], ['no', 'No', 0]] },
     { id: 'crossing_safe', s: 'Safe to cross', q: 'Does it feel safe to cross?', if: a => a.crossing === 'yes', opts: [['yes', 'Yes', 1], ['somewhat', 'Somewhat', .5], ['no', 'No', 0]] },
   ] },
