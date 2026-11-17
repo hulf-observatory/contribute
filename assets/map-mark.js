@@ -14,8 +14,9 @@ function loadMapLib() {
   });
 }
 
-// host: an empty element; onChange({ lat, lng, ok }) after every move (ok = zoomed in enough, inside the HMDA area)
-export function mapMark(host, { onChange, label = 'Find the area' } = {}) {
+// host: an empty element; onChange({ lat, lng, ok }) after every move (ok = zoomed in enough, inside the HMDA area).
+// points: optional () => GeoJSON points (bus stops; property has = 1 for darker dots); tapping one puts the pin on it.
+export function mapMark(host, { onChange, label = 'Find the area', points = null } = {}) {
   const n = Math.random().toString(36).slice(2, 7);
   host.innerHTML = `<div class="field mm-field"><label class="field-label" for="mm-q-${n}">${label}</label>
       <div class="search"><input class="inp" type="search" id="mm-q-${n}" placeholder="An area, colony or road, for example Ameerpet"><div class="ps-results" id="mm-r-${n}" hidden></div></div></div>
@@ -45,6 +46,17 @@ export function mapMark(host, { onChange, label = 'Find the area' } = {}) {
         maxBounds: [77.6, 16.6, 79.5, 18.3], attributionControl: { compact: true } });
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
       map.on('moveend', report); map.on('load', report);
+      if (points) map.on('load', () => {
+        map.addSource('mm-pts', { type: 'geojson', data: points() });
+        map.addLayer({ id: 'mm-pts', type: 'circle', source: 'mm-pts', paint: {
+          'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 1.5, 15, 4.5, 18, 7],
+          'circle-color': ['case', ['==', ['get', 'has'], 1], '#111827', '#9CA3AF'],
+          'circle-stroke-color': '#fff', 'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 12, 0, 15, 1.2] } });
+        map.on('click', (e) => {                  // a generous tap area: the nearest dot within about 16 px
+          const p = e.point, f = map.queryRenderedFeatures([[p.x - 16, p.y - 16], [p.x + 16, p.y + 16]], { layers: ['mm-pts'] })[0];
+          if (f) map.easeTo({ center: f.geometry.coordinates, zoom: Math.max(map.getZoom(), MARK_ZOOM + 1), duration: 300 });
+        });
+      });
     },
     jump(lng, lat, zoom = 17) { if (map) map.jumpTo({ center: [lng, lat], zoom }); },
   };

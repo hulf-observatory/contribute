@@ -1,9 +1,9 @@
 // Tell us about a bus stop, at the stop (Teja, 16 Nov 2026): the phone's location lists the nearest stops (or a
 // missing one is added within 100 m of it), then the topic screens, optional photo and improvement, check and send.
 // Phones only; a laptop sees a QR code. Talks to contribute-api.
-import { mapMark } from '../assets/map-mark.js?v=20261116';
+import { mapMark } from '../assets/map-mark.js?v=20261117';
 import { SURVEY, TOPICS, QUESTIONS, MIN_ANSWERS, optLabel, shown, answered, POINTS, loadStops, loadRatings, addedStops,
-  byStop, metres, stopLabel, esc, player, checkPlayer, PLAYER_SAYS } from './questions.js';
+  byStop, latest, ANSWER_KEYS, metres, stopLabel, esc, player, checkPlayer, PLAYER_SAYS } from './questions.js';
 
 const C = window.CONTRIBUTE;
 const $ = (id) => document.getElementById(id);
@@ -53,6 +53,20 @@ function ready(s) {
   return true;
 }
 const TOPIC_STEPS = TOPICS.map(t => 't-' + t.id);
+// a stop that already has a profile (Teja, 17 Nov 2026): its latest answer to each question starts the form, so the
+// first person builds the profile and later ones change only what's different. Nothing changed = "still the same".
+const snap = (a) => JSON.stringify(ANSWER_KEYS.filter(k => a[k] != null).map(k => [k, a[k]]));
+function prefill() {
+  if (S.missing || !S.stop || S.prefillFor === S.stop.id) return;
+  S.prefillFor = S.stop.id;
+  const list = RATED.get(S.stop.id) || [];
+  if (!list.length) { S.base = null; return; }
+  const a = latest(list).answers;
+  S.a = Object.fromEntries(QUESTIONS.filter(q => a[q.id] != null).map(q => [q.id, structuredClone(a[q.id])]));
+  S.base = snap(S.a); S.baseId = list[0].id; S.baseN = list.length;
+  drawAnswers();
+}
+const unchanged = () => !!S.base && !S.missing && snap(S.a) === S.base && !S.photo && !$('improve').value.trim();
 var DONE = false, lastList = [];                 // DONE: sent, so Back can't offer Send again
 function show(s, push = true) {
   if (DONE && s !== 'thanks') s = 'thanks';
@@ -67,11 +81,17 @@ function show(s, push = true) {
   $('stopcard').hidden = !showCard;
   if (showCard) drawCard();
   if (s === 'photo') $('photo-hint').textContent = S.here === 'yes' ? 'Optional. One photo of the stop helps others see it.' : 'Optional. A photo you took of this stop.';
+  if (TOPIC_STEPS.includes(s)) {
+    prefill();
+    document.querySelector(`.step[data-step="${s}"] .hint`).textContent = S.base
+      ? `These are the latest answers for this stop, from ${S.baseN} contribution${S.baseN > 1 ? 's' : ''}. Change only what's different now.`
+      : "Tap the answers that fit. Skip any you don't know.";
+  }
   if (s === 'review') drawReview();
   if (s === 'missing') openMap();
   if (s === 'where') openWhereMap();
-  if (s === 'mark') { marker.open(); $('mark-hint').textContent = S.here === 'known' ? 'Move the map until the pin in the middle sits exactly on the bus stop, then press Next.'
-    : 'Move the map until the pin in the middle sits on the bus stop, then press Next. You still need to be at the stop.'; }
+  if (s === 'mark') { marker.open(); $('mark-hint').textContent = (S.here === 'known' ? 'Move the map until the pin in the middle sits exactly on the bus stop, then press Next.'
+    : 'Move the map until the pin in the middle sits on the bus stop, then press Next. You still need to be at the stop.') + ' The dots are bus stops (darker: someone has added details): tap one to put the pin on it.'; }
   if (s === 'start') drawPlay();
   if (s === 'player') { S.noNick = false; const p = player.get(); $('p-nick').value = p ? p.nick : $('p-nick').value; $('p-pin').value = ''; $('p-msg').hidden = true; playerReady(); }
   if (s === 't-facilities') document.querySelector('[data-step="t-facilities"] [data-few]').hidden = answered(S.a) >= MIN_ANSWERS;
@@ -85,7 +105,7 @@ function updateNext() {
   if (cur === 'review' && sending) return;
   const optional = { photo: !S.photo, improve: !$('improve').value.trim() };
   const topicEmpty = TOPIC_STEPS.includes(cur) && !TOPICS.find(t => 't-' + t.id === cur).qs.some(q => S.a[q.id] != null);
-  n.textContent = cur === 'review' ? 'Send' : (optional[cur] || topicEmpty) ? 'Skip' : 'Next';
+  n.textContent = cur === 'review' ? (unchanged() ? "Confirm it's still the same" : 'Send') : (optional[cur] || topicEmpty) ? 'Skip' : 'Next';
 }
 function go(d) {
   const l = steps(), i = l.indexOf(cur);
@@ -201,7 +221,9 @@ function fromPlace(lat, lng, acc) {
 }
 function gpsFailed(t) { $('gps-go').textContent = 'Try again'; $('gps-go').disabled = false; $('gps-msg').textContent = t; $('gps-msg').hidden = false; }
 // the phone's location failed: find the stop with the pin in the middle of a map (Teja, 16 Nov 2026)
-const marker = mapMark($('markbox'), { onChange: ({ lat, lng, ok }) => { S.markAt = ok ? { lat, lng } : null; $('mark-msg').hidden = true; updateNext(); } });
+const marker = mapMark($('markbox'), { onChange: ({ lat, lng, ok }) => { S.markAt = ok ? { lat, lng } : null; $('mark-msg').hidden = true; updateNext(); },
+  points: () => ({ type: 'FeatureCollection', features: STOPS.map(s => ({ type: 'Feature', properties: { has: RATED.has(s.id) ? 1 : 0 },
+    geometry: { type: 'Point', coordinates: [s.lng, s.lat] } })) }) });
 $('to-mark').onclick = (e) => { e.preventDefault(); S.viaMap = true; S.markAt = null; show('mark'); };
 // not there now, but knows the stop well: from memory, on the map (Teja, 16 Nov 2026); marked "memory" in the data
 $('from-memory').onclick = () => {
@@ -376,6 +398,9 @@ function drawReview() {
   lastRows = rows.map(([k, v]) => [k, v.replace(/<br>|<small>/g, ' · ').replace(/<[^>]+>/g, '')]);
   $('review').innerHTML = rows.map(([k, v, s]) => `<div><dt>${k}</dt><dd>${v}</dd>${s ? `<button type="button" data-go="${s}">Change</button>` : '<span></span>'}</div>`).join('');
   document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => show(b.dataset.go));
+  $('review-hint').textContent = !S.base || S.missing ? 'Tap "Change" to fix anything. Nothing has been saved yet.'
+    : unchanged() ? "You haven't changed anything from the stop's latest answers. Press the button to confirm it's still the same, or tap \"Change\" to fix something."
+    : 'You started from the stop\'s latest answers. Tap "Change" to fix anything. Nothing has been saved yet.';
   const few = answered(S.a) < MIN_ANSWERS;
   $('send-msg').hidden = !few;
   if (few) $('send-msg').textContent = `Answer at least ${MIN_ANSWERS} questions before sending (you have answered ${answered(S.a)}). Tap "Change" next to a topic.`;
@@ -393,7 +418,7 @@ function who() {
 function payload() {
   const b = { observed_at: S.seenAt || (S.seenAt = new Date().toISOString()), here: S.here, place_type: S.missing ? 'missing' : S.viaMap ? 'map' : 'gps', located: S.viaMap ? 'map' : 'phone',
     ...Object.fromEntries(QUESTIONS.filter(q => shown(q, S.a) && S.a[q.id] != null).map(q => [q.id, S.a[q.id]])),
-    improve: $('improve').value.trim() || null, nick: who().nick, nick_pin: who().pin, photo: S.photo || null };
+    improve: $('improve').value.trim() || null, prefilled: !!S.base && !S.missing, nick: who().nick, nick_pin: who().pin, photo: S.photo || null };
   if (S.missing) Object.assign(b, { lat: S.missing.lat, lng: S.missing.lng, moved_m: S.missing.moved, stop_name: $('m-name').value.trim(), towards: $('m-towards').value.trim() || null });
   else Object.assign(b, { stop_id: S.stop.id,    // the server takes the stop's place from TGSRTC's list, not from the phone
     dist_m: Math.round(metres(S.phone, S.stop)) }); // how far the phone was from it: the server checks you were at the stop
@@ -428,7 +453,31 @@ function thanks(body, id) {
   $('to-stop').href = 'stop/?id=' + encodeURIComponent(body.place_type === 'missing' ? 'new-' + id : body.stop_id);
   DONE = true; show('thanks');
 }
+// nothing changed: a "still the same" check on the latest contribution instead of a new one
+async function confirmSame() {
+  sending = true; $('send-msg').hidden = true; updateNext(); $('next').textContent = 'Sending…';
+  try {
+    const token = await spam.token();
+    if (token === null) throw Object.assign(new Error('spam check'), { server: true, status: 403 });
+    let r;
+    try { r = await Contribute.post(`/${SURVEY}/reports/${S.baseId}/feedback`, { kind: 'confirm', note: null, device: Contribute.device(),
+      nick: who().nick, nick_pin: who().pin, token, website: $('trap').value }); } finally { spam.reset(); }
+    sending = false;
+    $('pts').textContent = r.accepted ? '+' + POINTS.confirm : '+0';
+    $('pts-list').innerHTML = r.accepted ? `<li>Confirming the stop is still the same<b>+${POINTS.confirm}</b></li>` : '';
+    $('thanks-text').textContent = !r.accepted ? 'You had already confirmed this stop from this phone, so nothing new was added.'
+      : who().nick ? `Points go to ${who().nick} on the leaderboard.` : "You weren't logged in, so these points aren't on the leaderboard.";
+    $('to-stop').href = 'stop/?id=' + encodeURIComponent(S.stop.id);
+    DONE = true; show('thanks');
+  } catch (err) {
+    sending = false; updateNext(); $('next').textContent = 'Try again';
+    $('send-msg').textContent = err.status === 403 ? 'The spam check did not finish. Please press Try again.' : err.status === 429 ? 'Too many sends from this connection just now. Please wait a minute.'
+      : err.server ? `The server could not accept this (${err.message}).` : "We couldn't send this; the signal may be weak.";
+    $('send-msg').hidden = false;
+  }
+}
 async function send() {
+  if (unchanged()) return confirmSame();
   if (answered(S.a) < MIN_ANSWERS) return drawReview();
   const body = payload(), saved = { body, rows: lastRows, at: Date.now(), first: !(RATED.get(body.stop_id) || []).length };
   const kept = store.set(saved) || store.set({ ...saved, body: { ...body, photo: null }, photoDropped: !!body.photo });
