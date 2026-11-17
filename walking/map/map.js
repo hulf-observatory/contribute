@@ -2,7 +2,9 @@
 // of up to ~500 m; each side of a stretch and each junction where main roads meet has a profile built from the spots
 // and crossings linked to it. Spots on other streets are single dots. One topic at a time; tap for the profile.
 // Data: ../roads.json (stretches, built by contribute-api/tools/build_roads.py), /walking/profiles.json, reports.json.
-import { SURVEY, TOPICS, CROSS_TOPICS, VIEWS, CROSS_VIEWS, VIEW_COLORS, shown, optLabel, esc, loadReports } from '../questions.js?v=20261117c';
+// Map or list (17 Nov 2026): the list shows road sides, junctions and single spots, newest first; ?p=<profile> or
+// ?r=<row id> opens one on the map.
+import { SURVEY, TOPICS, CROSS_TOPICS, VIEWS, CROSS_VIEWS, VIEW_COLORS, shown, optLabel, real, esc, loadReports } from '../questions.js?v=20261117d';
 const C = window.CONTRIBUTE;
 const $ = (id) => document.getElementById(id);
 const NONE = '#A9AFB8', FAINT = '#E5E7EB';     // grey: main roads with no profile yet
@@ -51,7 +53,7 @@ function drawControls() {
     + `<span><i style="background:${NONE}"></i>No profile yet</span><span><b class="key-x"></b>Junction where main roads meet</span><span><b class="key-f"></b>Spot on another street</span>`;
 }
 function refresh() { map.getSource('sides')?.setData(sidesGeo()); map.getSource('jn')?.setData(junctionsGeo()); map.getSource('dots')?.setData(dotsGeo()); }
-$('chips').addEventListener('click', (e) => { const b = e.target.closest('.chip'); if (!b) return; view = ALLV.find(v => `${v.g}:${v.id}` === b.dataset.v); drawControls(); refresh(); });
+$('chips').addEventListener('click', (e) => { const b = e.target.closest('.chip'); if (!b) return; view = ALLV.find(v => `${v.g}:${v.id}` === b.dataset.v); drawControls(); refresh(); drawList(); });
 drawControls();
 
 // ── map ──
@@ -66,7 +68,7 @@ map.on('load', () => {
     layout: { 'line-join': 'round' }, paint: { 'line-color': ['get', 'col'], 'line-offset': off(s === 'l' ? -1 : 1),
       'line-width': ['interpolate', ['linear'], ['zoom'], 10, ['case', ['==', ['get', 'has'], 1], 2, 1], 16, ['case', ['==', ['get', 'has'], 1], 5, 2.5]],
       'line-opacity': ['case', ['==', ['get', 'old'], 1], 0.5, 1] } });
-  map.addLayer({ id: 'sel', type: 'line', source: 'sides', filter: ['==', ['get', 'id'], ''], paint: { 'line-color': '#111827', 'line-width': 10, 'line-opacity': .22,
+  map.addLayer({ id: 'sel', type: 'line', source: 'sides', filter: ['==', ['get', 'id'], selId], paint: { 'line-color': '#111827', 'line-width': 10, 'line-opacity': .22,
     'line-offset': ['case', ['==', ['get', 'side'], 'l'], -6, 6] } }, 'side-l');
   map.addSource('dots', { type: 'geojson', data: dotsGeo() });
   map.addLayer({ id: 'dots', type: 'circle', source: 'dots', paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 2, 16, 5.5], 'circle-color': ['get', 'col'],
@@ -94,12 +96,13 @@ function facts(kind, p) {
     return `<li><span>${esc(q.s)}</span><b>${esc(txt)}<small>${note}</small></b></li>`;
   }).join('');
 }
-function history(p) {
+function histList(p) {
   return `<p class="sec">${p.n} contribution${p.n > 1 ? 's' : ''}${p.checks ? `, ${p.checks} "still like this" check${p.checks > 1 ? 's' : ''}` : ''}</p>
     <ul class="hist">${p.items.map((h, i) => `<li><b>${h.nick ? esc(h.nick) : 'Someone'}</b> <em>${day(h.at)}</em>${i === p.items.length - 1 && p.n <= 20 ? '<span class="tag">Started the profile</span>' : h.prefilled ? '<span class="tag">Updated it</span>' : ''}${h.located === 'memory' ? '<span class="tag">From memory</span>' : ''}</li>`).join('')}</ul>`;
 }
+const ARR = '<svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>';
 const buttons = (p) => `<div class="pbtns"><button type="button" class="btn btn-primary btn-lg fbb" data-id="${esc(p.latest)}" data-k="confirm">Still like this</button>
-  <a class="btn btn-secondary btn-lg" href="../">Something changed? Update it when you're there</a>
+  <a class="btn btn-secondary btn-lg" href="../">Changed? Update it when you're there ${ARR}</a>
   <button type="button" class="linkbtn fbb" data-id="${esc(p.latest)}">Something looks wrong</button></div>`;
 function sideLabel(id) {
   const [sid, side] = id.split(':'), s = STRETCH.get(sid), c = s.c, a = c[0], b = c[c.length - 1];
@@ -109,38 +112,113 @@ function sideLabel(id) {
   return { name: s.name || 'Main road', dir, m: Math.round(s.m / 10) * 10, divided: s.sides.length === 1 };
 }
 function open(html) { $('panel').innerHTML = html; if (matchMedia('(max-width: 959px)').matches) $('panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+let selId = '';                                 // the chosen road side, also when the map draws later
+const sel = (id) => { selId = id; if (map.getLayer('sel')) map.setFilter('sel', ['==', ['get', 'id'], id]); };
 function showSide(id) {
-  map.setFilter('sel', ['==', ['get', 'id'], id]);
+  sel(id);
   const n = sideLabel(id), p = PROFILES[id];
   const head = `<p class="eyebrow">Footpath profile</p><h2>${esc(n.name)}</h2><p class="ctx">${n.dir[0].toUpperCase() + n.dir.slice(1)} side${n.divided ? ' of a divided road' : ''} · about ${n.m} m, junction to junction</p>`;
-  if (!p) return open(head + `<p class="empty">No one has described this side yet. Walking here? Be the first: your answers start its profile.</p><div class="pbtns"><a class="btn btn-primary btn-lg" href="../">Describe it</a></div>`);
-  open(head + (p.old ? '<p class="oldnote">Not seen recently: the latest answers are more than six months old.</p>' : '') + `<ul class="facts">${facts('spot', p)}</ul>${buttons(p)}${history(p)}`);
+  if (!p) return open(head + `<p class="empty">No one has described this side yet. Walking here? Your answers start its profile.</p><div class="pbtns"><a class="btn btn-primary btn-lg" href="../">Describe it ${ARR}</a></div>`);
+  open(head + (p.old ? '<p class="oldnote">Not seen recently: the latest answers are more than six months old.</p>' : '') + `<ul class="facts">${facts('spot', p)}</ul>${buttons(p)}${histList(p)}`);
 }
 function showJunction(id) {
-  map.setFilter('sel', ['==', ['get', 'id'], '']);
-  const p = PROFILES[id], head = `<p class="eyebrow">Crossing profile</p><h2>Junction</h2><p class="ctx">Where main roads meet: one profile for crossing here</p>`;
-  if (!p) return open(head + `<p class="empty">No one has described crossing here yet.</p><div class="pbtns"><a class="btn btn-primary btn-lg" href="../">Describe it</a></div>`);
-  open(head + (p.old ? '<p class="oldnote">Not seen recently: the latest answers are more than six months old.</p>' : '') + `<ul class="facts">${facts('crossing', p)}</ul>${buttons(p)}${history(p)}`);
+  sel('');
+  const p = PROFILES[id], head = `<p class="eyebrow">Crossing profile</p><h2>${esc(junctionName(id))}</h2><p class="ctx">Where main roads meet: one profile for crossing here</p>`;
+  if (!p) return open(head + `<p class="empty">No one has described crossing here yet.</p><div class="pbtns"><a class="btn btn-primary btn-lg" href="../">Describe it ${ARR}</a></div>`);
+  open(head + (p.old ? '<p class="oldnote">Not seen recently: the latest answers are more than six months old.</p>' : '') + `<ul class="facts">${facts('crossing', p)}</ul>${buttons(p)}${histList(p)}`);
 }
 function showSpot(rid) {
-  map.setFilter('sel', ['==', ['get', 'id'], '']);
+  sel('');
   const r = ROWS.find(x => x.id === rid); if (!r) return;
   const kind = r.item === 'crossing' ? 'crossing' : 'spot';
-  const items = QS(kind).filter(q => shown(q, r) && r[q.id] != null).map(q => `<li><span>${esc(q.s)}</span><b>${esc(q.multi ? r[q.id].map(v => optLabel(q, v)).join(', ') : optLabel(q, r[q.id]))}</b></li>`).join('');
+  const items = QS(kind).filter(q => shown(q, r) && real(r[q.id])).map(q => `<li><span>${esc(q.s)}</span><b>${esc(q.multi ? r[q.id].map(v => optLabel(q, v)).join(', ') : optLabel(q, r[q.id]))}</b></li>`).join('');
   open(`<p class="eyebrow">A single ${kind === 'crossing' ? 'crossing' : 'spot'}</p><h2>${kind === 'crossing' ? 'Crossing' : 'Footpath spot'} on another street</h2>
     <p class="ctx">${day(r.observed_at)}${r.nick ? ' · ' + esc(r.nick) : ''}${r.located === 'memory' ? ' · from memory' : ''}${r.confirmed ? ` · ${r.confirmed} said it's still like this` : ''}</p>
     ${r.photo ? `<a href="${esc(r.photo)}" target="_blank" rel="noopener"><img class="pphoto" src="${esc(r.photo)}" alt="Photo"></a>` : ''}<ul class="facts">${items}</ul>${r.note ? `<p>“${esc(r.note)}”</p>` : ''}
-    <p class="empty">Only main roads have profiles for now. This is kept in the data and the download.</p>
+    <p class="empty">Only main roads have profiles for now.</p>
     <div class="pbtns"><button type="button" class="btn btn-secondary btn-lg fbb" data-id="${esc(r.id)}" data-photo="${r.photo ? 1 : ''}">Give feedback</button></div>`);
 }
 
-// ── numbers ──
+// ── numbers, in one line (Teja, 17 Nov 2026); "checked" = someone else said it's still like this ──
 const keys = Object.keys(PROFILES), sideKeys = keys.filter(k => k.includes(':'));
 const km = sideKeys.reduce((a, k) => a + (STRETCH.get(k.split(':')[0])?.m || 0), 0) / 1000;
-const checked = ROWS.filter(r => r.confirmed > 0).length;
-$('stats').innerHTML = `<div><b>${sideKeys.length.toLocaleString('en-IN')}</b>road sides with a profile</div><div><b>${km.toFixed(1)} km</b>of main road described</div>`
-  + `<div><b>${(keys.length - sideKeys.length).toLocaleString('en-IN')}</b>junctions with a crossing profile</div><div><b>${loose.length.toLocaleString('en-IN')}</b>spots on other streets</div>`
-  + `<div><b>${checked} of ${ROWS.length}</b>checked by someone else</div>`;
+const checked = ROWS.filter(r => r.confirmed > 0).length, fmt = (n) => n.toLocaleString('en-IN');
+$('counts').innerHTML = [`${fmt(sideKeys.length)} road sides described (${km.toFixed(1)} km)`, `${fmt(keys.length - sideKeys.length)} junctions`,
+  `${fmt(loose.length)} spots on other streets`, `${fmt(checked)} of ${fmt(ROWS.length)} checked by someone else`,
+  '<a href="../../bus-stops/leaderboard/">Leaderboard</a>', '<a href="../download/">Download</a>'].join(' · ');
+
+// a junction's name: the main roads that meet there
+function junctionName(id) {
+  const j = JUNCTION.get(id); if (!j) return 'Junction';
+  const near = (c) => Math.abs(c[0] - j.c[0]) < 0.0008 && Math.abs(c[1] - j.c[1]) < 0.0008;
+  const names = [...new Set([...STRETCH.values()].filter(s => s.name && (near(s.c[0]) || near(s.c[s.c.length - 1]))).map(s => s.name))];
+  return names.length > 1 ? `${names.slice(0, 2).join(' and ')} junction` : names.length ? `Junction on ${names[0]}` : 'Junction';
+}
+
+// ── map or list: road sides, junctions and single spots, newest first; a row opens it on the map ──
+const colourOf = (g, a) => { const v = a && view.g === g ? view.of(a) : null; return v ? VIEW_COLORS[v] : NONE; };
+const factLine = (vs, a) => vs.map(v => v.of(a) && v.labels[v.of(a)]).filter(Boolean).slice(0, 3).join(' · ');
+const many = (n, w) => `${n} ${w}${n > 1 ? 's' : ''}`;
+function listItems() {
+  const out = [];
+  for (const [key, p] of Object.entries(PROFILES)) {
+    const a = flat(p);
+    if (key.includes(':')) {
+      if (!STRETCH.has(key.split(':')[0])) continue;
+      const n = sideLabel(key);
+      out.push({ href: '?p=' + encodeURIComponent(key), at: p.seen, name: n.name, col: colourOf('foot', a), facts: factLine(VIEWS, a),
+        meta: [`${n.dir[0].toUpperCase() + n.dir.slice(1)} side`, day(p.seen), many(p.n, 'contribution'), p.checks ? 'checked' : null, p.old ? 'not seen recently' : null] });
+    } else {
+      out.push({ href: '?p=' + encodeURIComponent(key), at: p.seen, name: junctionName(key), col: colourOf('x', a), facts: factLine(CROSS_VIEWS, a),
+        meta: ['Crossing at a junction', day(p.seen), many(p.n, 'contribution'), p.checks ? 'checked' : null, p.old ? 'not seen recently' : null] });
+    }
+  }
+  for (const r of loose) {
+    const x = r.item === 'crossing';
+    out.push({ href: '?r=' + encodeURIComponent(r.id), at: r.observed_at, name: x ? 'Crossing' : 'Footpath spot', col: colourOf(x ? 'x' : 'foot', r), facts: factLine(x ? CROSS_VIEWS : VIEWS, r),
+      meta: ['Another street', day(r.observed_at), r.nick ? esc(r.nick) : null, r.located === 'memory' ? 'from memory' : null, r.confirmed ? 'checked' : null] });
+  }
+  return out.sort((a, b) => String(b.at).slice(0, 16).localeCompare(String(a.at).slice(0, 16)));
+}
+let mode = 'map', shownN = 60;
+function drawList() {
+  if (mode !== 'list') return;
+  const items = listItems();
+  $('rows').innerHTML = items.slice(0, shownN).map(it => `<li><a href="${it.href}" data-open="${it.href}"><i class="dot" style="background:${it.col}"></i><span class="t"><b>${esc(it.name)}</b>
+    <span class="m">${it.meta.filter(Boolean).join(' · ')}</span>${it.facts ? `<span class="f">${esc(it.facts)}</span>` : ''}</span>${ARR}</a></li>`).join('')
+    || '<li class="empty">Nothing described yet.</li>';
+  $('more').hidden = items.length <= shownN;
+}
+$('more').onclick = () => { shownN += 60; drawList(); };
+function setMode(m) {
+  mode = m;
+  $('seg').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === m));
+  $('v-map').hidden = m !== 'map'; $('v-list').hidden = m !== 'list';
+  if (m === 'map') map.resize(); else drawList();
+  history.replaceState(null, '', location.pathname + location.search + (m === 'list' ? '#list' : ''));
+}
+$('seg').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) setMode(b.dataset.v); });
+// open one profile or spot on the map: ?p=<stretch:side or junction> or ?r=<row id> (the thank-you screen links here)
+function openItem(q) {
+  const P = new URLSearchParams(q), r = P.get('r') ? ROWS.find(x => x.id === P.get('r')) : null;
+  const key = P.get('p') || (r && (r.stretch && r.stretch_side ? `${r.stretch}:${r.stretch_side}` : r.junction)) || null;
+  let at = null, go = null;
+  if (key && key.includes(':') && STRETCH.has(key.split(':')[0])) { const c = STRETCH.get(key.split(':')[0]).c; at = c[Math.floor(c.length / 2)]; go = () => showSide(key); }
+  else if (key && JUNCTION.has(key)) { at = JUNCTION.get(key).c; go = () => showJunction(key); }
+  else if (r) { at = [r.lng, r.lat]; go = () => showSpot(r.id); }
+  if (!go) return;
+  map.jumpTo({ center: at, zoom: 16.5 }); go();   // the panel needs no map; the highlight follows when the map has drawn
+}
+$('rows').addEventListener('click', (e) => {
+  const a = e.target.closest('[data-open]'); if (!a || e.metaKey || e.ctrlKey || e.shiftKey) return;
+  e.preventDefault(); setMode('map');
+  const P = new URLSearchParams(location.search); P.delete('p'); P.delete('r');      // keep any other parameters
+  for (const [k, v] of new URLSearchParams(a.dataset.open)) P.set(k, v);
+  history.replaceState(null, '', location.pathname + '?' + P);
+  openItem(a.dataset.open); window.scrollTo({ top: 0 });
+});
+if (location.hash === '#list') setMode('list');
+if (location.search) openItem(location.search);
 
 // ── feedback (the same for profiles and single spots): "still like this" goes straight to the dialog's send ──
 let kind = null, target = null;

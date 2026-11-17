@@ -8,26 +8,25 @@
 <link rel="icon" href="../../favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../../vendor/fonts/lato.css">
 <link rel="stylesheet" href="../../vendor/fonts/outfit.css">
-<link rel="stylesheet" href="../../assets/contribute.css?v=20261117c">
+<link rel="stylesheet" href="../../assets/contribute.css?v=20261117d">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 <!-- visit counter: page, referring site, country; no cookies, no IP addresses (live-feed/visits.js) -->
 <script src="https://api.urbanobservatory.in/visits.js" defer></script>
-<script src="../../assets/config.js?v=20261117c"></script>
+<script src="../../assets/config.js?v=20261117d"></script>
 <style>
   .top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 24px; margin-bottom: 20px; }
-  .top .lede { font-size: 16px; }
-  .actions { display: flex; flex-wrap: wrap; gap: 10px; }
-  .cards { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 20px; }
+  .cards { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin: 20px 0 0; }
   .card { border: 1px solid var(--border); border-radius: var(--r-card); padding: 14px 16px; }
   .card .eyebrow { margin-bottom: 6px; }
   .card b { display: block; font: 700 26px/1.1 var(--font-ui); font-variant-numeric: tabular-nums; }
   .card span { color: var(--muted); font-size: 13px; }
-  .card .rows { margin: 4px 0 0; padding: 0; list-style: none; font-size: 15px; }
-  .card .rows li { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px dashed var(--border); }
-  .card .rows li b { font-size: 15px; display: inline; }
+  .card .rows-s { margin: 4px 0 0; padding: 0; list-style: none; font-size: 15px; }
+  .card .rows-s li { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px dashed var(--border); }
+  .card .rows-s li b { font-size: 15px; display: inline; }
   .chips { margin-bottom: 12px; }
   .layout { display: grid; gap: 24px; }
-  @media (min-width: 1024px) { .layout { grid-template-columns: minmax(0, 1fr) 380px; } }
+  .layout > div { min-width: 0; }               /* the scrolling chip row must not widen the page */
+  @media (min-width: 1024px) { .layout { grid-template-columns: minmax(0, 1fr) 380px; } .layout.list { grid-template-columns: minmax(0, 1fr); } }
   .map-box { position: relative; height: 60vh; min-height: 360px; max-height: 640px; border: 1px solid var(--border); border-radius: var(--r-card); overflow: hidden; }
   @media (max-width: 767px) { .map-box { height: 56vh; margin: 0 -24px; border-radius: 0; border-left: 0; border-right: 0; } }
   #map { position: absolute; inset: 0; }
@@ -47,11 +46,6 @@
   table.wards td.n, table.wards th.n { text-align: right; }
   table.wards tr { cursor: pointer; } table.wards tbody tr:hover { background: var(--band); }
   .note { font-size: 13px; color: var(--muted); margin: 12px 0 0; }
-  .list { margin-top: 32px; }
-  .list h2 { font: 700 19px/1.3 var(--font-ui); margin: 0 0 10px; }
-  .order { padding: 12px 0; border-top: 1px solid var(--border); display: grid; gap: 2px; }
-  .order b { font-size: 15px; } .order span { font-size: 14px; color: var(--muted); }
-  .order .fb { justify-self: start; background: none; border: 0; padding: 0; margin-top: 2px; font: 400 13px var(--font-ui); color: var(--muted); text-decoration: underline; text-decoration-color: var(--border-2); text-underline-offset: 3px; cursor: pointer; }
   .empty { padding: 20px 0; color: var(--text-2); }
   .loadmsg { color: var(--text-2); margin: 0 0 12px; }
   dialog { border: 1px solid var(--border); border-radius: var(--r-card); padding: 22px; max-width: 420px; width: calc(100% - 32px); box-shadow: var(--shadow-float); }
@@ -65,6 +59,32 @@
   .dlg-btns { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; }
   .fbmsg { font-size: 13px; color: var(--text-2); margin: 6px 0 0; }
   .ts:empty { display: none; }
+  /* map or list (Teja, 17 Nov 2026, as in the bus-stops results) */
+  .counts { font-size: 15px; color: var(--text-2); margin: 4px 0 0; }
+  .counts a { color: var(--ink); }
+  .seg { display: inline-flex; background: var(--surface-2); border-radius: var(--r-ctl); padding: 3px; margin-bottom: 12px; }
+  .seg button { border: 0; background: none; padding: 7px 14px; border-radius: 3px; font: 400 14px var(--font-ui); cursor: pointer; color: var(--ink); }
+  .seg button[aria-pressed="true"] { background: #fff; font-weight: 700; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+  .rows { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--border); max-width: 760px; }
+  .rows li { border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+  .rows .row { display: flex; gap: 12px; align-items: flex-start; width: 100%; padding: 12px 0 2px; border: 0; background: none; text-align: left; cursor: pointer; color: var(--ink); font: inherit; }
+  .rows .row:hover { background: var(--band); }
+  .rows .dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 7px; flex: none; }
+  .rows .t { flex: 1; min-width: 0; }
+  .rows b { display: block; font-size: 16px; }
+  .rows .m { display: block; font-size: 13.5px; color: var(--muted); }
+  .rows .f { display: block; font-size: 14px; color: var(--text-2); margin-top: 2px; }
+  .rows .arr { margin-top: 5px; color: var(--muted); }
+  .rows .fb { margin-left: 22px; background: none; border: 0; padding: 0; font: 400 13px var(--font-ui); color: var(--muted); text-decoration: underline; text-decoration-color: var(--border-2); text-underline-offset: 3px; cursor: pointer; }
+  .rows .empty { padding: 16px 0; border: 0; }
+  #more { margin-top: 14px; }
+  #more[hidden] { display: none; }
+  @media (max-width: 767px) {          /* one scrolling row of chips, so the map or list starts sooner */
+    .chips { flex-wrap: nowrap; overflow-x: auto; margin-left: -24px; margin-right: -24px; padding: 0 24px 2px; scrollbar-width: none; }
+    .chips::-webkit-scrollbar { display: none; }
+    .chip { flex: none; }
+    .top { margin-bottom: 16px; }
+  }
 </style>
 </head>
 <body>
@@ -80,37 +100,34 @@
   <div class="top">
     <div>
       <p class="eyebrow"><a href="../" style="color:inherit;text-decoration:none">Contribute · Water</a></p>
-      <h1>What people pay for water tankers</h1>
-      <p class="lede">Tanker orders residents told us about: price, size and how long it took to come. Each order is shown at the detail its sender chose.</p>
-    </div>
-    <div class="actions">
-      <a class="btn btn-primary btn-lg" href="../">Add a tanker order</a>
-      <a class="btn btn-secondary btn-lg" href="../download/">Download the data</a>
+      <h1>Tanker orders</h1>
+      <p class="counts" id="counts">Loading…</p>
+      <p class="counts" id="loadmsg" hidden></p>
     </div>
   </div>
 
-  <p class="loadmsg" id="loadmsg" hidden></p>
-  <div class="chips" id="period" role="group" aria-label="Period"></div>
-  <div class="cards" id="cards"></div>
-
-  <div class="layout">
+  <div class="layout" id="layout">
     <div>
+      <div class="seg" id="seg" role="group" aria-label="Show as"><button type="button" data-v="map" aria-pressed="true">Map</button><button type="button" data-v="list" aria-pressed="false">List</button></div>
+      <div class="chips" id="period" role="group" aria-label="Period"></div>
       <div class="chips" id="src" role="group" aria-label="Supplier"></div>
-      <div class="map-box"><div id="map"></div></div>
-      <p class="legend" id="legend"></p>
-      <p class="note">Wards are shaded by the number of orders. Dots are orders whose senders allowed a spot: exact, moved about 500 m, or the middle of the area they searched (a ward or locality). Orders sent as "ward only" count in their ward's shading and summary but have no dot.</p>
+      <div id="v-map">
+        <div class="map-box"><div id="map"></div></div>
+        <p class="legend" id="legend"></p>
+        <p class="note">Wards are shaded by the number of orders. Dots are orders shown as a spot; orders shared as "ward only" have no dot. Tap a ward or a dot for details.</p>
+        <div class="cards" id="cards"></div>
+      </div>
+      <div id="v-list" hidden>
+        <ul class="rows" id="rows"></ul>
+        <button type="button" class="btn btn-secondary btn-lg" id="more" hidden>Show more</button>
+      </div>
     </div>
-    <aside class="side">
+    <aside class="side" id="side">
       <h2>By ward</h2>
-      <p class="sub">Typical (middle) private price for a 5,000 L tanker, and how long orders took to come. Wards with fewer than 3 orders show no price.</p>
+      <p class="sub">Typical private price for a 5,000 L tanker, from 3 orders, and the typical wait.</p>
       <table class="wards"><thead><tr><th>Ward</th><th class="n">Orders</th><th class="n">5,000 L</th><th class="n">Wait</th></tr></thead><tbody id="wards"></tbody></table>
     </aside>
   </div>
-
-  <section class="list">
-    <h2>Latest orders</h2>
-    <div id="orders"></div>
-  </section>
 </main>
 
 <dialog id="dlg">
@@ -135,7 +152,7 @@
 </footer>
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-<script src="../../assets/common.js?v=20261117c"></script>
-<script type="module" src="orders.js"></script>
+<script src="../../assets/common.js?v=20261117d"></script>
+<script type="module" src="orders.js?v=20261117d"></script>
 </body>
 </html>

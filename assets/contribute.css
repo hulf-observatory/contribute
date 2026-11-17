@@ -117,7 +117,7 @@ h1 { font: 700 30px/1.2 var(--font-ui); letter-spacing: -.005em; margin: 0 0 10p
 .memory p { margin: 0 0 12px; font-size: 15px; line-height: 1.5; }
 .memory .row-btns { margin: 0; }
 /* review tap areas (16 Nov 2026): "Change" links and "Remove" get a 44 px target without changing the layout */
-.steps .review button, .steps .spotlist button { min-height: 44px; padding: 12px 10px; margin: -12px -10px; }
+.steps .review button, .steps .spotlist button { min-height: 44px; padding: 12px 10px; margin: -12px 0 -12px -10px; }   /* no right overhang: it scrolled the screen sideways */
 /* map dots: a bigger invisible area to grab */
 .pin::before, .mpin::before { content: ''; position: absolute; inset: -14px; border-radius: 50%; }
 .ts-draft { margin: 10px 0 0; }

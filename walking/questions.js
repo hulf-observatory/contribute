@@ -21,9 +21,9 @@ export const sideWord = (s) => s.sideWord || (s.how === 'phone' ? sideFromRoad(s
 // ── questions, one screen per topic; `if` hides a follow-up until its first question is answered ──
 const yesFoot = a => a.footpath === 'yes', noFoot = a => a.footpath === 'no';
 export const TOPICS = [
-  { id: 'footpath', title: 'The footpath', qs: [
+  { id: 'footpath', title: 'The footpath', short: 'Footpath', qs: [
     { id: 'footpath', s: 'Footpath', q: 'Is there a footpath on your side of the road?', opts: [['yes', 'Yes'], ['no', 'No']] },
-    { id: 'other_side', s: 'Other side', q: 'Is there one on the other side?', if: noFoot, opts: [['yes', 'Yes'], ['no', 'No'], ['dk', 'Not sure']] },
+    { id: 'other_side', s: 'Other side', q: 'Is there one on the other side?', if: noFoot, opts: [['yes', 'Yes'], ['no', 'No']] },
     { id: 'walk_where', s: 'People walk', q: 'Where do people walk?', hint: 'Tick all that fit', multi: true, if: noFoot,
       opts: [['road', 'On the road'], ['edge', 'On a dirt or gravel edge'], ['parked', 'Between parked vehicles'], ['cross', 'They cross to the other side']] },
     { id: 'walkable', s: 'Easy to walk', q: 'Is it easy to walk on?', if: yesFoot, opts: [['easy', 'Easy'], ['somewhat', 'Somewhat'], ['hard', 'Hard']] },
@@ -34,17 +34,17 @@ export const TOPICS = [
     { id: 'damage', s: 'Damage', q: 'What kind of damage?', hint: 'Tick all you see', multi: true, if: a => yesFoot(a) && ['some', 'badly'].includes(a.damaged),
       opts: [['slabs', 'Broken or loose slabs'], ['drain', 'Open drain or manhole'], ['holes', 'Holes or dug up'], ['uneven', 'Steps or uneven height'], ['other', 'Something else']] },
   ] },
-  { id: 'comfort', title: 'Shade, access and safety', qs: [
+  { id: 'comfort', title: 'Shade, access and safety', short: 'Shade and safety', qs: [
     { id: 'shade', s: 'Shade', q: 'Is there shade?', hint: 'From trees or buildings', opts: [['most', 'Most of it'], ['some', 'Some'], ['none', 'None']] },
     { id: 'access', s: 'Wheelchair or pram', q: 'Could someone use it with a wheelchair or pram?', if: yesFoot, opts: [['yes', 'Yes'], ['partly', 'Partly'], ['no', 'No']] },
-    { id: 'lights', s: 'Street lights', q: 'Are there street lights?', opts: [['working', 'Yes, working'], ['broken', 'Yes, not working'], ['none', 'No lights'], ['dk', "Don't know"]] },
+    { id: 'lights', s: 'Street lights', q: 'Are there street lights?', opts: [['working', 'Yes, working'], ['broken', 'Yes, not working'], ['none', 'No lights']] },
     { id: 'safe_day', s: 'Safe by day', q: 'Does it feel safe to walk here by day?', opts: [['safe', 'Safe'], ['somewhat', 'Somewhat'], ['unsafe', 'Unsafe']] },
-    { id: 'safe_night', s: 'Safe after dark', q: 'And after dark?', opts: [['safe', 'Safe'], ['somewhat', 'Somewhat'], ['unsafe', 'Unsafe'], ['dk', "Haven't been after dark"]] },
+    { id: 'safe_night', s: 'Safe after dark', q: 'Does it feel safe to walk here after dark?', opts: [['safe', 'Safe'], ['somewhat', 'Somewhat'], ['unsafe', 'Unsafe'], ['dk', "Haven't been here after dark"]] },
   ] },
 ];
 // ── crossings (Teja, 16 Nov 2026): a crossing on its own, or added during a walk ──
 export const CROSS_TOPICS = [
-  { id: 'xing', title: 'The crossing', qs: [
+  { id: 'xing', title: 'The crossing', short: 'Crossing', qs: [
     { id: 'x_where', s: 'Where', q: 'Where is the crossing?', opts: [['junction', 'At a junction'], ['between', 'Between junctions']] },
     { id: 'x_marked', s: 'Marked', q: 'Is the crossing marked?', opts: [['zebra', 'Zebra stripes'], ['faded', 'Faded'], ['none', 'Not marked']] },
     { id: 'x_signal', s: 'Signal', q: 'Is there a signal for people walking?', opts: [['working', 'Working'], ['broken', 'Not working'], ['none', 'No']] },
@@ -53,24 +53,30 @@ export const CROSS_TOPICS = [
     { id: 'x_divider', s: 'Divider', q: 'Is there a divider in the middle of the road?', opts: [['yes', 'Yes'], ['no', 'No']] },
     { id: 'x_gap', s: 'Gap in divider', q: 'Is there a gap in it to walk through?', if: a => a.x_divider === 'yes', opts: [['level', 'Yes, level'], ['climb', 'Yes, but you have to climb'], ['none', 'No gap']] },
   ] },
-  { id: 'xwait', title: 'Waiting, light and safety', qs: [
+  { id: 'xwait', title: 'Waiting, light and safety', short: 'Waiting and safety', qs: [
     { id: 'x_wait', s: 'Waiting space', q: 'Is there space to wait safely, at the kerb or in the middle?', opts: [['yes', 'Yes'], ['cramped', 'Cramped'], ['no', 'No']] },
-    { id: 'x_lit', s: 'Lit at night', q: 'Is it lit at night?', opts: [['yes', 'Yes'], ['poor', 'Poorly'], ['no', 'No'], ['dk', "Don't know"]] },
+    { id: 'x_lit', s: 'Lit at night', q: 'Is it lit at night?', opts: [['yes', 'Yes'], ['poor', 'Poorly'], ['no', 'No']] },
     { id: 'x_kerb', s: 'Wheelchair or pram', q: 'Is it easy to get on and off the footpath with a wheelchair or pram?', opts: [['yes', 'Yes'], ['partly', 'Partly'], ['no', 'No']] },
     { id: 'x_fob', s: 'Bridge or subway', q: 'Is there a foot over bridge or subway nearby?', opts: [['used', 'Yes, people use it'], ['unused', "Yes, but people don't use it"], ['no', 'No']] },
     { id: 'x_safe', s: 'Feels', q: 'Does it feel safe to cross?', opts: [['safe', 'Safe'], ['somewhat', 'Somewhat'], ['unsafe', 'Unsafe']] },
   ] },
 ];
-export const QUESTIONS = TOPICS.flatMap(t => t.qs).concat(CROSS_TOPICS.flatMap(t => t.qs));
+// every one-answer question ends with "Don't know" (Teja, 17 Nov 2026: instead of skipping); it never counts as an
+// answer: not for the one-answer minimum, not in profiles, not in map colours
+for (const t of [...TOPICS, ...CROSS_TOPICS]) for (const q of t.qs) if (!q.multi && !q.opts.some(o => o[0] === 'dk')) q.opts.push(['dk', "Don't know"]);
+export const QUESTIONS = [...TOPICS, ...CROSS_TOPICS].flatMap(t => t.qs.map(q => Object.assign(q, { topic: t.id, topicShort: t.short })));
 export const topicsFor = (s) => s && s.kind === 'crossing' ? CROSS_TOPICS : TOPICS;
 export const shown = (q, a) => !q.if || q.if(a);
+export const real = (v) => v != null && v !== 'dk' && !(Array.isArray(v) && !v.length);
+// real answers (not "Don't know") among the questions shown for this spot or crossing; the server wants at least one
+export const nAnswered = (kind, a) => topicsFor({ kind }).flatMap(t => t.qs).filter(q => shown(q, a) && real(a[q.id])).length;
 export const optLabel = (q, v) => (q.opts.find(o => o[0] === v) || [, v])[1];
 export const POINTS = { spot: 10, crossing: 10, photo: 5, confirm: 2, flag: 2 };
 
 // ── map: one topic at a time, same colours as the bus stop map ──
 export const VIEW_COLORS = { good: '#2166AC', mid: '#EF8A62', bad: '#B2182B' };
 export const VIEWS = [
-  { id: 'footpath', label: 'Footpath', of: a => a.footpath === 'no' ? 'bad' : a.footpath === 'yes' ? (a.blocked && a.blocked !== 'no') || (a.damaged && a.damaged !== 'no') ? 'mid' : 'good' : null,
+  { id: 'footpath', label: 'Footpath', of: a => a.footpath === 'no' ? 'bad' : a.footpath === 'yes' ? ['partly', 'fully'].includes(a.blocked) || ['some', 'badly'].includes(a.damaged) ? 'mid' : 'good' : null,
     labels: { good: 'Clear footpath', mid: 'Blocked or damaged', bad: 'No footpath' } },
   { id: 'walkable', label: 'Easy to walk', of: a => ({ easy: 'good', somewhat: 'mid', hard: 'bad' })[a.walkable] || (a.footpath === 'no' ? 'bad' : null),
     labels: { good: 'Easy', mid: 'Somewhat', bad: 'Hard or no footpath' } },

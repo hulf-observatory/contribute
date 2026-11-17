@@ -9,63 +9,55 @@
 <link rel="stylesheet" href="../../vendor/fonts/lato.css">
 <link rel="stylesheet" href="../../vendor/fonts/outfit.css">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
-<link rel="stylesheet" href="../../assets/contribute.css?v=20261117c">
+<link rel="stylesheet" href="../../assets/contribute.css?v=20261117d">
 <!-- visit counter: page, referring site, country; no cookies, no IP addresses (live-feed/visits.js) -->
 <script src="https://api.urbanobservatory.in/visits.js" defer></script>
-<script src="../../assets/config.js?v=20261117c"></script>
+<script src="../../assets/config.js?v=20261117d"></script>
 <style>
-  .top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 32px; padding-bottom: 24px; }
-  .top-btns { display: flex; flex-wrap: wrap; gap: 10px; }
-  .ctl { display: grid; gap: 12px; margin-bottom: 20px; }
-  .ctl-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-  .ctl-label { font: 900 11px/1 var(--font-ui); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); min-width: 52px; }
-  /* segmented toggle (house) */
-  .seg { display: inline-flex; background: var(--surface-2); border-radius: var(--r-ctl); padding: 4px; gap: 2px; }
-  .seg button { border: 1px solid transparent; background: none; border-radius: 3px; padding: 7px 16px; font: 700 14px/1 var(--font-ui); color: var(--text-2); cursor: pointer; transition: background .12s; }
-  .seg button[aria-pressed="true"] { background: #fff; border-color: var(--border); color: var(--ink); }
+  .top { margin-bottom: 20px; }
+  .counts { font-size: 15px; color: var(--text-2); margin: 4px 0 0; }
+  .counts a { color: var(--ink); }
+  .ctl { display: grid; gap: 12px; margin-bottom: 16px; }
+  .ctl > * { min-width: 0; }                     /* the scrolling chip row must not widen the page */
+  /* map or list (Teja, 17 Nov 2026) */
+  .seg { display: inline-flex; justify-self: start; background: var(--surface-2); border-radius: var(--r-ctl); padding: 3px; }
+  .seg button { border: 0; background: none; padding: 7px 14px; border-radius: 3px; font: 400 14px var(--font-ui); cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: #fff; font-weight: 700; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
 
-  .fig { border-top: 1px solid var(--border); }
-  .fig-title { font: 700 18px/1.35 var(--font-ui); margin: 16px 0 2px; }
+  .fig-title { font: 700 17px/1.35 var(--font-ui); margin: 0 0 2px; }
   .fig-sub { font-size: 13px; color: var(--muted); margin: 0 0 14px; }
   .fig-foot { border-top: 1px solid var(--border); margin-top: 16px; padding-top: 8px; font-size: 11.5px; color: var(--muted); }
-  .key { display: flex; align-items: center; gap: 8px 16px; flex-wrap: wrap; font-size: 13px; color: var(--text-2); margin-bottom: 12px; }
+  .key { display: flex; align-items: center; gap: 6px 14px; flex-wrap: wrap; font-size: 13px; color: var(--text-2); margin: 12px 0 0; }
   .key-item { display: inline-flex; align-items: center; gap: 6px; }
   .dot { display: inline-block; border-radius: 50%; border: 1px solid rgba(18,63,112,.5); flex: none; vertical-align: -1px; }
 
   .view[hidden] { display: none; }
 
-  /* list view: a table on wide screens, cards on phones */
-  .tbl { width: 100%; border-collapse: collapse; font-size: 15px; }
-  .tbl th { text-align: left; font: 900 11px/1.3 var(--font-ui); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); padding: 10px 12px; border-bottom: 1px solid var(--border-2); white-space: nowrap; }
-  .tbl td { padding: 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
-  .tbl tr.row { cursor: pointer; }
-  .tbl tr.row:hover td, .tbl tr.row.on td { background: var(--band); }
-  .tbl .when { white-space: nowrap; font-weight: 700; }
-  .tbl .when small, .tbl .area small { display: block; font-weight: 400; color: var(--muted); font-size: 13px; }
-  .tbl .depth { white-space: nowrap; }
-  .tbl .extra { color: var(--muted); font-size: 13px; white-space: nowrap; }
-  .tbl tr.detail td { background: var(--band); padding: 4px 12px 16px; }
-  .tbl tr.detail[hidden] { display: none; }
-  .more { display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); gap: 16px; font-size: 14px; color: var(--text-2); }
-  .more img, .more .ph { width: 100%; max-height: 240px; object-fit: cover; border-radius: var(--r-card); border: 1px solid var(--border); background: var(--surface-2); }
-  .more .ph { height: 140px; display: grid; place-items: center; color: var(--muted); font-size: 13px; text-align: center; padding: 0 12px; }
-  .more p { margin: 0 0 8px; overflow-wrap: anywhere; }
-  .more .meta { color: var(--muted); font-size: 13px; }
-  .more:not(:has(.ph, img)) { grid-template-columns: 1fr; }
-  .cards { display: none; }
-  @media (max-width: 767px) {
-    .tbl { display: none; }
-    .cards { display: grid; gap: 10px; }
-    .card { border: 1px solid var(--border); border-radius: var(--r-card); background: #fff; }
-    .card-btn { width: 100%; display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; text-align: left; background: none; border: 0; padding: 14px 16px; cursor: pointer; }
-    .card-when { font-weight: 700; }
-    .card-area { color: var(--text-2); font-size: 14px; grid-column: 1 / -1; }
-    .card-depth { font-size: 14px; grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; }
-    .card-extra { font-size: 12px; color: var(--muted); }
-    .card .more { grid-template-columns: 1fr; padding: 0 16px 16px; }
-    .card .more[hidden] { display: none; }
-  }
   .empty { padding: 24px 0; color: var(--muted); }
+  /* the list: newest first; a row opens its details below it */
+  .rows { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--border); max-width: 760px; }
+  .rows > li { border-bottom: 1px solid var(--border); }
+  .row-btn { display: flex; gap: 12px; align-items: flex-start; width: 100%; padding: 12px 0; border: 0; background: none; text-align: left; cursor: pointer; color: var(--ink); font: inherit; }
+  .row-btn:hover, .row-btn[aria-expanded="true"] { background: var(--band); }
+  .row-btn .dot { margin-top: 6px; }
+  .row-btn .t { flex: 1; min-width: 0; }
+  .row-btn b { display: block; font-size: 16px; }
+  .row-btn .m { display: block; font-size: 13.5px; color: var(--muted); }
+  .row-btn .f { display: block; font-size: 14px; color: var(--text-2); margin-top: 2px; }
+  .row-btn .arr { margin-top: 5px; color: var(--muted); }
+  .rows .more { padding: 0 0 16px; }
+  .rows .more[hidden] { display: none; }
+  #more-btn { margin-top: 14px; }
+  @media (max-width: 767px) {
+    .rows .more { grid-template-columns: 1fr; }
+    .chips { flex-wrap: nowrap; overflow-x: auto; margin-left: -24px; margin-right: -24px; padding: 0 24px 2px; scrollbar-width: none; }   /* one scrolling row */
+    .chips::-webkit-scrollbar { display: none; }
+    .chip { flex: none; }
+    .map-wrap { height: 58vh; min-height: 320px; margin: 0 -24px; border-radius: 0; border-left: 0; border-right: 0; }
+    .top { margin-bottom: 16px; }
+    .fig-sub { display: none; }
+    .fig-title { margin-bottom: 12px; }
+  }
 
   /* map view */
   .map-wrap { position: relative; height: 60vh; min-height: 380px; max-height: 640px; border: 1px solid var(--border); border-radius: var(--r-card); overflow: hidden; }
@@ -125,34 +117,30 @@
 
 <main class="wrap">
   <div class="top">
-    <div>
-      <p class="eyebrow">Community data · Flooding</p>
-      <h1>Flood reports</h1>
-      <p class="lede">Where people have reported water on the roads, and how deep it was.</p>
-      <p class="check-line" id="check-line" hidden></p>
-    </div>
-    <div class="top-btns"><a class="btn btn-primary" href="../">Report flooding <span class="arr">→</span></a><a class="btn btn-secondary" href="../download/">Download the data</a></div>
+    <p class="eyebrow"><a href="../" style="color:inherit;text-decoration:none">Contribute · Flooding</a></p>
+    <h1>Flood reports</h1>
+    <p class="counts" id="counts">Loading…</p>
+    <p class="check-line" id="check-line" hidden></p>
   </div>
 
   <div class="ctl">
-    <div class="ctl-row"><span class="ctl-label">View</span>
-      <div class="seg" role="group" aria-label="View"><button type="button" data-v="list" aria-pressed="true">List</button><button type="button" data-v="map" aria-pressed="false">Map</button></div></div>
-    <div class="ctl-row"><span class="ctl-label">Period</span><div class="chips" id="period"></div></div>
+    <div class="seg" id="seg" role="group" aria-label="Show as"><button type="button" data-v="map" aria-pressed="true">Map</button><button type="button" data-v="list" aria-pressed="false">List</button></div>
+    <div class="chips" id="period" role="group" aria-label="Period"></div>
   </div>
 
   <section class="fig">
     <h2 class="fig-title" id="fig-title"></h2>
     <p class="fig-sub" id="fig-sub"></p>
 
-    <div class="view" id="v-list">
-      <table class="tbl"><thead><tr><th>When</th><th>Area</th><th>Depth</th><th>Water</th><th></th></tr></thead><tbody id="tbody"></tbody></table>
-      <div class="cards" id="cards"></div>
+    <div class="view" id="v-list" hidden>
+      <ul class="rows" id="rows"></ul>
+      <button type="button" class="btn btn-secondary btn-lg" id="more-btn" hidden>Show more</button>
     </div>
 
-    <div class="view" id="v-map" hidden>
-      <div class="key" id="key"></div>
+    <div class="view" id="v-map">
       <div class="map-wrap"><div id="map"></div>
         <div class="float" id="float" hidden><button type="button" class="x" aria-label="Close" id="float-x">×</button><div id="float-body"></div></div></div>
+      <div class="key" id="key"></div>
       <div class="days"><div class="days-label">Reports per day</div><svg id="days" role="img" aria-label="Reports per day"></svg></div>
     </div>
 
@@ -189,10 +177,11 @@
 </footer>
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-<script src="../../assets/common.js?v=20261117c"></script>
+<script src="../../assets/common.js?v=20261117d"></script>
 <script>
 const API = window.CONTRIBUTE.API;
 const $ = (id) => document.getElementById(id);
+const ARR = '<svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>';
 
 const DEPTH = {
   30:  { label: 'Half the tyre or less', color: '#E4EDF6', r: 4 },
@@ -262,7 +251,7 @@ $('fb-form').addEventListener('submit', async (e) => {
 });
 const dot = (cm, size = 12) => `<i class="dot" style="width:${size}px;height:${size}px;background:${(DEPTH[cm] || {}).color || '#B8BDC6'}"></i>`;
 
-let all = [], shown = [], outside = 0, view = 'list', period = 'all', map = null, openId = null;
+let all = [], shown = [], outside = 0, view = 'map', period = 'all', map = null, openId = null, shownN = 60;
 const TODAY = new Date();
 const PERIODS = [
   { id: '7',   label: 'Last 7 days',  test: (t) => TODAY - t <= 7 * 864e5 },
@@ -277,21 +266,26 @@ fetch(`${API}/flood/reports.json`, { cache: 'no-cache' }).then(r => { if (!r.ok)
   drawPeriods(); apply();
   drawCheck();
 }).catch(() => {
+  $('counts').textContent = '';
   $('fig-title').textContent = "The reports couldn't be loaded just now";
   $('fig-sub').textContent = 'Please try again in a little while.';
 });
+// one line of counts (Teja, 17 Nov 2026); "confirmed" = someone else said "I saw this too"
 function drawCheck() {
-  const ok = all.filter(f => f.properties.confirmed > 0).length;         // someone else said "I saw this too"
-  $('check-line').innerHTML = `<b>${ok} of ${all.length}</b> reports confirmed by someone else. Saw one of these too? Open it and tap <b>Give feedback</b> → <b>I saw this too</b>.`;
+  const ok = all.filter(f => f.properties.confirmed > 0).length;
+  $('counts').innerHTML = [`${all.length} report${all.length === 1 ? '' : 's'}`, `${ok} confirmed by someone else`,
+    `<a href="../">Report flooding ${ARR}</a>`, `<a href="../download/">Download ${ARR}</a>`].join(' · ');
+  $('check-line').innerHTML = 'Saw one of these too? Open it and tap <b>Give feedback</b>, then <b>I saw this too</b>.';
   $('check-line').hidden = !all.length;
 }
 
-document.querySelectorAll('.seg button').forEach(b => b.onclick = () => setView(b.dataset.v));
+$('seg').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) setView(b.dataset.v); });
 function setView(v) {
   view = v;
-  document.querySelectorAll('.seg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === v));
+  $('seg').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === v));
   $('v-list').hidden = v !== 'list'; $('v-map').hidden = v !== 'map';
   if (v === 'map') { if (!map) initMap(); else { map.resize(); fit(); } drawDays(); }
+  history.replaceState(null, '', location.pathname + location.search + (v === 'list' ? '#list' : ''));
 }
 
 function drawPeriods() {
@@ -327,45 +321,44 @@ const whenOf = (p) => [fmt(p.observed_at, { day: 'numeric', month: 'short', year
 const areaOf = (p) => p.ward ? [p.ward, p.zone ? p.zone + ' zone' : ''] : [p.place || 'Outside the corporation wards', ''];
 const depthOf = (p) => p.depth_exact ? `About ${p.depth_cm >= 100 ? (p.depth_cm / 100).toFixed(2).replace(/0$/, '') + ' m' : p.depth_cm + ' cm'}` : (DEPTH[p.depth_key] || {}).label;
 const HOW = { gps: (p) => `Phone location${p.accuracy_m != null ? `, within about ${p.accuracy_m} m` : ''}`, search: () => 'Place searched by name', map: () => 'Marked on a map', 'legacy-pin': () => 'Placed from social media reports' };
-const waterOf = (p) => `${FLOW[p.flow] || esc(p.flow)}, ${[].concat(p.quality).map(q => QUAL[q] || esc(q)).join(', ')}`;
+// "don't know" (flow dk, look cant_say) isn't an answer: left out of the summary
+const waterOf = (p) => { const f = p.flow === 'dk' ? '' : FLOW[p.flow] || esc(p.flow || ''), q = [].concat(p.quality || []).filter(x => x && x !== 'cant_say').map(x => QUAL[x] || esc(x)).join(', ');
+  return [f, q].filter(Boolean).join(', '); };
 const extraOf = (p) => [p.located === 'social' ? 'From social media' : '', p.photo ? 'Photo' : '', p.note ? 'Note' : '', p.confirmed ? `✓ ${p.confirmed}` : ''].filter(Boolean).join(' · ');
+// a row: depth colour, the area, when and where, depth and water; tap to open its details (photo, note, feedback)
 function drawList() {
-  if (!shown.length) { $('tbody').innerHTML = `<tr><td colspan="5" class="empty">No reports in this period. Choose a longer period.</td></tr>`; $('cards').innerHTML = '<p class="empty">No reports in this period. Choose a longer period.</p>'; return; }
-  $('tbody').innerHTML = shown.map(f => { const p = f.properties, [d, t] = whenOf(p), [a, z] = areaOf(p);
-    return `<tr class="row" data-id="${p.id}" tabindex="0" aria-expanded="false"><td class="when">${d}<small>${t}</small></td><td class="area">${esc(a)}<small>${esc(z)}</small></td>
-      <td class="depth">${dot(p.depth_key)} ${esc(depthOf(p))}</td><td>${waterOf(p)}</td><td class="extra">${extraOf(p)}</td></tr>
-      <tr class="detail" id="d-${p.id}" hidden><td colspan="5"></td></tr>`; }).join('');
-  $('cards').innerHTML = shown.map(f => { const p = f.properties, [d, t] = whenOf(p), [a, z] = areaOf(p);
-    return `<div class="card"><button type="button" class="card-btn" data-id="${p.id}" aria-expanded="false"><span class="card-when">${d}, ${t}</span><span class="card-extra">${extraOf(p)}</span>
-      <span class="card-area">${esc(a)}${z ? ' · ' + esc(z) : ''}</span><span class="card-depth">${dot(p.depth_key)} ${esc(depthOf(p))} · ${waterOf(p).toLowerCase()}</span></button>
-      <div class="more" id="c-${p.id}" hidden></div></div>`; }).join('');
-  document.querySelectorAll('tr.row, .card-btn').forEach(el => {
-    el.onclick = () => toggle(el.dataset.id);
-    el.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(el.dataset.id); } };
-  });
+  if (!shown.length) { $('rows').innerHTML = '<li class="empty">No reports in this period. Choose a longer period.</li>'; $('more-btn').hidden = true; return; }
+  $('rows').innerHTML = shown.slice(0, shownN).map(f => { const p = f.properties, [d, t] = whenOf(p), [a, z] = areaOf(p), w = waterOf(p), x = extraOf(p);
+    return `<li><button type="button" class="row-btn" data-id="${p.id}" aria-expanded="false">${dot(p.depth_key)}<span class="t"><b>${esc(a)}</b>
+      <span class="m">${[`${d}, ${t}`, esc(z), x].filter(Boolean).join(' · ')}</span>
+      <span class="f">${esc(depthOf(p))}${w ? ' · ' + w.toLowerCase() : ''}</span></span>${ARR}</button>
+      <div class="more" id="c-${p.id}" hidden></div></li>`; }).join('');
+  $('more-btn').hidden = shown.length <= shownN;
+  $('rows').querySelectorAll('.row-btn').forEach(el => el.onclick = () => toggle(el.dataset.id));
 }
+$('more-btn').onclick = () => { shownN += 60; drawList(); };
 function moreHtml(f) {
   const p = f.properties, [lng, lat] = f.geometry.coordinates;
   const where = [p.place, p.street, p.landmark ? 'near ' + p.landmark : '', p.address_more].filter(Boolean).join(' · ');
   return `${p.photo ? `<a href="${esc(p.photo)}" target="_blank" rel="noopener"><img src="${esc(p.photo)}"  alt="Photo sent with the report"></a>` : ''}<div>${where ? `<p>${esc(where)}</p>` : ''}${p.note ? `<p>${linkify(p.note)}</p>` : ''}
     <p class="meta">${lat.toFixed(4)}° N, ${lng.toFixed(4)}° E · ${esc((HOW[p.place_type] || (() => ''))(p))}</p>
     <p class="confirmed" data-conf="${p.id}">${confText(p.id)}</p>
-    <p class="meta links"><a href="#" data-fb="${p.id}">Give feedback</a><span class="onmap"> · <a href="#" data-onmap="${p.id}">Show on map</a></span></p></div>`;
+    <p class="meta links"><a href="#" data-fb="${p.id}">Give feedback</a><span class="onmap"> · <a href="#" data-onmap="${p.id}">Show on map ${ARR}</a></span></p></div>`;
 }
 function loadPhoto() { /* photos load straight from their address when a report is opened */ }
 function toggle(id) {
   const f = shown.find(x => x.properties.id === id); if (!f) return;
   const close = openId === id;
-  document.querySelectorAll('tr.detail, .card .more').forEach(x => x.hidden = true);
-  document.querySelectorAll('tr.row, .card-btn').forEach(x => { x.classList.remove('on'); x.setAttribute('aria-expanded', 'false'); });
+  document.querySelectorAll('.rows .more').forEach(x => x.hidden = true);
+  document.querySelectorAll('.row-btn').forEach(x => x.setAttribute('aria-expanded', 'false'));
   openId = close ? null : id; if (close) return;
-  const tr = $('d-' + id), card = $('c-' + id);
-  tr.firstElementChild.innerHTML = `<div class="more">${moreHtml(f)}</div>`; card.innerHTML = moreHtml(f);
-  tr.hidden = false; card.hidden = false;
-  document.querySelectorAll(`[data-id="${id}"]`).forEach(x => { x.classList.add('on'); x.setAttribute('aria-expanded', 'true'); });
-  loadPhoto(tr, id); loadPhoto(card, id);
+  const card = $('c-' + id);
+  card.innerHTML = moreHtml(f); card.hidden = false;
+  document.querySelectorAll(`.row-btn[data-id="${id}"]`).forEach(x => x.setAttribute('aria-expanded', 'true'));
+  loadPhoto(card, id);
   wireFb();
-  document.querySelectorAll(`[data-onmap="${id}"]`).forEach(a => a.onclick = (e) => { e.preventDefault(); setView('map'); setTimeout(() => pick(id), map && map.loaded() ? 0 : 1500); });
+  document.querySelectorAll(`[data-onmap="${id}"]`).forEach(a => a.onclick = (e) => { e.preventDefault(); setView('map');
+    const when = () => map && map.getLayer('r-on') ? pick(id) : setTimeout(when, 300); when(); });   // the map may still be loading
 }
 
 // ── map view ──
@@ -376,7 +369,7 @@ function pick(id) {
   const p = f.properties, [d, t] = whenOf(p), [a, z] = areaOf(p);
   map.setFilter('r-on', ['==', ['get', 'id'], id]);
   map.easeTo({ center: f.geometry.coordinates, zoom: Math.max(map.getZoom(), 13.5), duration: 1600 });
-  $('float-body').innerHTML = `<b>${(DEPTH[p.depth_key] || {}).label}</b>${d}, ${t}<br>${esc(a)}${z ? ' · ' + esc(z) : ''}<br>${waterOf(p)}<div class="more" style="margin-top:10px;grid-template-columns:1fr">${moreHtml(f).replace(/<span class="onmap">[^]*?<\/span>/, '')}</div>`;
+  $('float-body').innerHTML = `<b>${esc(depthOf(p))}</b>${d}, ${t}<br>${esc(a)}${z ? ' · ' + esc(z) : ''}${waterOf(p) ? '<br>' + waterOf(p) : ''}${p.located === 'social' ? '<br>From social media' : ''}<div class="more" style="margin-top:10px;grid-template-columns:1fr">${moreHtml(f).replace(/<span class="onmap">[^]*?<\/span>/, '')}</div>`;
   $('float').hidden = false; loadPhoto($('float'), id); wireFb();
 }
 $('float-x').onclick = () => { $('float').hidden = true; map.setFilter('r-on', ['==', ['get', 'id'], -1]); };
@@ -420,6 +413,7 @@ function drawDays() {
     out += `<line x1="${x}" x2="${x}" y1="${H - 16}" y2="${H - 12}" stroke="#9CA3AF"/><text x="${x + 3}" y="${H - 2}" font-size="12" fill="#6B7280">${fmt(m, { month: 'short' })}</text>`; }
   svg.innerHTML = out;
 }
+setView(location.hash === '#list' ? 'list' : 'map');   // the survey page's List button opens reports/#list
 window.addEventListener('resize', () => { clearTimeout(drawDays.t); drawDays.t = setTimeout(() => view === 'map' && drawDays(), 150); });
 </script>
 </body>
