@@ -54,7 +54,7 @@ export const CROSS_TOPICS = [
     { id: 'x_gap', s: 'Gap in divider', q: 'Is there a gap in it to walk through?', if: a => a.x_divider === 'yes', opts: [['level', 'Yes, level'], ['climb', 'Yes, but you have to climb'], ['none', 'No gap']] },
   ] },
   { id: 'xwait', title: 'Waiting, light and safety', short: 'Waiting and safety', qs: [
-    { id: 'x_wait', s: 'Waiting space', q: 'Is there space to wait safely, at the kerb or in the middle?', opts: [['yes', 'Yes'], ['cramped', 'Cramped'], ['no', 'No']] },
+    { id: 'x_wait', s: 'Waiting space', q: 'Is there space to wait safely, at the roadside or in the middle?', opts: [['yes', 'Yes'], ['cramped', 'Cramped'], ['no', 'No']] },
     { id: 'x_lit', s: 'Lit at night', q: 'Is it lit at night?', opts: [['yes', 'Yes'], ['poor', 'Poorly'], ['no', 'No']] },
     { id: 'x_kerb', s: 'Wheelchair or pram', q: 'Is it easy to get on and off the footpath with a wheelchair or pram?', opts: [['yes', 'Yes'], ['partly', 'Partly'], ['no', 'No']] },
     { id: 'x_fob', s: 'Bridge or subway', q: 'Is there a foot over bridge or subway nearby?', opts: [['used', 'Yes, people use it'], ['unused', "Yes, but people don't use it"], ['no', 'No']] },

@@ -2,9 +2,9 @@
 // (the phone follows the route; only the spots and crossings are sent, not the route). Side of the road by pointing
 // the phone at the road. One question per screen (17 Nov 2026). Phones only; a laptop sees a QR code. Talks to
 // contribute-api (/walking/reports).
-import { mapMark } from '../assets/map-mark.js?v=20261117g';
+import { mapMark } from '../assets/map-mark.js?v=20261117h';
 import { SURVEY, TOPICS, CROSS_TOPICS, QUESTIONS, DIRS, nearestDir, roadSide, sideFromRoad, sideWord, shown, optLabel, nAnswered, POINTS, inHmda, esc,
-  metres, bearing, loadReports, contributions, player, checkPlayer, PLAYER_SAYS } from './questions.js?v=20261117g';
+  metres, bearing, loadReports, contributions, player, checkPlayer, PLAYER_SAYS } from './questions.js?v=20261117h';
 
 const $ = (id) => document.getElementById(id);
 Contribute.phoneOnly({ what: 'Walking', mapHref: 'map/', mapLabel: 'See the walking map' });
