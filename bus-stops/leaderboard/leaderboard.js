@@ -1,5 +1,5 @@
 // Leaderboard for bus stops and walking together: nicknames and points, worked out on the server (all time and the last 30 days).
-import { SURVEY, POINTS, esc, player } from '../questions.js?v=20261117f';
+import { SURVEY, POINTS, esc, player } from '../questions.js?v=20261117g';
 
 const C = window.CONTRIBUTE;
 const $ = (id) => document.getElementById(id);

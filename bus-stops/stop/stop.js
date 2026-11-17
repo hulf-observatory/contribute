@@ -1,7 +1,7 @@
 // One bus stop: what people said (shelter, crossing, lighting… as on the map), routes, the latest answer to each
 // question, photos, every contribution with feedback. No overall score (Teja, 16 Nov 2026).
 import { SURVEY, TOPICS, VIEWS, VIEW_COLORS, optLabel, shown, loadStops, loadRatings, addedStops, byStop, latest, POINTS,
-  esc, player, day } from '../questions.js?v=20261117f';
+  esc, player, day } from '../questions.js?v=20261117g';
 
 const $ = (id) => document.getElementById(id);
 const id = new URLSearchParams(location.search).get('id');

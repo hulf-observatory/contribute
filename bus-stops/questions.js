@@ -25,7 +25,7 @@ export const TOPICS = [
     { id: 'crossing_safe', s: 'Safe to cross', q: 'Does it feel safe to cross?', if: a => a.crossing === 'yes', opts: [['yes', 'Yes', 1], ['somewhat', 'Somewhat', .5], ['no', 'No', 0]] },
   ] },
   { id: 'buses', title: 'Buses', qs: [
-    { id: 'bus_stops_at', s: 'Buses stop', q: 'Where do buses usually stop?', opts: [['kerb', 'At the kerb', 1], ['step', 'One step out', .6], ['lane', 'In the traffic lane', .2], ['away', 'Away from the stop', 0]] },
+    { id: 'bus_stops_at', s: 'Buses stop', q: 'Where do buses usually stop?', opts: [['kerb', 'Right next to the footpath', 1], ['step', 'A step away from the footpath', .6], ['lane', 'Out in the road', .2], ['away', 'Not at the stop (before or after it)', 0]] },   // plain words, same values (17 Nov 2026)
     { id: 'view', s: 'View blocked', q: 'Do ads or structures block the view of buses or stop information?', opts: [['yes', 'Yes', 0], ['no', 'No', 1]] },
     { id: 'room', s: 'Room at busy times', q: 'Is there enough room to wait at busy times?', opts: [['yes', 'Yes', 1], ['no', 'No', 0]] },
   ] },

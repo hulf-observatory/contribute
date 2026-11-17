@@ -4,7 +4,7 @@
 // Data: ../roads.json (stretches, built by contribute-api/tools/build_roads.py), /walking/profiles.json, reports.json.
 // Map or list (17 Nov 2026): the list shows road sides, junctions and single spots, newest first; ?p=<profile> or
 // ?r=<row id> opens one on the map.
-import { SURVEY, TOPICS, CROSS_TOPICS, VIEWS, CROSS_VIEWS, VIEW_COLORS, shown, optLabel, real, esc, loadReports } from '../questions.js?v=20261117f';
+import { SURVEY, TOPICS, CROSS_TOPICS, VIEWS, CROSS_VIEWS, VIEW_COLORS, shown, optLabel, real, esc, loadReports } from '../questions.js?v=20261117g';
 const C = window.CONTRIBUTE;
 const $ = (id) => document.getElementById(id);
 const NONE = '#A9AFB8', FAINT = '#E5E7EB';     // grey: main roads with no profile yet

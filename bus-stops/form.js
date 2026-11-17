@@ -1,9 +1,9 @@
 // Tell us about a bus stop, at the stop (Teja, 16 Nov 2026): the phone's location lists the nearest stops (or a
 // missing one is added within 100 m of it), then the topic screens, optional photo and improvement, check and send.
 // Phones only; a laptop sees a QR code. Talks to contribute-api.
-import { mapMark } from '../assets/map-mark.js?v=20261117f';
+import { mapMark } from '../assets/map-mark.js?v=20261117g';
 import { SURVEY, TOPICS, QUESTIONS, MIN_ANSWERS, optLabel, shown, answered, POINTS, loadStops, loadRatings, addedStops,
-  byStop, latest, ANSWER_KEYS, metres, stopLabel, esc, player, checkPlayer, PLAYER_SAYS } from './questions.js?v=20261117f';
+  byStop, latest, ANSWER_KEYS, metres, stopLabel, esc, player, checkPlayer, PLAYER_SAYS } from './questions.js?v=20261117g';
 
 const C = window.CONTRIBUTE;
 const $ = (id) => document.getElementById(id);
