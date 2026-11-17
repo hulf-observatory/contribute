@@ -1,6 +1,6 @@
 // Bus stops map: every TGSRTC stop, coloured by its latest answer to one topic at a time (shelter, crossing,
 // lighting…); grey = no answer yet. No overall score (Teja, 16 Nov 2026). The leaderboard is its own page.
-import { SURVEY, VIEWS, VIEW_COLORS, loadStops, loadRatings, addedStops, byStop, latest, esc } from '../questions.js';
+import { SURVEY, VIEWS, VIEW_COLORS, loadStops, loadRatings, addedStops, byStop, latest, esc } from '../questions.js?v=20261117c';
 
 const C = window.CONTRIBUTE;
 const $ = (id) => document.getElementById(id);
@@ -15,14 +15,14 @@ const stops = base.concat(added);
 const per = byStop(ratings);
 const answersOf = new Map([...per].map(([id, list]) => [id, latest(list).answers]));
 
-$('n-rated').textContent = fmt(per.size);
-$('n-of').textContent = `of ${fmt(stops.length)} stops with details`;
-$('cover-bar').style.width = (stops.length ? per.size / stops.length * 100 : 0).toFixed(1) + '%';
-$('n-ratings').textContent = fmt(ratings.length);
-$('n-added').textContent = fmt(added.length);
-const checked = ratings.filter(r => r.confirmed > 0).length;           // someone else said "still the same"
-$('n-checked').textContent = fmt(checked);
-$('n-checked-of').textContent = `of ${fmt(ratings.length)} contributions checked by someone else`;
+// one line of counts (Teja, 17 Nov 2026); "checked" = someone else said it's still the same
+const checked = ratings.filter(r => r.confirmed > 0).length;
+const ARR = '<svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>';
+function drawCounts() {
+  $('counts').innerHTML = [`${fmt(per.size)} of ${fmt(stops.length)} stops have details`, `${fmt(checked)} of ${fmt(ratings.length)} checked by someone else`,
+    added.length ? `${fmt(added.length)} missing stop${added.length > 1 ? 's' : ''} added` : null, `<a href="../leaderboard/">Leaderboard${lb ? ` (${fmt(lb.all.length)})` : ''}</a>`,
+    '<a href="../download/">Download</a>'].filter(Boolean).join(' · ');
+}
 
 // ── which topic, and which answers to show ──
 let view = VIEWS[0], filter = null;
@@ -46,12 +46,12 @@ function drawLegend() {
 $('views').addEventListener('click', (e) => {
   const b = e.target.closest('.chip'); if (!b) return;
   view = VIEWS.find(v => v.id === b.dataset.v); filter = null;
-  feats = features().features; drawViews(); drawLegend(); refresh();
+  feats = features().features; drawViews(); drawLegend(); refresh(); drawList();
   if (pop) pop.remove();
 });
 $('chips').addEventListener('click', (e) => {
   const b = e.target.closest('.chip'); if (!b) return;
-  filter = filter === b.dataset.f ? null : b.dataset.f; drawLegend(); applyFilter();
+  filter = filter === b.dataset.f ? null : b.dataset.f; drawLegend(); applyFilter(); drawList();
 });
 drawViews(); drawLegend();
 
@@ -90,13 +90,14 @@ function popup(f) {
     <b>${esc(p.name)}</b><span class="ctx">${p.towards ? 'towards ' + esc(p.towards) : ''}${p.added ? ' · added by someone' : ''}</span>
     ${said ? `<div class="cond"><i style="background:${p.color}"></i>${esc(said)}</div>` : ''}
     <div class="ctx">${p.n ? `${p.n} contribution${p.n > 1 ? 's' : ''}, latest ${when}` : 'No details yet. Be first: extra points'}</div>
-    <p style="margin:8px 0 0"><a href="../stop/?id=${encodeURIComponent(p.id)}">${p.n ? 'Open the stop' : 'See the stop and add details'} →</a></p></div>`).addTo(map);
+    <p style="margin:8px 0 0"><a href="../stop/?id=${encodeURIComponent(p.id)}">${p.n ? 'Open the stop' : 'See the stop and add details'} ${ARR}</a></p></div>`).addTo(map);
 }
 
 // find a stop by name
 const sugg = $('sugg');
 $('find').addEventListener('input', () => {
   const q = $('find').value.trim().toLowerCase();
+  if (mode === 'list') { sugg.hidden = true; return drawList(); }   // the list filters by name instead
   if (q.length < 2) { sugg.hidden = true; return; }
   const hits = stops.filter(s => s.name.toLowerCase().includes(q)).sort((a, b) => a.name.toLowerCase().indexOf(q) - b.name.toLowerCase().indexOf(q) || a.name.length - b.name.length).slice(0, 8);
   sugg.innerHTML = hits.map(s => `<li data-id="${esc(s.id)}">${esc(s.name)}<small>${s.towards ? 'towards ' + esc(s.towards) + ' · ' : ''}${per.has(s.id) ? per.get(s.id).length + ' contributions' : 'no details yet'}</small></li>`).join('') || '<li style="color:var(--muted)">No stop by that name</li>';
@@ -111,5 +112,30 @@ sugg.addEventListener('click', (e) => {
 });
 document.addEventListener('pointerdown', (e) => { if (!sugg.contains(e.target) && e.target !== $('find')) sugg.hidden = true; });
 
-// the leaderboard has its own page; here only how many players it has
-$('n-people').textContent = lb ? fmt(lb.all.length) : '–';
+// ── map or list: the list shows stops with details, newest first, coloured and filtered like the map ──
+let mode = 'map', shownN = 60;
+function drawList() {
+  if (mode !== 'list') return;
+  const q = $('find').value.trim().toLowerCase();
+  const rows = feats.filter(f => f.properties.n && (!filter || f.properties.cat === filter) && (!q || f.properties.name.toLowerCase().includes(q)))
+    .sort((a, b) => b.properties.last.localeCompare(a.properties.last));
+  const facts = (id) => { const a = answersOf.get(id); return VIEWS.map(v => v.of(a) && v.labels[v.of(a)]).filter(Boolean).slice(0, 3).join(' · '); };
+  $('rows').innerHTML = rows.slice(0, shownN).map(f => { const p = f.properties, list = per.get(p.id), ok = list.filter(r => r.confirmed > 0).length;
+    return `<li><a href="../stop/?id=${encodeURIComponent(p.id)}"><i class="dot" style="background:${p.color}"></i><span class="t"><b>${esc(p.name)}</b>
+      <span class="m">${[p.towards && 'towards ' + esc(p.towards), new Date(p.last).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
+        `${p.n} contribution${p.n > 1 ? 's' : ''}`, ok ? 'checked' : null, list[0].located === 'memory' ? 'from memory' : null].filter(Boolean).join(' · ')}</span>
+      <span class="f">${esc(facts(p.id))}</span></span>${ARR}</a></li>`; }).join('') || '<li class="empty">No stops match.</li>';
+  $('more').hidden = rows.length <= shownN;
+}
+$('more').onclick = () => { shownN += 60; drawList(); };
+function setMode(m) {
+  mode = m;
+  $('seg').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === m));
+  $('v-map').hidden = m !== 'map'; $('v-list').hidden = m !== 'list';
+  $('find').placeholder = m === 'list' ? 'Filter by stop name' : 'Find a stop by name';
+  if (m === 'map') map.resize(); else drawList();
+  history.replaceState(null, '', location.pathname + location.search + (m === 'list' ? '#list' : ''));
+}
+$('seg').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) setMode(b.dataset.v); });
+drawCounts();
+if (location.hash === '#list') setMode('list');

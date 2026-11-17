@@ -8,11 +8,11 @@
 <link rel="icon" href="../../favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../../vendor/fonts/lato.css">
 <link rel="stylesheet" href="../../vendor/fonts/outfit.css">
-<link rel="stylesheet" href="../../assets/contribute.css?v=20261117b">
+<link rel="stylesheet" href="../../assets/contribute.css?v=20261117c">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 <!-- visit counter: page, referring site, country; no cookies, no IP addresses (live-feed/visits.js) -->
 <script src="https://api.urbanobservatory.in/visits.js" defer></script>
-<script src="../../assets/config.js?v=20261117b"></script>
+<script src="../../assets/config.js?v=20261117c"></script>
 <style>
   .top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 24px; margin-bottom: 24px; }
   .top .lede { font-size: 16px; }
@@ -25,6 +25,7 @@
   .cover .track i { display: block; height: 100%; background: var(--ink); }
 
   .layout { display: grid; gap: 28px; }
+  .layout > div { min-width: 0; }               /* the scrolling chip row must not widen the page */
   .check-nudge { margin: 0 0 12px; font-size: 14px; color: var(--text-2); }
   .stat-link { text-decoration: none; color: inherit; }
   .stat-link span { text-decoration: underline; text-decoration-color: var(--border-2); text-underline-offset: 3px; }
@@ -69,6 +70,26 @@
   .sugg li { padding: 8px 10px; border-radius: 3px; cursor: pointer; font-size: 15px; }
   .sugg li small { display: block; color: var(--muted); font-size: 13px; }
   .sugg li:hover { background: var(--surface-2); }
+  /* map or list (Teja, 17 Nov 2026) */
+  .counts { font-size: 15px; color: var(--text-2); margin: 4px 0 0; }
+  .counts a { color: var(--ink); }
+  .rows { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--border); max-width: 760px; }
+  .rows a { display: flex; gap: 12px; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid var(--border); text-decoration: none; color: var(--ink); }
+  .rows a:hover { background: var(--band); }
+  .rows .dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 7px; flex: none; }
+  .rows .t { flex: 1; min-width: 0; }
+  .rows b { display: block; font-size: 16px; }
+  .rows .m { display: block; font-size: 13.5px; color: var(--muted); }
+  .rows .f { display: block; font-size: 14px; color: var(--text-2); margin-top: 2px; }
+  .rows .arr { margin-top: 5px; color: var(--muted); }
+  .rows .empty { padding: 16px 0; color: var(--muted); }
+  #more { margin-top: 14px; }
+  @media (max-width: 767px) {          /* one scrolling row of chips, so the map or list starts sooner */
+    .chips { flex-wrap: nowrap; overflow-x: auto; margin-left: -24px; margin-right: -24px; padding: 0 24px 2px; scrollbar-width: none; }
+    .chips::-webkit-scrollbar { display: none; }
+    .chip { flex: none; }
+    .top { margin-bottom: 16px; }
+  }
 </style>
 </head>
 <body>
@@ -84,33 +105,25 @@
   <div class="top">
     <div>
       <p class="eyebrow"><a href="../" style="color:inherit;text-decoration:none">Contribute · Bus stops</a></p>
-      <h1>Bus stops, as the people who use them see them</h1>
-      <p class="lede">Every TGSRTC stop in the Hyderabad area. Pick what to look at (shelter, crossing, lighting…) and the stops show what people told us. Tap a stop to see everything, or to add yours.</p>
-    </div>
-    <div class="actions">
-      <a class="btn btn-primary btn-lg" href="../">Tell us about a bus stop</a>
-      <a class="btn btn-secondary btn-lg" href="../download/">Download the data</a>
+      <h1>Results so far</h1>
+      <p class="counts" id="counts">Loading…</p>
+      <p class="counts" id="load-msg" hidden></p>
     </div>
   </div>
-
-  <p class="check-nudge">At a stop that has details? Open it on the map and tap <b>Still the same</b>, or give feedback if something is wrong. Checking others keeps the data honest, and earns 2 points on the leaderboard.</p>
-  <div class="stats">
-    <div class="cover"><span class="stat"><b id="n-rated">0</b><span id="n-of">of 0 stops with details</span></span><div class="track"><i id="cover-bar"></i></div></div>
-    <span class="stat"><b id="n-ratings">0</b><span>contributions</span></span>
-    <a class="stat stat-link" href="../leaderboard/"><b id="n-people">0</b><span>contributors on the leaderboard <span class="arr">→</span></span></a>
-    <span class="stat"><b id="n-added">0</b><span>missing stops added</span></span>
-    <span class="stat"><b id="n-checked">0</b><span id="n-checked-of">contributions checked by someone else</span></span>
-    <span class="stat" id="load-msg" hidden></span>
-  </div>
-
   <div class="layout">
     <div>
+      <div class="seg" id="seg" role="group" aria-label="Show as"><button type="button" data-v="map" aria-pressed="true">Map</button><button type="button" data-v="list" aria-pressed="false">List</button></div>
       <div class="search"><input class="inp" type="search" id="find" placeholder="Find a stop by name" autocomplete="off"><ul class="sugg" id="sugg" hidden></ul></div>
-      <p class="viewq">Show stops by</p>
       <div class="chips views" id="views" role="group" aria-label="Show stops by"></div>
       <div class="chips legend" id="chips" role="group" aria-label="Filter the stops"></div>
-      <div class="map-box"><div id="map"></div></div>
-      <p class="note">Each stop shows its latest answer to what you picked above. Tap a colour to show only those stops. Grey: no answer yet.</p>
+      <div id="v-map">
+        <div class="map-box"><div id="map"></div></div>
+        <p class="note">Each stop shows its latest answer to what you picked. Tap a colour to show only those stops.</p>
+      </div>
+      <div id="v-list" hidden>
+        <ul class="rows" id="rows"></ul>
+        <button type="button" class="btn btn-secondary btn-lg" id="more" hidden>Show more</button>
+      </div>
     </div>
   </div>
 </main>
@@ -124,7 +137,7 @@
 </footer>
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-<script src="../../assets/common.js?v=20261117b"></script>
-<script type="module" src="map.js?v=20261117b"></script>
+<script src="../../assets/common.js?v=20261117c"></script>
+<script type="module" src="map.js?v=20261117c"></script>
 </body>
 </html>

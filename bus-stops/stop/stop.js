@@ -1,7 +1,7 @@
 // One bus stop: what people said (shelter, crossing, lighting… as on the map), routes, the latest answer to each
 // question, photos, every contribution with feedback. No overall score (Teja, 16 Nov 2026).
 import { SURVEY, TOPICS, VIEWS, VIEW_COLORS, optLabel, shown, loadStops, loadRatings, addedStops, byStop, latest, POINTS,
-  esc, player, day } from '../questions.js';
+  esc, player, day } from '../questions.js?v=20261117c';
 
 const $ = (id) => document.getElementById(id);
 const id = new URLSearchParams(location.search).get('id');
@@ -25,7 +25,7 @@ if (!list.length) { ['state-sec', 'photo-sec', 'hist-sec', 'same'].forEach(x => 
 
 // latest state, topic by topic, with how many of the last few said the same
 const agree = (q) => {
-  const said = list.filter(r => r[q.id] != null).slice(0, 5).map(r => JSON.stringify(r[q.id]));
+  const said = list.filter(r => r[q.id] != null && r[q.id] !== 'dk').slice(0, 5).map(r => JSON.stringify(r[q.id]));
   return said.length > 1 ? `${said.filter(x => x === said[0]).length} of the last ${said.length} said this` : '';
 };
 $('state').innerHTML = TOPICS.map(t => `<div class="topic"><h3>${esc(t.title)}</h3>${t.qs.filter(q => shown(q, answers)).map(q => {

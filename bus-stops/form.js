@@ -1,9 +1,9 @@
 // Tell us about a bus stop, at the stop (Teja, 16 Nov 2026): the phone's location lists the nearest stops (or a
 // missing one is added within 100 m of it), then the topic screens, optional photo and improvement, check and send.
 // Phones only; a laptop sees a QR code. Talks to contribute-api.
-import { mapMark } from '../assets/map-mark.js?v=20261117b';
+import { mapMark } from '../assets/map-mark.js?v=20261117c';
 import { SURVEY, TOPICS, QUESTIONS, MIN_ANSWERS, optLabel, shown, answered, POINTS, loadStops, loadRatings, addedStops,
-  byStop, latest, ANSWER_KEYS, metres, stopLabel, esc, player, checkPlayer, PLAYER_SAYS } from './questions.js';
+  byStop, latest, ANSWER_KEYS, metres, stopLabel, esc, player, checkPlayer, PLAYER_SAYS } from './questions.js?v=20261117c';
 
 const C = window.CONTRIBUTE;
 const $ = (id) => document.getElementById(id);
@@ -12,16 +12,14 @@ const NEAR_M = 500, MAX_MOVE = 100;   // the chosen stop within 500 m of the pho
 const far = (d) => d < 1000 ? `${Math.round(d / 10) * 10} m` : `${(d / 1000).toFixed(1)} km`;
 Contribute.phoneOnly({ what: 'Bus stops', mapHref: 'map/', mapLabel: 'See the stops map' });
 
-// ── topic screens, drawn from the question list ──
-$('topics').innerHTML = TOPICS.map(t => `<section class="step" data-step="t-${t.id}">
-  <h2 class="qt">${esc(t.title)}</h2>
-  <p class="hint">Tap the answers that fit. Skip any you don't know.</p>
-  ${t.qs.map(q => `<div class="qblock" data-q="${q.id}">
-    <h3 id="h-${q.id}">${esc(q.q)}</h3>${q.hint ? `<p class="qh">${esc(q.hint)}</p>` : ''}
-    <div class="opts" role="${q.multi ? 'group' : 'radiogroup'}" aria-labelledby="h-${q.id}">
-      ${q.opts.map(([v, l]) => `<button type="button" class="opt${q.multi ? ' check' : ''}" role="${q.multi ? 'checkbox' : 'radio'}" aria-checked="false" data-v="${v}">${esc(l)}</button>`).join('')}
-    </div></div>`).join('')}
-  <p class="msg" data-few hidden>Answer at least ${MIN_ANSWERS} questions in all before sending. You can go back and add more.</p>
+// ── one screen per question (Teja, 17 Nov 2026): tap an answer and the next question comes; ticks have Next ──
+$('topics').innerHTML = QUESTIONS.map(q => `<section class="step" data-step="q-${q.id}">
+  <p class="qtopic" data-qn></p>
+  <h2 class="qt" id="h-${q.id}">${esc(q.q)}</h2>${q.hint ? `<p class="hint">${esc(q.hint)}</p>` : ''}
+  <div class="answers" data-q="${q.id}" role="${q.multi ? 'group' : 'radiogroup'}" aria-labelledby="h-${q.id}">
+    ${q.opts.map(([v, l]) => `<button type="button" class="answer${q.multi ? ' check' : ''}" role="${q.multi ? 'checkbox' : 'radio'}" aria-checked="false" data-v="${v}"><span>${esc(l)}</span><i class="tick"></i></button>`).join('')}
+  </div>
+  ${q.multi ? '' : ''}<p class="msg" data-few hidden></p>
 </section>`).join('');
 
 const S = { here: null, stop: null, missing: null, a: {}, photo: null, how: null };
@@ -30,7 +28,9 @@ const PRESET = new URLSearchParams(location.search).get('stop');
 
 // ── steps ──
 function steps() {
-  const l = ['start'];
+  const l = ['start', 'here'];
+  if (S.here === 'no' || S.here === 'known') l.push('nothere');
+  if (S.here === 'no') return l;
   if (S.here === 'yes' || S.here === 'known') {    // at the stop: the phone's location first, or the map if it fails;
     const mem = S.here === 'known';                 // from memory: the map only (a stop's own page: that stop)
     const loc = mem ? (S.preset ? [] : ['mark']) : S.viaMap ? ['locate', 'mark'] : ['locate'], chk = S.viaMap ? [] : ['where'];
@@ -38,7 +38,7 @@ function steps() {
     else if (S.how === 'missing') l.push(...loc, 'missing');
     else l.push(...loc, 'nearest', ...chk);
   }
-  for (const t of TOPICS) l.push('t-' + t.id);
+  for (const q of QUESTIONS) if (shown(q, S.a)) l.push('q-' + q.id);
   l.push('photo', 'improve', 'review', 'thanks');   // contributors log in on the first screen only (Teja, 15 Nov 2026)
   return l;
 }
@@ -52,7 +52,8 @@ function ready(s) {
   if (s === 'review') return !sending && answered(S.a) >= MIN_ANSWERS;
   return true;
 }
-const TOPIC_STEPS = TOPICS.map(t => 't-' + t.id);
+const isQ = (s) => s.startsWith('q-');
+const qOf = (s) => QUESTIONS.find(q => 'q-' + q.id === s);
 // a stop that already has a profile (Teja, 17 Nov 2026): its latest answer to each question starts the form, so the
 // first person builds the profile and later ones change only what's different. Nothing changed = "still the same".
 const snap = (a) => JSON.stringify(ANSWER_KEYS.filter(k => a[k] != null).map(k => [k, a[k]]));
@@ -60,9 +61,10 @@ function prefill() {
   if (S.missing || !S.stop || S.prefillFor === S.stop.id) return;
   S.prefillFor = S.stop.id;
   const list = RATED.get(S.stop.id) || [];
-  if (!list.length) { S.base = null; return; }
+  if (!list.length) { S.base = null; S.baseA = null; return; }
   const a = latest(list).answers;
   S.a = Object.fromEntries(QUESTIONS.filter(q => a[q.id] != null).map(q => [q.id, structuredClone(a[q.id])]));
+  S.baseA = structuredClone(S.a);                // shown as "Last answer" on each question
   S.base = snap(S.a); S.baseId = list[0].id; S.baseN = list.length;
   drawAnswers();
 }
@@ -72,40 +74,38 @@ function show(s, push = true) {
   if (DONE && s !== 'thanks') s = 'thanks';
   cur = s; lastList = steps();
   document.querySelectorAll('.step').forEach(x => x.classList.toggle('on', x.dataset.step === s));
-  const qs = steps().filter(x => x !== 'start' && x !== 'thanks'), i = qs.indexOf(s);
-  $('progress').hidden = i < 0;
-  if (i >= 0) { $('bar').style.width = `${(i + 1) / qs.length * 100}%`; $('count').textContent = s === 'review' ? 'Last step' : `${i + 1} of ${qs.length - 1}`; }
-  $('nav').hidden = s === 'start' || s === 'thanks' || s === 'player';
-  $('next').hidden = s === 'locate';
-  const showCard = (TOPIC_STEPS.includes(s) || ['photo', 'improve', 'review'].includes(s)) && (S.stop || S.missing);
-  $('stopcard').hidden = !showCard;
-  if (showCard) drawCard();
-  if (s === 'photo') $('photo-hint').textContent = S.here === 'yes' ? 'Optional. One photo of the stop helps others see it.' : 'Optional. A photo you took of this stop.';
-  if (TOPIC_STEPS.includes(s)) {
+  const inQ = !['start', 'thanks', 'player'].includes(s);
+  document.body.classList.toggle('q-mode', inQ);
+  const l = steps().filter(x => !['start', 'here', 'nothere', 'thanks'].includes(x)), i = l.indexOf(s);
+  $('progress').hidden = !inQ;
+  $('bar').style.width = `${i < 0 ? 0 : (i + 1) / l.length * 100}%`;
+  $('nav').hidden = !inQ;
+  if (isQ(s)) {
     prefill();
-    document.querySelector(`.step[data-step="${s}"] .hint`).textContent = S.base
-      ? `These are the latest answers for this stop, from ${S.baseN} contribution${S.baseN > 1 ? 's' : ''}. Change only what's different now.`
-      : "Tap the answers that fit. Skip any you don't know.";
-  }
+    const q = qOf(s), qs = QUESTIONS.filter(x => shown(x, S.a)), n = qs.indexOf(q);
+    $('count').textContent = q.topicTitle.replace(' and seating', '').replace('Comfort and ', '');
+    document.querySelector(`.step[data-step="${s}"] [data-qn]`).textContent = `Question ${n + 1} of ${qs.length}` + (n === 0 && S.base ? ` · "Last answer" is this stop's latest` : '');
+    drawAnswers();
+  } else $('count').textContent = '';
   if (s === 'review') drawReview();
   if (s === 'missing') openMap();
   if (s === 'where') openWhereMap();
-  if (s === 'mark') { marker.open(); $('mark-hint').textContent = (S.here === 'known' ? 'Move the map until the pin in the middle sits exactly on the bus stop, then press Next.'
-    : 'Move the map until the pin in the middle sits on the bus stop, then press Next. You still need to be at the stop.') + ' The dots are bus stops (darker: someone has added details): tap one to put the pin on it.'; }
+  if (s === 'mark') { marker.open(); $('mark-hint').textContent = S.here === 'known' ? 'Put the pin exactly on the stop. Dots are bus stops: tap one.' : 'Move the map so the pin is on your stop. Dots are bus stops: tap one.'; }
   if (s === 'start') drawPlay();
   if (s === 'player') { S.noNick = false; const p = player.get(); $('p-nick').value = p ? p.nick : $('p-nick').value; $('p-pin').value = ''; $('p-msg').hidden = true; playerReady(); }
-  if (s === 't-facilities') document.querySelector('[data-step="t-facilities"] [data-few]').hidden = answered(S.a) >= MIN_ANSWERS;
   updateNext();
   if (push) history.pushState({ s }, '', location.search + '#' + s);
   window.scrollTo({ top: 0 });
   const h = document.querySelector(`.step[data-step="${s}"] .qt, .step[data-step="${s}"] h1`); if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }); }
 }
+// screens where a tap moves on have no Next button: one-answer questions, and picking a stop
+const TAP_ON = ['here', 'nothere', 'locate', 'nearest'];
 function updateNext() {
   const n = $('next'); n.disabled = !ready(cur);
+  n.hidden = TAP_ON.includes(cur) || (isQ(cur) && !qOf(cur).multi) || (cur === 'where' && S.where !== 'marked');
   if (cur === 'review' && sending) return;
   const optional = { photo: !S.photo, improve: !$('improve').value.trim() };
-  const topicEmpty = TOPIC_STEPS.includes(cur) && !TOPICS.find(t => 't-' + t.id === cur).qs.some(q => S.a[q.id] != null);
-  n.textContent = cur === 'review' ? (unchanged() ? "Confirm it's still the same" : 'Send') : (optional[cur] || topicEmpty) ? 'Skip' : 'Next';
+  n.textContent = cur === 'review' ? (unchanged() ? 'Confirm nothing has changed' : 'Send') : optional[cur] ? 'Skip' : 'Next';
 }
 function go(d) {
   const l = steps(), i = l.indexOf(cur);
@@ -119,8 +119,12 @@ function go(d) {
 $('next').onclick = async () => {
   if (cur === 'review') return send();
   if (cur === 'mark') return fromPlace(S.markAt.lat, S.markAt.lng, null);
-  go(1);
+  next();
 };
+// after a question: the next one, or back to the check screen when the person came from there to change one
+function next() { if (S.fromReview && isQ(cur)) { S.fromReview = false; return show('review'); } go(1); }
+$('start-go').onclick = () => show('here');
+$('exit').onclick = () => show('start');
 $('back').onclick = () => history.back();
 window.addEventListener('popstate', (e) => show(e.state?.s || 'start', false));
 
@@ -128,49 +132,49 @@ window.addEventListener('popstate', (e) => show(e.state?.s || 'start', false));
 document.querySelector('[data-field="here"]').addEventListener('click', (e) => {
   const b = e.target.closest('[role=radio]'); if (!b) return;
   b.parentElement.querySelectorAll('[role=radio]').forEach(x => x.setAttribute('aria-checked', x === b));
-  S.here = b.dataset.val;
-  $('not-here').hidden = S.here !== 'no';          // not at a stop: from memory, if they know it well
-  $('memory-box').hidden = S.here !== 'no';
-  if (S.here !== 'yes') return;
-  if (!S.preset) { S.how = 'gps'; S.stop = null; S.missing = null; }
+  S.here = b.dataset.val;                         // "no": from memory, if they know a stop well
+  if (S.here === 'yes') { S.viaMap = false; if (!S.preset) { S.how = 'gps'; S.stop = null; S.missing = null; } }
   setTimeout(() => go(1), 220);
 });
 
-// topic answers: tap to choose, tap again to clear; ticks toggle, "None of these" clears the others
+// answers: one tap chooses and moves on (tapping the chosen one again also moves on); ticks toggle, "None of these"
+// clears the others
+let moving = false;
 $('topics').addEventListener('click', (e) => {
-  const b = e.target.closest('.opt'); if (!b) return;
-  const id = b.closest('.qblock').dataset.q, q = QUESTIONS.find(x => x.id === id), v = b.dataset.v;
+  const b = e.target.closest('.answer'); if (!b) return;
+  const id = b.closest('[data-q]').dataset.q, q = QUESTIONS.find(x => x.id === id), v = b.dataset.v;
   if (q.multi) {
     let t = new Set(S.a[id] || []);
     if (t.has(v)) t.delete(v); else { if (v === 'none') t = new Set(); else t.delete('none'); t.add(v); }
     S.a[id] = t.size ? [...t] : undefined;
-  } else S.a[id] = S.a[id] === v ? undefined : v;
-  if (S.a[id] === undefined) delete S.a[id];
-  drawAnswers();
+    if (S.a[id] === undefined) delete S.a[id];
+    return drawAnswers();
+  }
+  if (moving) return;                             // a second tap while the next question is coming
+  S.a[id] = v; drawAnswers(); moving = true;
+  setTimeout(() => { moving = false; next(); }, 220);
 });
 function drawAnswers() {
   for (const q of QUESTIONS) {
-    const blk = document.querySelector(`.qblock[data-q="${q.id}"]`);
-    blk.hidden = !shown(q, S.a);
-    if (blk.hidden) delete S.a[q.id];
-    const v = S.a[q.id];
-    blk.querySelectorAll('.opt').forEach(o => o.setAttribute('aria-checked', q.multi ? !!(v || []).includes(o.dataset.v) : o.dataset.v === v));
+    if (!shown(q, S.a)) delete S.a[q.id];        // a follow-up whose first answer changed
+    const v = S.a[q.id], was = S.baseA && S.baseA[q.id];
+    document.querySelectorAll(`[data-q="${q.id}"] .answer`).forEach(o => {
+      const k = o.dataset.v;
+      o.setAttribute('aria-checked', q.multi ? !!(v || []).includes(k) : k === v);
+      const last = was != null && (q.multi ? was.includes(k) : was === k);
+      let tag = o.querySelector('.last');
+      if (last && !tag) { tag = document.createElement('span'); tag.className = 'last'; tag.textContent = 'Last answer'; o.querySelector('.tick').before(tag); }
+      if (!last && tag) tag.remove();
+    });
   }
   updateNext();
 }
 
-// ── the chosen stop ──
-function drawCard() {
-  if (S.missing) { $('sc-name').textContent = $('m-name').value.trim() || 'New stop'; $('sc-ctx').textContent = ($('m-towards').value.trim() ? `towards ${$('m-towards').value.trim()} · ` : '') + 'A stop you are adding'; return; }
-  const s = S.stop, n = (RATED.get(s.id) || []).length;
-  $('sc-name').textContent = s.name;
-  $('sc-ctx').textContent = [s.towards && `towards ${s.towards}`, n ? `${n} contribution${n > 1 ? 's' : ''} so far` : 'no one has added details yet: being first earns extra points'].filter(Boolean).join(' · ');
-}
 function routeText(s) {
   if (!s.nRoutes) return 'A stop someone added';
   return `Buses ${s.routes.slice(0, 3).join(', ')}${s.nRoutes > 3 ? ` and ${s.nRoutes - 3} more` : ''}`;
 }
-const stopButton = (s, d) => `<button type="button" class="answer" role="radio" aria-checked="${!!(S.stop && S.stop.id === s.id)}" data-id="${esc(s.id)}"><span>${esc(s.name)}<small>${s.towards ? 'towards ' + esc(s.towards) + ' · ' : ''}${esc(routeText(s))}</small></span>${d != null ? `<span class="dist">${d < 1000 ? Math.round(d / 10) * 10 + ' m' : (d / 1000).toFixed(1) + ' km'}</span>` : '<i class="tick"></i>'}</button>`;
+const stopButton = (s, d) => `<button type="button" class="answer" role="radio" aria-checked="${!!(S.stop && S.stop.id === s.id)}" data-id="${esc(s.id)}"><span>${esc(s.name)}<small>${s.towards ? 'towards ' + esc(s.towards) : esc(routeText(s))}${RATED.has(s.id) ? ' · has details' : ''}</small></span>${d != null ? `<span class="dist">${d < 1000 ? Math.round(d / 10) * 10 + ' m' : (d / 1000).toFixed(1) + ' km'}</span>` : '<i class="tick"></i>'}</button>`;
 function pickFrom(listEl) {
   listEl.addEventListener('click', (e) => {
     const b = e.target.closest('[data-id]'); if (!b) return;
@@ -213,10 +217,10 @@ function fromPlace(lat, lng, acc) {
   const near = STOPS.map(s => [s, metres({ lat, lng }, s)]).sort((a, b) => a[1] - b[1]).slice(0, 4);
   $('near-list').innerHTML = near.map(([s, d]) => stopButton(s, d)).join('');
   $('near-msg').hidden = near[0][1] < 400;
-  $('near-msg').textContent = `The nearest stop we know is ${Math.round(near[0][1])} m away${acc > 100 ? ", and your phone's location is rough" : ''}. If you are at a stop, it may be missing from the bus data: add it.`;
+  $('near-msg').textContent = `The nearest stop we know is ${Math.round(near[0][1])} m away${acc > 100 ? ", and your phone's location is rough" : ''}. It may be missing: add it.`;
   $('near-q').textContent = S.here === 'known' ? 'Which stop is it?' : 'Which stop are you at?';
-  $('near-hint').textContent = S.viaMap ? 'Each side of the road is a separate stop. Pick the one under the pin.' : 'Each side of the road is a separate stop. Pick the one you are standing at.';
-  $('miss-dot').textContent = S.viaMap ? 'The dot is where you put the pin' : 'The dot is where you are';
+  $('near-hint').textContent = 'Each side of the road is a separate stop.';
+  $('miss-dot').textContent = S.viaMap ? 'The dot is where you put the pin. Drag it to where buses stop.' : 'The dot is you. Drag it to where buses stop.';
   S.stop = null; go(1);
 }
 function gpsFailed(t) { $('gps-go').textContent = 'Try again'; $('gps-go').disabled = false; $('gps-msg').textContent = t; $('gps-msg').hidden = false; }
@@ -228,6 +232,7 @@ $('to-mark').onclick = (e) => { e.preventDefault(); S.viaMap = true; S.markAt = 
 // not there now, but knows the stop well: from memory, on the map (Teja, 16 Nov 2026); marked "memory" in the data
 $('from-memory').onclick = () => {
   S.here = 'known'; S.viaMap = true; S.markAt = null;
+  document.querySelectorAll('[data-field="here"] [role=radio]').forEach(x => x.setAttribute('aria-checked', x.dataset.val === 'no'));
   if (S.preset) S.phone = { lat: S.stop.lat, lng: S.stop.lng, acc: null };   // a stop's own page: that stop
   else { S.how = 'gps'; S.stop = null; S.missing = null; }
   go(1);
@@ -239,8 +244,9 @@ let whereMap = null, stopDot = null, meDot = null;
 async function openWhereMap() {
   const s = S.stop, me = S.phone; if (!s || !me) return;
   const d = Math.round(metres(me, s));
-  $('where-dist').textContent = d < 15 ? 'The map puts the stop right where you are.' : `The map puts the stop about ${d < 1000 ? Math.round(d / 5) * 5 + ' m' : (d / 1000).toFixed(1) + ' km'} from you.`;
-  try { await loadMapLib(); } catch { $('where-dist').textContent += " (The map couldn't load.)"; return; }
+  const distTxt = d < 15 ? 'The map puts the stop right where you are.' : `The map puts it about ${d < 1000 ? Math.round(d / 5) * 5 + ' m' : (d / 1000).toFixed(1) + ' km'} from you.`;
+  $('where-hint').textContent = S.where === 'marked' ? 'Drag the black dot to where the stop really is, then press Next.' : `Black: the stop. Blue: you. ${distTxt}`;
+  try { await loadMapLib(); } catch { $('where-hint').textContent += " (The map couldn't load.)"; return; }
   const fit = () => { const b = new maplibregl.LngLatBounds([s.lng, s.lat], [s.lng, s.lat]).extend([me.lng, me.lat]); whereMap.fitBounds(b, { padding: 60, maxZoom: 18, duration: 0 }); };
   if (!whereMap) {
     whereMap = new maplibregl.Map({ container: 'wheremap', style: 'https://tiles.openfreemap.org/styles/positron', center: [s.lng, s.lat], zoom: 17, minZoom: 12, maxZoom: 19, attributionControl: { compact: true } });
@@ -262,7 +268,7 @@ $('where-opts').addEventListener('click', (e) => {
   setDraggable(marking);
   if (!marking && stopDot) { stopDot.setLngLat([S.stop.lng, S.stop.lat]); S.whereAt = null; }
   if (marking && stopDot && !S.whereAt) { const q = stopDot.getLngLat(); S.whereAt = { lat: q.lat, lng: q.lng }; }
-  $('where-hint').textContent = marking ? 'Drag the black dot to where the stop really is, then press Next.' : 'The black dot is where the bus data puts the stop; the blue dot is you.';
+  if (marking) $('where-hint').textContent = 'Drag the black dot to where the stop really is, then press Next.';
   updateNext();
   if (!marking) setTimeout(() => go(1), 220);
 });
@@ -299,7 +305,7 @@ function placePin(lng, lat) {
   const moved = metres(S.phone, { lat, lng });
   if (moved > MAX_MOVE || !inHmda(lng, lat)) {
     if (pin && S.missing) pin.setLngLat([S.missing.lng, S.missing.lat]);
-    $('pin-msg').textContent = S.viaMap ? `The stop can be up to ${MAX_MOVE} m from the place you marked. Go back and move the map closer.` : `The stop can be up to ${MAX_MOVE} m from where you are. Walk closer, if it's safe, and start again.`; $('pin-msg').hidden = false; return;
+    $('pin-msg').textContent = S.viaMap ? `It can be up to ${MAX_MOVE} m from the place you marked. Go back and move the map closer.` : `It can be up to ${MAX_MOVE} m from where you are. Walk closer, if it's safe, and start again.`; $('pin-msg').hidden = false; return;
   }
   $('pin-msg').hidden = true;
   if (!pin) { const el = document.createElement('div'); el.className = 'pin';
@@ -307,8 +313,8 @@ function placePin(lng, lat) {
     pin.on('dragend', () => { const q = pin.getLngLat(); placePin(q.lng, q.lat); }); } else pin.setLngLat([lng, lat]);
   S.missing = { lat, lng, moved: Math.round(moved) }; $('map-hint').classList.add('off');
   const [n, d] = STOPS.map(s => [s, metres({ lat, lng }, s)]).sort((a, b) => a[1] - b[1])[0];
-  $('pin-info').hidden = false;
-  $('pin-info').textContent = d < 60 ? `${stopLabel(n)} is only ${Math.round(d)} m away. If that's the same stop, go back and pick it instead.` : `Nearest known stop: ${stopLabel(n)}, ${Math.round(d)} m away.`;
+  $('pin-info').hidden = d >= 60;
+  $('pin-info').textContent = `${stopLabel(n)} is only ${Math.round(d)} m away. If that's the same stop, go back and pick it instead.`;
   updateNext();
 }
 ['m-name', 'm-towards', 'improve'].forEach(id => $(id).addEventListener('input', updateNext));
@@ -322,7 +328,7 @@ $('photo-in').addEventListener('change', async (e) => {
     const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height)), w = Math.round(bmp.width * k), h = Math.round(bmp.height * k);
     const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(bmp, 0, 0, w, h);
     S.photo = c.toDataURL('image/jpeg', .82); $('photo-prev').src = S.photo; $('photo-prev').style.display = 'block';
-    info.textContent = `Ready to send: ${w} × ${h}`; $('photo-btn').textContent = 'Use a different photo';
+    info.textContent = 'Photo added.'; $('photo-btn').textContent = 'Use a different photo';
   } catch { S.photo = null; info.textContent = "This photo couldn't be read. Try a different one."; }
   updateNext();
 });
@@ -340,11 +346,11 @@ let mode = 'create';
 function setMode(m) {
   mode = m;
   const c = m === 'create';
-  $('p-title').textContent = c ? 'Join as a contributor' : 'Log in';
-  $('p-hint').textContent = c ? 'Make up a nickname and a 4-digit PIN. Use them to log in on any phone.' : 'Enter the nickname and 4-digit PIN you chose when you joined.';
+  $('p-title').textContent = c ? 'Pick a nickname' : 'Log in';
+  $('p-hint').textContent = c ? 'And a 4-digit PIN, so you can log in on any phone.' : 'The nickname and 4-digit PIN you picked before.';
   $('p-go').textContent = c ? 'Join' : 'Log in';
-  $('p-switch-text').textContent = c ? 'Contributed before?' : 'New here?';
-  $('p-switch').textContent = c ? 'Log in' : 'Join as a contributor';
+  $('p-switch-text').textContent = c ? 'Have one already?' : 'New here?';
+  $('p-switch').textContent = c ? 'Log in' : 'Pick a nickname';
   $('p-msg').hidden = true;
 }
 $('play-create').onclick = (e) => { e.preventDefault(); setMode('create'); show('player'); };
@@ -388,7 +394,7 @@ function topicSummary(t) {
 let lastRows = [];
 function drawReview() {
   const stopTxt = S.missing ? `${esc($('m-name').value.trim())}<small>${$('m-towards').value.trim() ? 'towards ' + esc($('m-towards').value.trim()) + ' · ' : ''}A new stop, marked on the map</small>`
-    : `${esc(S.stop.name)}<small>${S.stop.towards ? 'towards ' + esc(S.stop.towards) : ''}</small>`;
+    : `${esc(S.stop.name)}<small>${S.stop.towards ? 'towards ' + esc(S.stop.towards) : ''}</small>`;   // kept for an unsent entry's summary
   const placeTxt = { yes: 'Where the map shows it', here: 'Where I am (your location is saved for the stop)', marked: 'Where I marked it', dk: 'Not sure' }[S.where];
   const rows = [['Stop', stopTxt, S.preset ? null : S.missing ? 'missing' : 'nearest'],
     ...(S.where && !S.missing && !S.viaMap ? [['Stop place', esc(placeTxt), 'where']] : []),
@@ -396,14 +402,21 @@ function drawReview() {
     ['Photo', S.photo ? 'Added' : 'None', 'photo'], ['Improve', esc($('improve').value.trim() || 'None'), 'improve'],
     ['Points', esc(who().nick ? 'For ' + who().nick : 'None: you are not logged in'), 'player']];
   lastRows = rows.map(([k, v]) => [k, v.replace(/<br>|<small>/g, ' · ').replace(/<[^>]+>/g, '')]);
-  $('review').innerHTML = rows.map(([k, v, s]) => `<div><dt>${k}</dt><dd>${v}</dd>${s ? `<button type="button" data-go="${s}">Change</button>` : '<span></span>'}</div>`).join('');
-  document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => show(b.dataset.go));
-  $('review-hint').textContent = !S.base || S.missing ? 'Tap "Change" to fix anything. Nothing has been saved yet.'
-    : unchanged() ? "You haven't changed anything from the stop's latest answers. Press the button to confirm it's still the same, or tap \"Change\" to fix something."
-    : 'You started from the stop\'s latest answers. Tap "Change" to fix anything. Nothing has been saved yet.';
-  const few = answered(S.a) < MIN_ANSWERS;
+  // on screen: a short summary; the answers themselves open only if asked (Teja, 17 Nov 2026)
+  const n = answered(S.a), stopName = S.missing ? $('m-name').value.trim() : S.stop.name;
+  const short = [['Stop', `${esc(stopName)}<small>${S.missing ? 'A new stop' : S.here === 'known' ? 'From memory' : S.stop.towards ? 'towards ' + esc(S.stop.towards) : ''}</small>`, S.preset ? null : S.missing ? 'missing' : 'nearest'],
+    ['Answers', `${n} answer${n === 1 ? '' : 's'}`, 'all'], ['Photo', S.photo ? 'Added' : 'None', 'photo'],
+    ...($('improve').value.trim() ? [['Improve', esc($('improve').value.trim()), 'improve']] : [])];
+  $('review').innerHTML = short.map(([k, v, s]) => `<div><dt>${k}</dt><dd>${v}</dd>${s ? `<button type="button" data-go="${s}">${s === 'all' ? 'See' : 'Change'}</button>` : '<span></span>'}</div>`).join('');
+  $('review').querySelectorAll('[data-go]').forEach(b => b.onclick = () => b.dataset.go === 'all' ? ($('all-answers').hidden = !$('all-answers').hidden) : show(b.dataset.go));
+  $('all-answers').innerHTML = QUESTIONS.filter(q => shown(q, S.a)).map(q => { const v = S.a[q.id];
+    return `<button type="button" data-q="${q.id}"><span>${esc(q.s)}</span><b>${v == null ? '–' : esc(q.multi ? v.map(x => optLabel(q, x)).join(', ') : optLabel(q, v))}</b></button>`; }).join('');
+  $('all-answers').querySelectorAll('[data-q]').forEach(b => b.onclick = () => { S.fromReview = true; show('q-' + b.dataset.q); });
+  $('review-hint').hidden = !unchanged();
+  $('review-hint').textContent = "Your answers match what's already there.";
+  const few = n < MIN_ANSWERS;
   $('send-msg').hidden = !few;
-  if (few) $('send-msg').textContent = `Answer at least ${MIN_ANSWERS} questions before sending (you have answered ${answered(S.a)}). Tap "Change" next to a topic.`;
+  if (few) $('send-msg').textContent = `Answer at least ${MIN_ANSWERS} questions before sending ("Don't know" doesn't count). Tap "See" to change answers.`;
 }
 
 // ── send; if it fails the answers stay on this phone ──
@@ -444,11 +457,8 @@ function points(body) {
   return got;
 }
 function thanks(body, id) {
-  const got = points(body), total = got.reduce((a, b) => a + b[1], 0);
-  $('pts').textContent = '+' + total;
-  $('pts-list').innerHTML = got.map(([k, v]) => `<li>${k}<b>+${v}</b></li>`).join('');
-  $('thanks-text').textContent = body.nick ? `Points go to ${body.nick} on the leaderboard. This phone remembers you; on another phone, use the same nickname and PIN.`
-    : "You weren't logged in, so these points aren't on the leaderboard. Next time, join as a contributor or log in on the first screen.";
+  const total = points(body).reduce((a, b) => a + b[1], 0);
+  $('thanks-text').textContent = 'Your answers are now public.' + (body.nick ? ` ${total} points to ${body.nick} on the leaderboard.` : '');
   if (body.nick) player.set(body.nick, body.nick_pin);   // signed in for next time
   $('to-stop').href = 'stop/?id=' + encodeURIComponent(body.place_type === 'missing' ? 'new-' + id : body.stop_id);
   DONE = true; show('thanks');
@@ -463,10 +473,8 @@ async function confirmSame() {
     try { r = await Contribute.post(`/${SURVEY}/reports/${S.baseId}/feedback`, { kind: 'confirm', note: null, device: Contribute.device(),
       nick: who().nick, nick_pin: who().pin, token, website: $('trap').value }); } finally { spam.reset(); }
     sending = false;
-    $('pts').textContent = r.accepted ? '+' + POINTS.confirm : '+0';
-    $('pts-list').innerHTML = r.accepted ? `<li>Confirming the stop is still the same<b>+${POINTS.confirm}</b></li>` : '';
     $('thanks-text').textContent = !r.accepted ? 'You had already confirmed this stop from this phone, so nothing new was added.'
-      : who().nick ? `Points go to ${who().nick} on the leaderboard.` : "You weren't logged in, so these points aren't on the leaderboard.";
+      : "You've confirmed nothing has changed." + (who().nick ? ` ${POINTS.confirm} points to ${who().nick} on the leaderboard.` : '');
     $('to-stop').href = 'stop/?id=' + encodeURIComponent(S.stop.id);
     DONE = true; show('thanks');
   } catch (err) {
@@ -534,9 +542,9 @@ async function loadAll() {
   RATED = byStop(ratings);
 }
 await loadAll();
-if (STOPS.length) $('meta').textContent = `${RATED.size.toLocaleString('en-IN')} of ${STOPS.length.toLocaleString('en-IN')} stops with details so far`;
+if (STOPS.length) $('meta').textContent = `${RATED.size.toLocaleString('en-IN')} stops with details`;
 if (PRESET && BY_ID.get(PRESET)) {
   S.preset = true; S.stop = BY_ID.get(PRESET);
-  document.querySelector('[data-step="start"] h1').textContent = 'Tell us about ' + S.stop.name;
-  document.querySelector('[data-step="start"] .hint').textContent = (S.stop.towards ? `The stop towards ${S.stop.towards}. ` : '') + "Tell us what it is like now, while you are at the stop. It takes about two minutes, and you don't need to sign in.";
+  $('start-h').textContent = S.stop.name;
+  $('start-lede').textContent = (S.stop.towards ? `The stop towards ${S.stop.towards}. ` : '') + 'Tell us what it is like now. It takes two minutes.';
 }

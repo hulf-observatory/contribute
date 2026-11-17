@@ -2,7 +2,7 @@
 // of up to ~500 m; each side of a stretch and each junction where main roads meet has a profile built from the spots
 // and crossings linked to it. Spots on other streets are single dots. One topic at a time; tap for the profile.
 // Data: ../roads.json (stretches, built by contribute-api/tools/build_roads.py), /walking/profiles.json, reports.json.
-import { SURVEY, TOPICS, CROSS_TOPICS, VIEWS, CROSS_VIEWS, VIEW_COLORS, shown, optLabel, esc, loadReports } from '../questions.js';
+import { SURVEY, TOPICS, CROSS_TOPICS, VIEWS, CROSS_VIEWS, VIEW_COLORS, shown, optLabel, esc, loadReports } from '../questions.js?v=20261117c';
 const C = window.CONTRIBUTE;
 const $ = (id) => document.getElementById(id);
 const NONE = '#A9AFB8', FAINT = '#E5E7EB';     // grey: main roads with no profile yet

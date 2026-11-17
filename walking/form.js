@@ -1,9 +1,9 @@
 // Walking survey: footpaths and crossings, at the place itself (Teja, 16 Nov 2026). One spot, one crossing, or a walk
 // (the phone follows the route; only the spots and crossings are sent, not the route). Side of the road by pointing
 // the phone at the road. Phones only; a laptop sees a QR code. Talks to contribute-api (/walking/reports).
-import { mapMark } from '../assets/map-mark.js?v=20261117b';
+import { mapMark } from '../assets/map-mark.js?v=20261117c';
 import { SURVEY, TOPICS, CROSS_TOPICS, QUESTIONS, DIRS, nearestDir, roadSide, sideFromRoad, sideWord, shown, optLabel, POINTS, inHmda, esc,
-  metres, bearing, loadReports, contributions, player, checkPlayer, PLAYER_SAYS } from './questions.js';
+  metres, bearing, loadReports, contributions, player, checkPlayer, PLAYER_SAYS } from './questions.js?v=20261117c';
 
 const $ = (id) => document.getElementById(id);
 Contribute.phoneOnly({ what: 'Walking', mapHref: 'map/', mapLabel: 'See the walking map' });

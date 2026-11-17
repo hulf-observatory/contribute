@@ -33,7 +33,7 @@ export const TOPICS = [
     { id: 'light', s: 'Lighting at night', q: 'Is there lighting at night?', opts: [['yes', 'Yes', 1], ['no', 'No', 0], ['dk', "Don't know"]] },
     { id: 'light_state', s: 'Lighting', q: 'How is the lighting?', if: a => a.light === 'yes', opts: [['good', 'Good', 1], ['poor', 'Poor', .4]] },
     { id: 'safe_day', s: 'Feels by day', q: 'How safe does it feel to wait here during the day?', opts: [['safe', 'Safe', 1], ['somewhat', 'Somewhat', .5], ['unsafe', 'Unsafe', 0]] },
-    { id: 'safe_night', s: 'Feels after dark', q: 'How safe does it feel to wait here after dark?', hint: "Skip if you haven't been here after dark", opts: [['safe', 'Safe', 1], ['somewhat', 'Somewhat', .5], ['unsafe', 'Unsafe', 0]] },
+    { id: 'safe_night', s: 'Feels after dark', q: 'How safe does it feel to wait here after dark?', opts: [['safe', 'Safe', 1], ['somewhat', 'Somewhat', .5], ['unsafe', 'Unsafe', 0], ['dk', "Haven't been here after dark"]] },
     { id: 'floods', s: 'Floods', q: 'Does it flood or water-log when it rains?', opts: [['yes', 'Yes', 0], ['no', 'No', 1], ['dk', "Don't know"]] },
   ] },
   { id: 'signs', title: 'Signs', qs: [
@@ -46,11 +46,14 @@ export const TOPICS = [
     { id: 'facilities', s: 'Facilities', q: 'Which of these are at or near the stop?', hint: 'Tick all you see', multi: true, score: false, opts: [['dustbin', 'Dustbin'], ['water', 'Drinking water'], ['toilet', 'Toilet in sight'], ['cctv', 'CCTV camera'], ['board', 'Live arrival board'], ['none', 'None of these']] },
   ] },
 ];
-export const QUESTIONS = TOPICS.flatMap(t => t.qs.map(q => ({ ...q, topic: t.id })));
+// every one-answer question ends with "Don't know" (Teja, 17 Nov 2026: instead of skipping); it has no score and
+// never replaces a real answer in a stop's profile
+for (const t of TOPICS) for (const q of t.qs) if (!q.multi && !q.opts.some(o => o[0] === 'dk')) q.opts.push(['dk', "Don't know"]);
+export const QUESTIONS = TOPICS.flatMap(t => t.qs.map(q => ({ ...q, topic: t.id, topicTitle: t.title })));
 export const MIN_ANSWERS = 3;
 export const optLabel = (q, v) => (q.opts.find(o => o[0] === v) || [, v])[1];
 export const shown = (q, a) => !q.if || q.if(a);
-export const answered = (a) => QUESTIONS.filter(q => shown(q, a) && a[q.id] != null && !(Array.isArray(a[q.id]) && !a[q.id].length)).length;
+export const answered = (a) => QUESTIONS.filter(q => shown(q, a) && a[q.id] != null && a[q.id] !== 'dk' && !(Array.isArray(a[q.id]) && !a[q.id].length)).length;
 
 // condition: the average of the answered, scored questions (ticks count as the share ticked); needs 3 answers
 export function score(a) {
@@ -125,7 +128,7 @@ export function byStop(rs) {
 }
 export function latest(list) {
   const a = {}, from = {};
-  for (const r of list) for (const k of ANSWER_KEYS) if (r[k] != null && !(k in a)) { a[k] = r[k]; from[k] = r; }
+  for (const r of list) for (const k of ANSWER_KEYS) if (r[k] != null && r[k] !== 'dk' && !(k in a)) { a[k] = r[k]; from[k] = r; }   // "Don't know" never hides an answer
   return { answers: a, from };
 }
 

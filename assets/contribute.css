@@ -97,7 +97,7 @@ h1 { font: 700 30px/1.2 var(--font-ui); letter-spacing: -.005em; margin: 0 0 10p
 .phone-gate .qr svg { display: block; width: 180px; height: 180px; margin: 0 0 8px; }
 .phone-gate .gate-url { font-size: 14px; color: var(--muted); margin: 0 0 24px; overflow-wrap: anywhere; }
 /* safety first: on the first screen of the at-the-spot surveys */
-.safety-box { margin: 18px 0 0; padding: 12px 14px; border-left: 3px solid #B2182B; background: #FDF4F3; font-size: 15px; line-height: 1.55; color: var(--text-2); }
+.safety-box { margin: 18px 0 0; padding: 12px 0; border-top: 1px solid var(--border-2); border-bottom: 1px solid var(--border-2); font-size: 15px; line-height: 1.55; color: var(--text-2); }   /* house note style: two thin lines, no bar (17 Nov 2026) */
 .safety-box b { color: var(--ink); }
 .not-here { margin: 14px 0 0; padding: 12px 14px; border: 1px solid var(--border-2); border-radius: var(--r-card); font-size: 15px; color: var(--text-2); }
 .not-here[hidden] { display: none; }
@@ -121,3 +121,6 @@ h1 { font: 700 30px/1.2 var(--font-ui); letter-spacing: -.005em; margin: 0 0 10p
 /* map dots: a bigger invisible area to grab */
 .pin::before, .mpin::before { content: ''; position: absolute; inset: -14px; border-radius: 50%; }
 .ts-draft { margin: 10px 0 0; }
+/* the arrow on every link that goes somewhere (17 Nov 2026): thin, pointing up and right */
+svg.arr { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vertical-align: -2px; transition: transform .2s ease; }
+.btn:hover svg.arr, a:hover > svg.arr { transform: translate(2px, -2px); }
