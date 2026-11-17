@@ -8,10 +8,10 @@
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../vendor/fonts/lato.css">
 <link rel="stylesheet" href="../vendor/fonts/outfit.css">
-<link rel="stylesheet" href="../assets/contribute.css?v=20261117d">
+<link rel="stylesheet" href="../assets/contribute.css?v=20261117e">
 <!-- visit counter: page, referring site, country; no cookies, no IP addresses (live-feed/visits.js) -->
 <script src="https://api.urbanobservatory.in/visits.js" defer></script>
-<script src="../assets/config.js?v=20261117d"></script>
+<script src="../assets/config.js?v=20261117e"></script>
 <style>
   .steps { max-width: var(--measure); margin: 0 auto; }
   .progress { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; min-height: 20px; }
@@ -196,6 +196,8 @@
     body.q-mode .answer { min-height: 52px; padding: 12px 16px; }
     .where-box { height: 22vh; min-height: 140px; max-height: 240px; margin-bottom: 10px; }
   }
+  .see-data { display: flex; width: 100%; max-width: 420px; margin-top: 10px; }
+  .res-h .meta { margin-left: 0; }
 </style>
 </head>
 <body>
@@ -227,11 +229,8 @@
       <button type="button" class="btn btn-primary btn-lg start-btn" id="start-go">Start</button>
       <p class="small" id="play-box">Want to be on the <a href="leaderboard/">leaderboard</a>? <a href="#" id="play-create">Pick a nickname</a> or <a href="#" id="play-login">log in</a>.</p>
       <p class="small" id="play-in" hidden>Contributing as <b id="play-name"></b> · <a href="leaderboard/">Leaderboard</a> · <a href="#" id="play-out">Log out</a></p>
-      <p class="res-h">Results so far <span class="meta" id="meta"></span></p>
-      <div class="pair">
-        <a class="btn btn-secondary btn-lg" href="map/" id="see-map">Map <svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
-        <a class="btn btn-secondary btn-lg" href="map/#list">List <svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
-      </div>
+      <p class="res-h"><span class="meta" id="meta"></span></p>
+      <a class="btn btn-secondary btn-lg see-data" href="map/" id="see-map">See data <svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
     </section>
 
     <section class="step" data-step="here">
@@ -248,10 +247,7 @@
       <p class="hint">You can add it from the map. We'll mark it as added from memory.</p>
       <button type="button" class="btn btn-primary btn-lg wide" id="from-memory">Find the stop on the map</button>
       <p class="small" style="margin-top:28px">If not, come back when you're at a stop.</p>
-      <div class="pair" style="margin-top:10px">
-        <a class="btn btn-secondary btn-lg" href="map/">Map <svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
-        <a class="btn btn-secondary btn-lg" href="map/#list">List <svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
-      </div>
+      <a class="btn btn-secondary btn-lg see-data" href="map/">See data <svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
     </section>
 
     <section class="step" data-step="locate">
@@ -377,7 +373,7 @@
   </div>
 </footer>
 
-<script src="../assets/common.js?v=20261117d"></script>
-<script type="module" src="form.js?v=20261117d"></script>
+<script src="../assets/common.js?v=20261117e"></script>
+<script type="module" src="form.js?v=20261117e"></script>
 </body>
 </html>

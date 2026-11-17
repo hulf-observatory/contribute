@@ -8,10 +8,10 @@
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../vendor/fonts/lato.css">
 <link rel="stylesheet" href="../vendor/fonts/outfit.css">
-<link rel="stylesheet" href="../assets/contribute.css?v=20261117d">
+<link rel="stylesheet" href="../assets/contribute.css?v=20261117e">
 <!-- visit counter: page, referring site, country; no cookies, no IP addresses (live-feed/visits.js) -->
 <script src="https://api.urbanobservatory.in/visits.js" defer></script>
-<script src="../assets/config.js?v=20261117d"></script>
+<script src="../assets/config.js?v=20261117e"></script>
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <style>
@@ -170,6 +170,8 @@
     body.q-mode .mm-box { height: 36vh; min-height: 200px; }
     body.q-mode .walk-box { height: 30vh; min-height: 170px; }
   }
+  .see-data { display: flex; width: 100%; max-width: 420px; margin-top: 10px; }
+  .res-h .meta { margin-left: 0; }
 </style>
 </head>
 <body>
@@ -201,11 +203,8 @@
       <button type="button" class="btn btn-primary btn-lg start-btn" id="start-go">Start</button>
       <p class="small" id="play-box">Want to be on the <a href="../bus-stops/leaderboard/">leaderboard</a>? <a href="#" id="play-create">Pick a nickname</a> or <a href="#" id="play-login">log in</a>.</p>
       <p class="small" id="play-in" hidden>Contributing as <b id="play-name"></b> · <a href="../bus-stops/leaderboard/">Leaderboard</a> · <a href="#" id="play-out">Log out</a></p>
-      <p class="res-h">Results so far <span class="meta" id="meta"></span></p>
-      <div class="pair">
-        <a class="btn btn-secondary btn-lg" href="map/">Map <svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
-        <a class="btn btn-secondary btn-lg" href="map/#list">List <svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
-      </div>
+      <p class="res-h"><span class="meta" id="meta"></span></p>
+      <a class="btn btn-secondary btn-lg see-data" href="map/">See data <svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
     </section>
 
     <section class="step" data-step="mode">
@@ -390,7 +389,7 @@
   </div>
 </footer>
 
-<script src="../assets/common.js?v=20261117d"></script>
-<script type="module" src="form.js?v=20261117d"></script>
+<script src="../assets/common.js?v=20261117e"></script>
+<script type="module" src="form.js?v=20261117e"></script>
 </body>
 </html>

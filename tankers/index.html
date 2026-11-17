@@ -8,10 +8,10 @@
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../vendor/fonts/lato.css">
 <link rel="stylesheet" href="../vendor/fonts/outfit.css">
-<link rel="stylesheet" href="../assets/contribute.css?v=20261117d">
+<link rel="stylesheet" href="../assets/contribute.css?v=20261117e">
 <!-- visit counter: page, referring site, country; no cookies, no IP addresses (live-feed/visits.js) -->
 <script src="https://api.urbanobservatory.in/visits.js" defer></script>
-<script src="../assets/config.js?v=20261117d"></script>
+<script src="../assets/config.js?v=20261117e"></script>
 <style>
   .steps { max-width: var(--measure); margin: 0 auto; }
   .progress { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; min-height: 20px; }
@@ -133,6 +133,8 @@
     body.q-mode .answer { min-height: 50px; padding: 11px 16px; }
     body.q-mode .map-box { height: 46vh; min-height: 220px; }
   }
+  .see-data { display: flex; width: 100%; max-width: 420px; margin-top: 10px; }
+  .res-h .meta { margin-left: 0; }
 </style>
 </head>
 <body>
@@ -162,11 +164,8 @@
         <p class="msg" id="draft-msg" hidden></p>
       </div>
       <button type="button" class="btn btn-primary btn-lg start-btn" id="start-go">Start</button>
-      <p class="res-h">Results so far <span class="meta" id="meta"></span></p>
-      <div class="pair">
-        <a class="btn btn-secondary btn-lg" href="orders/">Map <svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
-        <a class="btn btn-secondary btn-lg" href="orders/#list">List <svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
-      </div>
+      <p class="res-h"><span class="meta" id="meta"></span></p>
+      <a class="btn btn-secondary btn-lg see-data" href="orders/">See data <svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
     </section>
 
     <section class="step" data-step="mode">
@@ -362,7 +361,7 @@
       <h2 class="qt">Thank you</h2>
       <p class="hint">Your answers are now public.</p>
       <div class="stack">
-        <a class="btn btn-primary btn-lg" href="orders/#list">See tanker orders <svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+        <a class="btn btn-primary btn-lg" href="orders/">See data <svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
         <button type="button" class="btn btn-secondary btn-lg" id="again">Tell us about another</button>
       </div>
       <p class="small" style="margin-top:22px">Hear about new surveys on <a href="https://chat.whatsapp.com/GJUFWd2UJyEImsmgxbEKlg" target="_blank" rel="noopener">WhatsApp</a></p>
@@ -383,7 +382,7 @@
   </div>
 </footer>
 
-<script src="../assets/common.js?v=20261117d"></script>
-<script type="module" src="form.js?v=20261117d"></script>
+<script src="../assets/common.js?v=20261117e"></script>
+<script type="module" src="form.js?v=20261117e"></script>
 </body>
 </html>

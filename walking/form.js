@@ -2,9 +2,9 @@
 // (the phone follows the route; only the spots and crossings are sent, not the route). Side of the road by pointing
 // the phone at the road. One question per screen (17 Nov 2026). Phones only; a laptop sees a QR code. Talks to
 // contribute-api (/walking/reports).
-import { mapMark } from '../assets/map-mark.js?v=20261117d';
+import { mapMark } from '../assets/map-mark.js?v=20261117e';
 import { SURVEY, TOPICS, CROSS_TOPICS, QUESTIONS, DIRS, nearestDir, roadSide, sideFromRoad, sideWord, shown, optLabel, nAnswered, POINTS, inHmda, esc,
-  metres, bearing, loadReports, contributions, player, checkPlayer, PLAYER_SAYS } from './questions.js?v=20261117d';
+  metres, bearing, loadReports, contributions, player, checkPlayer, PLAYER_SAYS } from './questions.js?v=20261117e';
 
 const $ = (id) => document.getElementById(id);
 Contribute.phoneOnly({ what: 'Walking', mapHref: 'map/', mapLabel: 'See the walking map' });
@@ -595,6 +595,6 @@ if (openPlay && !player.get()) { setPMode(openPlay); show('player'); }
 loadReports().then(rows => {
   const c = contributions(rows), xs = rows.filter(r => r.item === 'crossing').length, ws = c.filter(x => x.kind === 'walk').length;
   const many = (n, w) => `${n.toLocaleString('en-IN')} ${w}${n === 1 ? '' : 's'}`;
-  if (rows.length) $('meta').textContent = [many(rows.length - xs, 'spot'), many(xs, 'crossing'), many(ws, 'walk')].join(', ');
+  if (rows.length) $('meta').textContent = 'So far: ' + [many(rows.length - xs, 'spot'), many(xs, 'crossing'), many(ws, 'walk')].join(', ');
 }).catch(() => {});
 if (LOCAL) window.__test = { S, show, placeSpot, setRoad, flow, maps: () => ({ wmap, kmap }) };

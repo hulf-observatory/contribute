@@ -8,10 +8,10 @@
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../vendor/fonts/lato.css">
 <link rel="stylesheet" href="../vendor/fonts/outfit.css">
-<link rel="stylesheet" href="../assets/contribute.css?v=20261117d">
+<link rel="stylesheet" href="../assets/contribute.css?v=20261117e">
 <!-- visit counter: page, referring site, country; no cookies, no IP addresses (live-feed/visits.js) -->
 <script src="https://api.urbanobservatory.in/visits.js" defer></script>
-<script src="../assets/config.js?v=20261117d"></script>
+<script src="../assets/config.js?v=20261117e"></script>
 <style>
   /* one question per screen */
   .steps { max-width: var(--measure); margin: 0 auto; }
@@ -180,6 +180,8 @@
     body.q-mode .field { margin-bottom: 14px; }
     body.q-mode .review > div { grid-template-columns: 72px 1fr auto; padding: 9px 0; }
   }
+  .see-data { display: flex; width: 100%; max-width: 420px; margin-top: 10px; }
+  .res-h .meta { margin-left: 0; }
 </style>
 </head>
 <body>
@@ -209,11 +211,8 @@
         <p class="msg" id="draft-msg" hidden></p>
       </div>
       <button type="button" class="btn btn-primary btn-lg start-btn" id="start-go">Start</button>
-      <p class="res-h">Results so far <span class="meta" id="reports-meta"></span></p>
-      <div class="pair">
-        <a class="btn btn-secondary btn-lg" href="reports/" id="see-map">Map <svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
-        <a class="btn btn-secondary btn-lg" href="reports/#list">List <svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
-      </div>
+      <p class="res-h"><span class="meta" id="reports-meta"></span></p>
+      <a class="btn btn-secondary btn-lg see-data" href="reports/" id="see-map">See data <svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
     </section>
 
     <section class="step" data-step="here">
@@ -228,11 +227,7 @@
     <section class="step" data-step="nothere">
       <h2 class="qt">Come back when you're there</h2>
       <p class="hint">Reports come from people who can see the water, so the map shows flooding as it happens.</p>
-      <p class="res-h">Results so far</p>
-      <div class="pair">
-        <a class="btn btn-secondary btn-lg" href="reports/">Map <svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
-        <a class="btn btn-secondary btn-lg" href="reports/#list">List <svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
-      </div>
+      <a class="btn btn-secondary btn-lg see-data" href="reports/">See data <svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
     </section>
 
     <!-- locate: explain before the phone asks -->
@@ -350,7 +345,7 @@
       <h2 class="qt">Thank you</h2>
       <p class="hint">Your report is now public.</p>
       <div class="stack">
-        <a class="btn btn-primary btn-lg" href="reports/">See all reports <svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+        <a class="btn btn-primary btn-lg" href="reports/">See data <svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
         <button type="button" class="btn btn-secondary btn-lg" id="again">Report another</button>
       </div>
       <p class="small" style="margin-top:22px">Hear about new surveys on <a href="https://chat.whatsapp.com/GJUFWd2UJyEImsmgxbEKlg" target="_blank" rel="noopener" id="wa">WhatsApp</a></p>
@@ -370,9 +365,9 @@
   </div>
 </footer>
 
-<script src="../assets/common.js?v=20261117d"></script>
+<script src="../assets/common.js?v=20261117e"></script>
 <script type="module">
-import { mapMark } from '../assets/map-mark.js?v=20261117d';
+import { mapMark } from '../assets/map-mark.js?v=20261117e';
 // Report flooding, at the place (Teja, 16 Nov 2026): phones only, the phone's location (the dot moves up to 100 m), time = now.
 const $ = (id) => document.getElementById(id);
 Contribute.phoneOnly({ what: 'Flooding', mapHref: 'reports/', mapLabel: 'See the reports so far' });
@@ -807,7 +802,7 @@ $('again').onclick = () => { location.href = location.pathname; };
 fetch(`${window.CONTRIBUTE.API}/flood/reports.json`, { cache: 'no-cache' }).then(r => r.json()).then(d => {
   const f = d.features || [];
   const last = f.map(x => x.properties.observed_at).sort().pop();
-  if (f.length) $('reports-meta').textContent = `${f.length} report${f.length > 1 ? 's' : ''}${last ? ', latest ' + new Date(last).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' }) : ''}`;
+  if (f.length) $('reports-meta').textContent = `So far: ${f.length} report${f.length > 1 ? 's' : ''}${last ? ', latest ' + new Date(last).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' }) : ''}`;
 }).catch(() => {});
 if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__test = { S, show, onFix, wardAt, setExact, store, placePin };   // local checks only
 </script>
