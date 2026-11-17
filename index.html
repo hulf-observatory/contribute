@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Contribute · Hyderabad Urban Observatory</title>
-<meta name="description" content="Tell the Hyderabad Urban Observatory what you see in the city: flooding, bus stops and water tankers now, more surveys soon. Anonymous, no sign-in; shared as community data.">
+<meta name="description" content="Help build open data for Hyderabad: short phone surveys on bus stops, footpaths and crossings, water tankers and flooding. No real names; everything is shared as open data.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="vendor/fonts/lato.css">
 <link rel="stylesheet" href="vendor/fonts/outfit.css">
@@ -13,19 +13,26 @@
 <script src="https://api.urbanobservatory.in/visits.js" defer></script>
 <style>
   .intro { max-width: var(--measure); margin-bottom: 32px; }
+  /* surveys grouped by theme (Teja, 17 Nov 2026); each card is one big button with an arrow at its top right */
+  .theme { margin: 0 0 36px; }
+  .theme-h { font: 700 22px/1.25 var(--font-ui); color: var(--ink); margin: 0 0 4px; }
+  .theme-sub { color: var(--text-2); font-size: 15px; margin: 0 0 14px; }
   .surveys { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
   @media (min-width: 768px) { .surveys { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-  @media (min-width: 1280px) { .surveys { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-  /* simple cards (Teja, 16 Nov 2026): name, one line, the whole card starts the survey; results as a small link */
-  .card { position: relative; border: 1px solid var(--border); border-radius: var(--r-card); padding: 20px 22px 18px; background: #fff; transition: border-color .2s ease, background .2s ease; }
+  .card { position: relative; border: 1px solid var(--border-2); border-radius: var(--r-card); padding: 20px 56px 18px 22px; background: #fff; transition: border-color .2s ease, background .2s ease; }
   .card:hover { border-color: var(--ink); background: var(--band); }
-  .card h2 { font: 700 19px/1.3 var(--font-ui); margin: 0 0 4px; }
+  .card h3 { font: 700 20px/1.3 var(--font-ui); margin: 0 0 4px; }
+  .card .arrow { position: absolute; top: 20px; right: 20px; width: 22px; height: 22px; fill: none; stroke: var(--ink); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transition: transform .2s ease; }
+  .card:hover .arrow { transform: translate(2px, -2px); }
+  .card .foot { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; margin-top: 4px; }
+  .card .start { font: 700 15px var(--font-ui); color: var(--ink); text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1.5px; }
   .card .go { color: var(--ink); text-decoration: none; }
   .card .go::after { content: ''; position: absolute; inset: 0; border-radius: var(--r-card); }   /* the whole card is the link */
   .card .go:focus-visible { outline: none; }
   .card:focus-within { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
   .card p { color: var(--text-2); margin: 0 0 12px; font-size: 15px; }
   .card .more { position: relative; z-index: 1; font-size: 14px; color: var(--text-2); }
+  .card h3 .go { color: var(--ink); }
   .rules { max-width: var(--measure); margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--text-2); font-size: 15px; }
   .rules h2 { font: 700 18px/1.3 var(--font-ui); color: var(--ink); margin: 0 0 8px; }
   .rules ul { margin: 0; padding-left: 20px; }
@@ -44,39 +51,50 @@
 <main class="wrap">
   <section class="intro">
     <p class="eyebrow">Contribute</p>
-    <h1>Tell us what you see in the city</h1>
-    <p class="lede">Short surveys anyone can fill in on a phone. What you send is shown with everyone else's and shared
-      as community data, so residents, researchers and city offices can see the same picture.</p>
+    <h1>Help build open data for Hyderabad</h1>
+    <p class="lede">Pick a survey below and tell us what you see. Each takes a few minutes on your phone. What you send
+      becomes open data that anyone can see and use: residents, researchers and city offices.</p>
   </section>
 
-  <div class="surveys">
-    <article class="card">
-      <h2><a class="go" href="bus-stops/">Bus stops</a></h2>
-      <p>Shelter, seating, footpath, crossing, lighting at a stop.</p>
-      <a class="more" href="bus-stops/map/">See the map</a>
-    </article>
-    <article class="card">
-      <h2><a class="go" href="walking/">Walking</a></h2>
-      <p>Footpaths and crossings: blocked, broken, shaded, safe to cross?</p>
-      <a class="more" href="walking/map/">See the map</a>
-    </article>
-    <article class="card">
-      <h2><a class="go" href="tankers/">Water tankers</a></h2>
-      <p>What you paid, the size, and how long it took to come.</p>
-      <a class="more" href="tankers/orders/">See orders</a>
-    </article>
-    <article class="card">
-      <h2><a class="go" href="flood/">Flooding</a></h2>
-      <p>Seen water on a road? Say where and how deep.</p>
-      <a class="more" href="flood/reports/">See reports</a>
-    </article>
-  </div>
+  <section class="theme" aria-labelledby="th-move">
+    <h2 class="theme-h" id="th-move">Getting around</h2>
+    <p class="theme-sub">Bus stops, footpaths and crossings, as people find them.</p>
+    <div class="surveys">
+      <article class="card">
+        <h3><a class="go" href="bus-stops/">Bus stops</a></h3><svg class="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>
+        <p>Shelter, seating, footpath, crossing, lighting at a stop.</p>
+        <div class="foot"><span class="start" aria-hidden="true">Start</span><a class="more" href="bus-stops/map/">See the map</a></div>
+      </article>
+      <article class="card">
+        <h3><a class="go" href="walking/">Walking</a></h3><svg class="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>
+        <p>Footpaths and crossings: blocked, broken, shaded, safe to cross?</p>
+        <div class="foot"><span class="start" aria-hidden="true">Start</span><a class="more" href="walking/map/">See the map</a></div>
+      </article>
+    </div>
+  </section>
+
+  <section class="theme" aria-labelledby="th-water">
+    <h2 class="theme-h" id="th-water">Water</h2>
+    <p class="theme-sub">What tankers cost, and where the roads flood.</p>
+    <div class="surveys">
+      <article class="card">
+        <h3><a class="go" href="tankers/">Water tankers</a></h3><svg class="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>
+        <p>What you paid, the size, and how long it took to come.</p>
+        <div class="foot"><span class="start" aria-hidden="true">Start</span><a class="more" href="tankers/orders/">See orders</a></div>
+      </article>
+      <article class="card">
+        <h3><a class="go" href="flood/">Flooding</a></h3><svg class="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>
+        <p>Seen water on a road? Say where and how deep.</p>
+        <div class="foot"><span class="start" aria-hidden="true">Start</span><a class="more" href="flood/reports/">See reports</a></div>
+      </article>
+    </div>
+  </section>
 
   <section class="rules">
     <h2>How we handle what you send</h2>
     <ul>
       <li><b>A public data exercise, not a complaint service:</b> what you send is shared openly; we don't pass it on as a complaint or follow up on it. To get something fixed, contact the department responsible directly.</li>
-      <li>No names, no sign-in, and we don't keep IP addresses.</li>
+      <li>No real names or email, and we don't keep IP addresses. A nickname for the leaderboard is optional.</li>
       <li>The forms are filled in on a phone. Flooding, bus stops and footpaths are reported at the place itself, from your phone's location (you can move the point up to 100 m, so you can stand somewhere safe). Tankers can be reported from anywhere. For bus stops, your location only finds the nearest stops; it is sent only if you say the stop is where you are.</li>
       <li>Photos are made smaller and their hidden location data is removed on your phone, before sending.</li>
       <li>Answers are shared as open data under CC BY 4.0; photos are shown on the website but not in the download.</li>
