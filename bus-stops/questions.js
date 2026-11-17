@@ -34,7 +34,7 @@ export const TOPICS = [
     { id: 'light_state', s: 'Lighting', q: 'How is the lighting?', if: a => a.light === 'yes', opts: [['good', 'Good', 1], ['poor', 'Poor', .4]] },
     { id: 'safe_day', s: 'Feels by day', q: 'How safe does it feel to wait here during the day?', opts: [['safe', 'Safe', 1], ['somewhat', 'Somewhat', .5], ['unsafe', 'Unsafe', 0]] },
     { id: 'safe_night', s: 'Feels after dark', q: 'How safe does it feel to wait here after dark?', hint: "Skip if you haven't been here after dark", opts: [['safe', 'Safe', 1], ['somewhat', 'Somewhat', .5], ['unsafe', 'Unsafe', 0]] },
-    { id: 'floods', s: 'Floods', q: 'Does it flood or water-log when it rains?', opts: [['yes', 'Yes', 0], ['no', 'No', 1]] },
+    { id: 'floods', s: 'Floods', q: 'Does it flood or water-log when it rains?', opts: [['yes', 'Yes', 0], ['no', 'No', 1], ['dk', "Don't know"]] },
   ] },
   { id: 'signs', title: 'Signs', qs: [
     { id: 'name_sign', s: 'Name sign', q: 'Is the stop name shown on a sign?', opts: [['yes', 'Yes', 1], ['no', 'No', 0]] },
