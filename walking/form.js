@@ -1,7 +1,7 @@
 // Walking survey: footpaths and crossings, at the place itself (Teja, 16 Nov 2026). One spot, one crossing, or a walk
 // (the phone follows the route; only the spots and crossings are sent, not the route). Side of the road by pointing
 // the phone at the road. Phones only; a laptop sees a QR code. Talks to contribute-api (/walking/reports).
-import { mapMark } from '../assets/map-mark.js?v=20261117';
+import { mapMark } from '../assets/map-mark.js?v=20261117b';
 import { SURVEY, TOPICS, CROSS_TOPICS, QUESTIONS, DIRS, nearestDir, roadSide, sideFromRoad, sideWord, shown, optLabel, POINTS, inHmda, esc,
   metres, bearing, loadReports, contributions, player, checkPlayer, PLAYER_SAYS } from './questions.js';
 
@@ -51,8 +51,7 @@ function show(s, push = true) {
   if (s === 'walk') openWalkMap();
   if (s === 'dir') drawDir();
   if (s === 'same') drawSame();
-  if (ALL_STEPS.includes(s)) { drawAnswers(); document.querySelector(`[data-step="${s}"] [data-hint]`).textContent = S.spot.same === 'changed'
-      ? 'These are your answers from the last spot. Change only what is different.' : "Tap the answers that fit. Skip any you don't know."; }
+  if (ALL_STEPS.includes(s)) { profileHere(); drawAnswers(); hintTopic(s); }
   if (s === 'extra') drawExtra();
   if (s === 'review') drawReview();
   updateNext();
@@ -71,7 +70,7 @@ function updateNext() {
   const n = $('next'); n.disabled = !ready();
   $('extra-few').hidden = !(cur === 'extra' && S.spot && !nAnswered(S.spot));
   const topicEmpty = ALL_STEPS.includes(cur) && ![...TOPICS, ...CROSS_TOPICS].find(t => 't-' + t.id === cur).qs.some(q => S.spot.answers[q.id] != null);
-  n.textContent = cur === 'review' ? 'Send' : cur === 'extra' && S.mode === 'walk' ? (isX() ? 'Add this crossing' : 'Add this spot') : (topicEmpty || (cur === 'extra' && !S.spot.photo && !$('note').value.trim())) ? 'Skip' : 'Next';
+  n.textContent = cur === 'review' ? (unchanged() ? "Confirm it's still like this" : 'Send') : cur === 'extra' && S.mode === 'walk' ? (isX() ? 'Add this crossing' : 'Add this spot') : (topicEmpty || (cur === 'extra' && !S.spot.photo && !$('note').value.trim())) ? 'Skip' : 'Next';
 }
 function next() {
   if (cur === 'review') return send();
@@ -324,6 +323,29 @@ $('topics').addEventListener('click', (e) => {
   if (a[id] === undefined) delete a[id];
   drawAnswers();
 });
+// ── a main road's profile (Teja, 17 Nov 2026): a single spot or crossing on a stretch or junction that already has
+// answers starts from them; the person changes only what's different. Nothing changed = "still like this". ──
+const snapA = (a) => JSON.stringify(Object.keys(a).filter(k => a[k] != null).sort().map(k => [k, a[k]]));
+function hintTopic(s) {
+  const sp = S.spot, el = document.querySelector(`[data-step="${s}"] [data-hint]`), p = sp.profile;
+  el.textContent = sp.same === 'changed' ? 'These are your answers from the last spot. Change only what is different.'
+    : sp.base && p ? `These are the latest answers for ${sp.kind === 'crossing' ? 'crossing here' : `this side of ${p.name || 'the road'}`}, from ${p.n} contribution${p.n > 1 ? 's' : ''}. Change only what's different now.`
+    : "Tap the answers that fit. Skip any you don't know.";
+}
+function profileHere() {
+  const sp = S.spot;
+  if (S.mode === 'walk' || !sp || sp.asked) return;
+  sp.asked = true;
+  const side = sp.kind === 'crossing' ? '' : sideWord(sp) || '';
+  fetch(`${window.CONTRIBUTE.API}/${SURVEY}/near?item=${sp.kind}&lat=${sp.lat.toFixed(6)}&lng=${sp.lng.toFixed(6)}&side=${side}`, { credentials: 'omit', cache: 'no-store' })
+    .then(r => r.json()).then(d => {
+      if (!d.profile || S.spot !== sp || Object.keys(sp.answers).length) return;   // nothing there, or they've started answering
+      sp.answers = Object.fromEntries(Object.entries(d.profile.answers).map(([k, x]) => [k, structuredClone(x.v)]));
+      sp.base = snapA(sp.answers); sp.profile = { latest: d.profile.latest, n: d.profile.n, name: d.name };
+      if (ALL_STEPS.includes(cur)) { drawAnswers(); hintTopic(cur); }
+    }).catch(() => {});
+}
+const unchanged = () => S.mode !== 'walk' && !!S.spot && !!S.spot.base && snapA(S.spot.answers) === S.spot.base && !S.spot.photo && !(S.spot.note || $('note').value.trim());
 function drawAnswers() {
   const a = S.spot.answers;
   for (const q of QUESTIONS) {
@@ -398,6 +420,9 @@ function drawReview() {
       ...S.spots.map((s, i) => [`${i + 1}. ${s.kind === 'crossing' ? 'Crossing' : 'Spot'}`, `${esc(s.kind === 'crossing' ? itemSummary(s) : spotTitle(s))}<small>${s.kind === 'crossing' ? '' : esc(itemSummary(s))}${s.same === true ? ' (same as before)' : ''}${s.photo ? ' · photo' : ''}</small>`, null])];
     $('review-hint').textContent = 'Nothing has been saved yet. Go back to the walk to add or remove spots.';
   }
+  if (S.mode !== 'walk' && S.spot.base) $('review-hint').textContent = unchanged()
+    ? "You haven't changed anything from the latest answers. Press the button to confirm it's still like this, or tap \"Change\" to fix something."
+    : 'You started from the latest answers here. Tap "Change" to fix anything. Nothing has been saved yet.';
   $('review').innerHTML = rows.map(([k, v, s]) => `<div><dt>${k}</dt><dd>${v}</dd>${s ? `<button type="button" data-go="${s}">Change</button>` : '<span></span>'}</div>`).join('');
   $('review').querySelectorAll('[data-go]').forEach(b => b.onclick = () => show(b.dataset.go));
 }
@@ -412,7 +437,7 @@ function payload() {
     items: spots.map(s => ({ item: s.kind, here: S.memory ? 'known' : 'yes', place_type: s.byMap ? 'map' : 'gps', lat: +s.lat.toFixed(6), lng: +s.lng.toFixed(6), accuracy_m: s.accuracy_m, moved_m: s.byMap ? null : (s.moved_m || 0), observed_at: s.at,
       ...(s.kind === 'spot' ? { facing: s.facing, side_how: s.how, road_deg: s.roadDeg, lr: s.lr, same: s.same === true } : {}),
       ...Object.fromEntries(Object.entries(s.answers).filter(([k, v]) => ANSWER_IDS.has(k) && v != null)),
-      note: s.note || null, photo: s.photo || null })) };
+      note: s.note || null, photo: s.photo || null, prefilled: !!s.base || null })) };
 }
 const spam = Contribute.spamCheck($('ts-review'));
 async function postIt(body, sc = spam) {
@@ -433,8 +458,32 @@ function thanks(body) {
   stack = []; show('thanks', false);
 }
 let sending = false;
+// nothing changed from the profile: a "still like this" check on its latest contribution, not a new one
+async function confirmSame() {
+  sending = true; $('send-msg').hidden = true; $('next').disabled = true; $('next').textContent = 'Sending…';
+  try {
+    const token = await spam.token();
+    if (token === null) throw Object.assign(new Error('spam check'), { server: true, status: 403 });
+    const p = player.get(), nk = p && !S.noNick;
+    let r;
+    try { r = await Contribute.post(`/${SURVEY}/reports/${S.spot.profile.latest}/feedback`, { kind: 'confirm', note: null, device: Contribute.device(),
+      nick: nk ? p.nick : null, nick_pin: nk ? p.pin : null, token, website: $('trap').value }); } finally { spam.reset(); }
+    sending = false;
+    $('pts').textContent = r.accepted ? '+' + POINTS.confirm : '+0';
+    $('pts-list').innerHTML = r.accepted ? `<li>Confirming it's still like this<b>+${POINTS.confirm}</b></li>` : '';
+    $('thanks-text').textContent = !r.accepted ? 'You had already confirmed this from this phone, so nothing new was added.'
+      : nk ? `Points go to ${p.nick} on the leaderboard.` : 'You are not logged in, so these points are not on the leaderboard.';
+    stack = []; show('thanks', false);
+  } catch (err) {
+    sending = false; $('next').disabled = false; $('next').textContent = 'Try again';
+    $('send-msg').textContent = err.status === 403 ? 'The spam check did not finish. Please press Try again.' : err.status === 429 ? 'Too many sends from this connection just now. Please wait a minute.'
+      : err.server ? `The server could not accept this (${err.message}).` : "We couldn't send this; the signal may be weak.";
+    $('send-msg').hidden = false;
+  }
+}
 async function send() {
   if (sending) return;
+  if (unchanged()) return confirmSame();
   const body = payload(), saved = { body, at: Date.now(), n: body.items.length };
   const kept = store.set(saved) || store.set({ ...saved, body: { ...body, items: body.items.map(i => ({ ...i, photo: null })) }, photoDropped: true });
   sending = true; $('send-msg').hidden = true; $('next').disabled = true; $('next').textContent = 'Sending…';
