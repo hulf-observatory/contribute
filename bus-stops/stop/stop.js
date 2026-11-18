@@ -2,7 +2,7 @@
 // with how many gave each answer (Teja, 18 Nov 2026: from the stop's profile on the server), photos, every
 // contribution with feedback. No overall score (Teja, 16 Nov 2026).
 import { SURVEY, TOPICS, VIEWS, VIEW_COLORS, shown, loadStops, loadRatings, loadProfiles, addedStops, byStop, currentOf, describe, POINTS,
-  esc, player, day } from '../questions.js?v=20261118a';
+  esc, player, day } from '../questions.js?v=20261118b';
 
 const $ = (id) => document.getElementById(id);
 const id = new URLSearchParams(location.search).get('id');
@@ -26,7 +26,7 @@ $('facts').innerHTML = VIEWS.map(v => [v, v.of(answers)]).filter(([, c]) => c).m
 $('cond-meta').textContent = list.length ? `From ${list.length} contribution${list.length > 1 ? 's' : ''}, latest ${day(list[0].observed_at)}` : 'No one has sent details for this stop yet.';
 if (!list.length) { ['state-sec', 'photo-sec', 'hist-sec', 'same'].forEach(x => { $(x).hidden = true; }); $('rate').textContent = 'Be the first to add details'; }
 
-// each question: the current answer, how many gave each answer, agreed / mixed / one person; older answers apart
+// each question: the current answer, how many gave each answer, agreed / mixed; older answers apart
 if (list.length && !prof) $('state-sub').textContent = "The answers couldn't load just now. Please try again later.";
 $('state').innerHTML = !prof ? '' : TOPICS.map(t => `<div class="topic"><h3>${esc(t.title)}</h3>${t.qs.filter(q => shown(q, answers)).map(q => {
   const d = describe(q, prof.answers[q.id]);

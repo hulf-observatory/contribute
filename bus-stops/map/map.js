@@ -1,7 +1,7 @@
 // Bus stops map: every TGSRTC stop, coloured by its current answer to one topic at a time (shelter, crossing,
 // lighting…); grey = no clear answer yet (none, or mixed answers: Teja, 18 Nov 2026). No overall score (16 Nov 2026).
 // The leaderboard is its own page.
-import { SURVEY, VIEWS, VIEW_COLORS, loadStops, loadRatings, loadProfiles, addedStops, byStop, currentOf, esc } from '../questions.js?v=20261118a';
+import { SURVEY, VIEWS, VIEW_COLORS, loadStops, loadRatings, loadProfiles, addedStops, byStop, currentOf, esc } from '../questions.js?v=20261118b';
 
 const C = window.CONTRIBUTE;
 const $ = (id) => document.getElementById(id);

@@ -121,13 +121,13 @@ export async function loadProfiles() {
 const has1 = (v) => v != null && !(Array.isArray(v) && !v.length);
 // a profile's current answers, as one answers object (mixed or none left out); for map colours, facts and pre-filling
 export const currentOf = (p) => p ? Object.fromEntries(Object.entries(p.answers).filter(([, x]) => has1(x.current)).map(([k, x]) => [k, x.current])) : {};
-// one question's line: the answer, and "Yes 3 · No 1 · agreed" / "mixed answers" / "1 person", older answers
+// one question's line: the answer, and "Yes 3 · No 1 · agreed" / "mixed answers" (one answer: counts only), older answers
 export function describe(q, x, label = optLabel) {
   if (!x) return null;
   const multi = Array.isArray(x.current) || q.multi;
   const counts = Object.entries(x.counts || {}).map(([v, n]) => `${label(q, v)} ${n}`);
   if (x.dk) counts.push(`Don't know ${x.dk}`);
-  const status = !x.of ? '' : x.of === 1 ? '1 person' : x.mixed || (multi && !has1(x.current)) ? 'mixed answers' : 'agreed';
+  const status = !(x.of > 1) ? '' : x.mixed || (multi && !has1(x.current)) ? 'mixed answers' : 'agreed';
   const older = x.older ? `+${x.older} older answer${x.older > 1 ? 's' : ''} not counted` : '';
   const txt = has1(x.current) ? (multi ? x.current.map(v => label(q, v)).join(', ') : label(q, x.current))
     : x.of ? 'Mixed answers' : x.older ? 'No recent answer' : 'Not answered';

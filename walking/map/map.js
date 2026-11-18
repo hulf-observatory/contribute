@@ -4,8 +4,8 @@
 // Data: ../roads.json (stretches, built by contribute-api/tools/build_roads.py), /walking/profiles.json, reports.json.
 // Map or list (17 Nov 2026): the list shows road sides, junctions and single spots, newest first; ?p=<profile> or
 // ?r=<row id> opens one on the map.
-import { SURVEY, TOPICS, CROSS_TOPICS, VIEWS, CROSS_VIEWS, VIEW_COLORS, shown, optLabel, real, esc, loadReports } from '../questions.js?v=20261118a';
-import { currentOf, describe } from '../../bus-stops/questions.js?v=20261118a';
+import { SURVEY, TOPICS, CROSS_TOPICS, VIEWS, CROSS_VIEWS, VIEW_COLORS, shown, optLabel, real, esc, loadReports } from '../questions.js?v=20261118b';
+import { currentOf, describe } from '../../bus-stops/questions.js?v=20261118b';
 const C = window.CONTRIBUTE;
 const $ = (id) => document.getElementById(id);
 const NONE = '#A9AFB8', FAINT = '#E5E7EB';     // grey: main roads with no profile yet
@@ -90,7 +90,7 @@ map.on('load', () => {
 
 // ── the profile panel ──
 const QS = (kind) => (kind === 'crossing' ? CROSS_TOPICS : TOPICS).flatMap(t => t.qs);
-// each question: the current answer, how many gave each answer, agreed / mixed / one person; older answers apart
+// each question: the current answer, how many gave each answer, agreed / mixed; older answers apart
 function facts(kind, p) {
   const a = flat(p);
   return QS(kind).filter(q => shown(q, a) && p.answers[q.id] && (p.answers[q.id].of || p.answers[q.id].older)).map(q => {   // not "Don't know" alone
