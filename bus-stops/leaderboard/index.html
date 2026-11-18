@@ -8,10 +8,10 @@
 <link rel="icon" href="../../favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../../vendor/fonts/lato.css">
 <link rel="stylesheet" href="../../vendor/fonts/outfit.css">
-<link rel="stylesheet" href="../../assets/contribute.css?v=20261118b">
+<link rel="stylesheet" href="../../assets/contribute.css?v=20261118c">
 <!-- visit counter: page, referring site, country; no cookies, no IP addresses (live-feed/visits.js) -->
 <script src="https://api.urbanobservatory.in/visits.js" defer></script>
-<script src="../../assets/config.js?v=20261118b"></script>
+<script src="../../assets/config.js?v=20261118c"></script>
 <style>
   .lb { max-width: 720px; }
   .lb .lede { margin-bottom: 20px; }
@@ -22,6 +22,8 @@
   .board li { display: grid; grid-template-columns: 36px 1fr auto; gap: 8px; align-items: baseline; padding: 12px 4px; border-bottom: 1px solid var(--border); font-size: 16px; }
   .board li .r { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
   .board li b { font-variant-numeric: tabular-nums; }
+  .board li a { color: var(--ink); }
+  .me-box a { color: var(--ink); }
   .board li.me { background: var(--band); font-weight: 700; }
   .board li.gap { display: block; text-align: center; color: var(--muted); padding: 6px; font-size: 14px; }
   .cols { display: grid; gap: 32px; margin-top: 36px; }
@@ -49,7 +51,7 @@
   <div class="lb">
     <p class="eyebrow"><a href="../" style="color:inherit;text-decoration:none">Contribute · Bus stops and walking</a></p>
     <h1>Leaderboard</h1>
-    <p class="lede">Contributors telling us about Hyderabad's bus stops, footpaths and crossings, by points. Nicknames are made up by the contributors.</p>
+    <p class="lede">Contributors telling us about Hyderabad's bus stops, footpaths and crossings, by points. Nicknames are made up by the contributors; tap one to see what they've added.</p>
     <p class="me-box" id="me-box" hidden></p>
     <div class="seg" role="group" aria-label="Period"><button type="button" aria-pressed="true" data-p="all">All time</button><button type="button" aria-pressed="false" data-p="month">Last 30 days</button></div>
     <ol class="board" id="board"></ol>
@@ -60,8 +62,8 @@
       </section>
       <section>
         <h2>Not on the board?</h2>
-        <p>Join as a contributor with a nickname and a 4-digit PIN: no email, and it works on any phone.</p>
-        <div class="row-btns"><a class="btn btn-primary" href="../#create">Join as a contributor</a><a class="btn btn-secondary" href="../#login">Log in</a></div>
+        <p>Create a profile: just a nickname and a 4-digit PIN. No name, phone number or email, and it works on any phone.</p>
+        <div class="row-btns"><a class="btn btn-primary" href="../#create">Create profile</a><a class="btn btn-secondary" href="../#login">Log in</a></div>
         <p style="margin-top:16px"><a href="../map/">See the bus stops map</a> · <a href="../../walking/map/">See the walking map</a></p>
       </section>
     </div>
@@ -76,7 +78,7 @@
   </div>
 </footer>
 
-<script src="../../assets/common.js?v=20261118b"></script>
-<script type="module" src="leaderboard.js?v=20261118b"></script>
+<script src="../../assets/common.js?v=20261118c"></script>
+<script type="module" src="leaderboard.js?v=20261118c"></script>
 </body>
 </html>

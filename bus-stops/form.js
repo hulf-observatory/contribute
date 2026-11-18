@@ -1,9 +1,9 @@
 // Tell us about a bus stop, at the stop (Teja, 16 Nov 2026): the phone's location lists the nearest stops (or a
 // missing one is added within 100 m of it), then the topic screens, optional photo and improvement, check and send.
 // Phones only; a laptop sees a QR code. Talks to contribute-api.
-import { mapMark } from '../assets/map-mark.js?v=20261118b';
+import { mapMark } from '../assets/map-mark.js?v=20261118c';
 import { SURVEY, TOPICS, QUESTIONS, MIN_ANSWERS, optLabel, shown, answered, POINTS, loadStops, loadRatings, loadProfiles, addedStops,
-  byStop, currentOf, ANSWER_KEYS, metres, stopLabel, esc, player, checkPlayer, PLAYER_SAYS } from './questions.js?v=20261118b';
+  byStop, currentOf, ANSWER_KEYS, metres, stopLabel, esc, player, checkPlayer, PLAYER_SAYS } from './questions.js?v=20261118c';
 
 const C = window.CONTRIBUTE;
 const $ = (id) => document.getElementById(id);
@@ -92,6 +92,7 @@ function show(s, push = true) {
   if (s === 'where') openWhereMap();
   if (s === 'mark') { marker.open(); $('mark-hint').textContent = S.here === 'known' ? 'Put the pin exactly on the stop. Dots are bus stops: tap one.' : 'Move the map so the pin is on your stop. Dots are bus stops: tap one.'; }
   if (s === 'start') drawPlay();
+  if (s === 'thanks') { const p = S.noNick ? null : player.get(); $('thanks-prof').hidden = !p; if (p) $('thanks-prof-a').href = profileUrl(p.nick); }
   if (s === 'player') { S.noNick = false; const p = player.get(); $('p-nick').value = p ? p.nick : $('p-nick').value; $('p-pin').value = ''; $('p-msg').hidden = true; playerReady(); }
   updateNext();
   if (push) history.pushState({ s }, '', location.search + '#' + s);
@@ -336,10 +337,12 @@ $('photo-in').addEventListener('change', async (e) => {
 // ── the player: nickname + 4-digit PIN, checked with the server (a new nickname becomes theirs with the first rating) ──
 const cleanNick = (v) => v.trim().replace(/\s+/g, ' ');
 const pinOk = (v) => /^\d{4}$/.test(v);
+const profileUrl = (n) => `../profile/?n=${encodeURIComponent(n)}`;
 function drawPlay() {
   const p = player.get();
   $('play-box').hidden = !!p; $('play-in').hidden = !p;
-  if (p) $('play-name').textContent = p.nick;
+  $('start-go').textContent = p ? 'Start' : 'Start anonymously';
+  if (p) { $('play-name').textContent = p.nick; $('play-prof').href = profileUrl(p.nick); }
 }
 // one screen for both: Create a player (the nickname must be free) or Log in (an existing player, on any phone)
 let mode = 'create';
@@ -355,6 +358,9 @@ function setMode(m) {
 }
 $('play-create').onclick = (e) => { e.preventDefault(); setMode('create'); show('player'); };
 $('play-login').onclick = (e) => { e.preventDefault(); setMode('login'); show('player'); };
+// before sending: anonymous entries earn no points, so offer a profile once more (Teja, 18 Nov 2026)
+$('anon-create').onclick = (e) => { e.preventDefault(); setMode('create'); show('player'); };
+$('anon-login').onclick = (e) => { e.preventDefault(); setMode('login'); show('player'); };
 $('p-switch').onclick = (e) => { e.preventDefault(); setMode(mode === 'create' ? 'login' : 'create'); };
 $('play-out').onclick = (e) => { e.preventDefault(); player.clear(); drawPlay(); };
 const playerReady = () => { $('p-go').disabled = cleanNick($('p-nick').value).length < 3 || !pinOk($('p-pin').value); };
@@ -407,6 +413,7 @@ function drawReview() {
   const short = [['Stop', `${esc(stopName)}<small>${S.missing ? 'A new stop' : S.here === 'known' ? 'From memory' : S.stop.towards ? 'towards ' + esc(S.stop.towards) : ''}</small>`, S.preset ? null : S.missing ? 'missing' : 'nearest'],
     ['Answers', `${n} answer${n === 1 ? '' : 's'}`, 'all'], ['Photo', S.photo ? 'Added' : 'None', 'photo'],
     ...($('improve').value.trim() ? [['Improve', esc($('improve').value.trim()), 'improve']] : [])];
+  $('anon').hidden = !!who().nick;
   $('review').innerHTML = short.map(([k, v, s]) => `<div><dt>${k}</dt><dd>${v}</dd>${s ? `<button type="button" data-go="${s}">${s === 'all' ? 'See' : 'Change'}</button>` : '<span></span>'}</div>`).join('');
   $('review').querySelectorAll('[data-go]').forEach(b => b.onclick = () => b.dataset.go === 'all' ? ($('all-answers').hidden = !$('all-answers').hidden) : show(b.dataset.go));
   $('all-answers').innerHTML = QUESTIONS.filter(q => shown(q, S.a)).map(q => { const v = S.a[q.id];

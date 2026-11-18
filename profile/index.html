@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Contributor · Hyderabad Urban Observatory</title>
+<meta name="description" content="A contributor to the Hyderabad Urban Observatory: points and the bus stops, footpaths and crossings they told us about.">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../vendor/fonts/lato.css">
+<link rel="stylesheet" href="../vendor/fonts/outfit.css">
+<link rel="stylesheet" href="../assets/contribute.css?v=20261118c">
+<!-- visit counter: page, referring site, country; no cookies, no IP addresses (live-feed/visits.js) -->
+<script src="https://api.urbanobservatory.in/visits.js" defer></script>
+<script src="../assets/config.js?v=20261118c"></script>
+<style>
+  .pf { max-width: 720px; }
+  .pf h1 { overflow-wrap: anywhere; }
+  .pf .lede { margin-bottom: 18px; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--r-ctl); overflow: hidden; margin: 0 0 14px; }
+  .stats div { background: #fff; padding: 12px 12px 10px; }
+  .stats b { display: block; font: 700 24px/1.2 var(--font-ui); font-variant-numeric: tabular-nums; color: var(--ink); }
+  .stats span { font-size: 13px; color: var(--muted); }
+  .did { font-size: 15px; color: var(--text-2); margin: 0 0 8px; }
+  .me-box { margin: 0 0 16px; font-size: 15px; color: var(--text-2); }
+  .me-box[hidden], .stats[hidden] { display: none; }
+  .me-box a { color: var(--ink); }
+  .pf h2 { font: 700 18px/1.3 var(--font-ui); margin: 32px 0 8px; }
+  .entries { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--border); }
+  .entries li { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 11px 2px; border-bottom: 1px solid var(--border); }
+  .entries li a, .entries li .nm { font-size: 16px; color: var(--ink); }
+  .entries li small { grid-column: 1; font-size: 13px; color: var(--muted); }
+  .entries li b { grid-row: 1 / span 2; grid-column: 2; align-self: center; font-variant-numeric: tabular-nums; font-size: 15px; }
+  .entries li.gap { display: block; color: var(--muted); font-size: 14px; text-align: center; }
+  .fine { font-size: 13px; color: var(--muted); margin: 14px 0 0; }
+  .fine a { color: var(--ink); }
+</style>
+</head>
+<body>
+<header class="obs-header">
+  <a class="obs-brand" href="/" aria-label="Hyderabad Urban Observatory, home"><span class="obs-logo"><svg viewBox="0 0 100 100" aria-hidden="true"><defs><rect id="bH1" x="2" y="26" width="96" height="16" rx="6"/><rect id="bH2" x="2" y="58" width="96" height="16" rx="6"/><rect id="bV1" x="28" y="2" width="16" height="96" rx="6" transform="rotate(18 36 50)"/><rect id="bV2" x="56" y="2" width="16" height="96" rx="6" transform="rotate(18 64 50)"/><mask id="cH1"><rect width="100" height="100" fill="white"/><use href="#bV1" fill="black" stroke="black" stroke-width="4"/></mask><mask id="cV2"><rect width="100" height="100" fill="white"/><use href="#bH1" fill="black" stroke="black" stroke-width="4"/></mask><mask id="cH2"><rect width="100" height="100" fill="white"/><use href="#bV2" fill="black" stroke="black" stroke-width="4"/></mask><mask id="cV1"><rect width="100" height="100" fill="white"/><use href="#bH2" fill="black" stroke="black" stroke-width="4"/></mask></defs><g fill="#FFFFFF" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#bH1" mask="url(#cH1)"/><use href="#bV2" mask="url(#cV2)"/><use href="#bH2" mask="url(#cH2)"/><use href="#bV1" mask="url(#cV1)"/></g></svg></span><span class="obs-word">Hyderabad Urban Observatory</span></a>
+  <nav class="obs-nav" aria-label="Observatory"><a href="/live/" class="obs-live"><i class="obs-live-dot" aria-hidden="true"></i>Live</a><a href="/maps/">Layers</a><a href="/tools/">Tools</a><a href="/stories/">Stories</a><a href="/contribute/" aria-current="page">Contribute</a><a href="/data/">Data sources</a><a href="/about">About</a></nav>
+  <a href="/live/" class="obs-live obs-live-bar"><i class="obs-live-dot" aria-hidden="true"></i>Live</a>
+  <button type="button" class="obs-burger" aria-label="Menu" aria-expanded="false" aria-controls="obs-menu"><span></span></button>
+  <nav class="obs-menu" id="obs-menu" aria-label="Observatory" hidden><a href="/live/" class="obs-live"><i class="obs-live-dot" aria-hidden="true"></i>Live</a><a href="/maps/">Layers</a><a href="/tools/">Tools</a><a href="/stories/">Stories</a><a href="/contribute/" aria-current="page">Contribute</a><a href="/data/">Data sources</a><a href="/about">About</a></nav>
+</header>
+
+<main class="wrap">
+  <div class="pf">
+    <p class="eyebrow"><a href="../bus-stops/leaderboard/" style="color:inherit;text-decoration:none">Contribute · Leaderboard</a></p>
+    <h1 id="nick">Contributor</h1>
+    <p class="lede" id="since">Loading…</p>
+    <p class="me-box" id="me-box" hidden></p>
+    <div class="stats" id="stats" hidden>
+      <div><b id="s-all">0</b><span>points</span></div>
+      <div><b id="s-month">0</b><span>last 30 days</span></div>
+      <div><b id="s-rank">–</b><span id="s-of">on the leaderboard</span></div>
+    </div>
+    <p class="did" id="did"></p>
+    <h2 id="list-h" hidden>What they've added</h2>
+    <ul class="entries" id="entries"></ul>
+    <p class="fine">Dates only, no times. Nicknames are made up by the contributors. <a href="../bus-stops/leaderboard/">See the leaderboard</a></p>
+  </div>
+</main>
+
+<footer class="obs-footer">
+  <div class="obs-footer-fine">
+    <span>This website is under continuous development; you may find errors or incomplete content.
+      Feedback: <a href="mailto:hulf.observatory@gmail.com">hulf.observatory@gmail.com</a> · Bus stops from TGSRTC's open data (June 2026). Contributions are published as community data under CC BY 4.0.</span>
+    <a class="obs-footer-disclaimer" href="/disclaimer">Disclaimer</a>
+  </div>
+</footer>
+
+<script src="../assets/common.js?v=20261118c"></script>
+<script type="module" src="profile.js?v=20261118c"></script>
+</body>
+</html>

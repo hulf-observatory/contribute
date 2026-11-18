@@ -2,7 +2,7 @@
 // with how many gave each answer (Teja, 18 Nov 2026: from the stop's profile on the server), photos, every
 // contribution with feedback. No overall score (Teja, 16 Nov 2026).
 import { SURVEY, TOPICS, VIEWS, VIEW_COLORS, shown, loadStops, loadRatings, loadProfiles, addedStops, byStop, currentOf, describe, POINTS,
-  esc, player, day } from '../questions.js?v=20261118b';
+  esc, player, day } from '../questions.js?v=20261118c';
 
 const $ = (id) => document.getElementById(id);
 const id = new URLSearchParams(location.search).get('id');

@@ -8,10 +8,10 @@
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../vendor/fonts/lato.css">
 <link rel="stylesheet" href="../vendor/fonts/outfit.css">
-<link rel="stylesheet" href="../assets/contribute.css?v=20261118b">
+<link rel="stylesheet" href="../assets/contribute.css?v=20261118c">
 <!-- visit counter: page, referring site, country; no cookies, no IP addresses (live-feed/visits.js) -->
 <script src="https://api.urbanobservatory.in/visits.js" defer></script>
-<script src="../assets/config.js?v=20261118b"></script>
+<script src="../assets/config.js?v=20261118c"></script>
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <style>
@@ -200,9 +200,14 @@
         <div class="row-btns"><button type="button" class="btn btn-primary btn-lg" id="draft-send">Send it now</button><button type="button" class="btn btn-secondary btn-lg" id="draft-drop">Discard it</button></div>
         <p class="msg" id="draft-msg" hidden></p>
       </div>
-      <button type="button" class="btn btn-primary btn-lg start-btn" id="start-go">Start</button>
-      <p class="small" id="play-box">Want to be on the <a href="../bus-stops/leaderboard/">leaderboard</a>? <a href="#" id="play-create">Pick a nickname</a> or <a href="#" id="play-login">log in</a>.</p>
-      <p class="small" id="play-in" hidden>Contributing as <b id="play-name"></b> · <a href="../bus-stops/leaderboard/">Leaderboard</a> · <a href="#" id="play-out">Log out</a></p>
+      <!-- a profile or anonymous: a nickname and a PIN, nothing personal (Teja, 18 Nov 2026) -->
+      <div class="profile-box" id="play-box">
+        <p class="pb-h">Keep track of what you add</p>
+        <p class="pb-t">Create a profile: just a nickname and a 4-digit PIN. No name, phone number or email.</p>
+        <div class="pb-btns"><button type="button" class="btn btn-secondary" id="play-create">Create profile</button><button type="button" class="btn btn-secondary" id="play-login">Log in</button></div>
+      </div>
+      <p class="small play-in" id="play-in" hidden>Contributing as <b id="play-name"></b> · <a href="../profile/" id="play-prof">Your profile</a> · <a href="#" id="play-out">Log out</a></p>
+      <button type="button" class="btn btn-primary btn-lg start-btn" id="start-go">Start anonymously</button>
       <p class="res-h"><span class="meta" id="meta"></span></p>
       <a class="btn btn-secondary btn-lg see-data" href="map/">See data <svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
     </section>
@@ -357,6 +362,7 @@
       <dl class="review" id="review"></dl>
       <div class="all-answers" id="all-answers" hidden></div>
       <p class="small" id="review-hint" hidden></p>
+      <p class="anon" id="anon" hidden>Sending anonymously. <a href="#" id="anon-create">Create a profile</a> or <a href="#" id="anon-login">log in</a> to get points for this.</p>
       <div class="ts" id="ts-review"></div>
       <input type="text" name="website" id="trap" tabindex="-1" autocomplete="off" aria-hidden="true" class="trap">
       <p class="msg" id="send-msg" hidden></p>
@@ -368,6 +374,7 @@
       <p class="eyebrow">Received</p>
       <h2 class="qt">Thank you</h2>
       <p class="hint" id="thanks-text">Your answers are now public.</p>
+      <p class="small" id="thanks-prof" hidden><a href="../profile/" id="thanks-prof-a">See your profile</a></p>
       <div class="stack">
         <a class="btn btn-primary btn-lg" id="to-map" href="map/">See it on the map <svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
         <button type="button" class="btn btn-secondary btn-lg" id="again">Add another</button>
@@ -390,7 +397,7 @@
   </div>
 </footer>
 
-<script src="../assets/common.js?v=20261118b"></script>
-<script type="module" src="form.js?v=20261118b"></script>
+<script src="../assets/common.js?v=20261118c"></script>
+<script type="module" src="form.js?v=20261118c"></script>
 </body>
 </html>

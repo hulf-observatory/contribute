@@ -2,9 +2,9 @@
 // (the phone follows the route; only the spots and crossings are sent, not the route). Side of the road by pointing
 // the phone at the road. One question per screen (17 Nov 2026). Phones only; a laptop sees a QR code. Talks to
 // contribute-api (/walking/reports).
-import { mapMark } from '../assets/map-mark.js?v=20261118b';
+import { mapMark } from '../assets/map-mark.js?v=20261118c';
 import { SURVEY, TOPICS, CROSS_TOPICS, QUESTIONS, DIRS, nearestDir, roadSide, sideFromRoad, sideWord, shown, optLabel, nAnswered, POINTS, inHmda, esc,
-  metres, bearing, loadReports, contributions, player, checkPlayer, PLAYER_SAYS } from './questions.js?v=20261118b';
+  metres, bearing, loadReports, contributions, player, checkPlayer, PLAYER_SAYS } from './questions.js?v=20261118c';
 
 const $ = (id) => document.getElementById(id);
 Contribute.phoneOnly({ what: 'Walking', mapHref: 'map/', mapLabel: 'See the walking map' });
@@ -65,6 +65,7 @@ function show(s, push = true) {
   if (s === 'photo') drawPhoto();
   if (s === 'note') $('note').value = S.spot ? S.spot.note || '' : '';
   if (s === 'review') drawReview();
+  if (s === 'thanks') { const p = S.noNick ? null : player.get(); $('thanks-prof').hidden = !p; if (p) $('thanks-prof-a').href = profileUrl(p.nick); }
   if (s === 'start') drawPlay();
   if (s === 'player') { S.noNick = false; const p = player.get(); $('p-nick').value = p ? p.nick : $('p-nick').value; $('p-pin').value = ''; $('p-msg').hidden = true; playerReady(); }
   updateNext();
@@ -432,7 +433,13 @@ $('photo-in').addEventListener('change', async (e) => {
 // ── the player: nickname + 4-digit PIN, the same as for bus stops, checked with the server ──
 const cleanNick = (v) => v.trim().replace(/\s+/g, ' ');
 const pinOk = (v) => /^\d{4}$/.test(v);
-function drawPlay() { const p = player.get(); $('play-box').hidden = !!p; $('play-in').hidden = !p; if (p) $('play-name').textContent = p.nick; }
+const profileUrl = (n) => `../profile/?n=${encodeURIComponent(n)}`;
+function drawPlay() {
+  const p = player.get();
+  $('play-box').hidden = !!p; $('play-in').hidden = !p;
+  $('start-go').textContent = p ? 'Start' : 'Start anonymously';
+  if (p) { $('play-name').textContent = p.nick; $('play-prof').href = profileUrl(p.nick); }
+}
 let pmode = 'create';
 function setPMode(m) {
   pmode = m; const c = m === 'create';
@@ -445,6 +452,9 @@ function setPMode(m) {
 }
 $('play-create').onclick = (e) => { e.preventDefault(); setPMode('create'); show('player'); };
 $('play-login').onclick = (e) => { e.preventDefault(); setPMode('login'); show('player'); };
+// before sending: anonymous entries earn no points, so offer a profile once more (Teja, 18 Nov 2026)
+$('anon-create').onclick = (e) => { e.preventDefault(); setPMode('create'); show('player'); };
+$('anon-login').onclick = (e) => { e.preventDefault(); setPMode('login'); show('player'); };
 $('p-switch').onclick = (e) => { e.preventDefault(); setPMode(pmode === 'create' ? 'login' : 'create'); };
 $('play-out').onclick = (e) => { e.preventDefault(); player.clear(); drawPlay(); };
 const playerReady = () => { $('p-go').disabled = cleanNick($('p-nick').value).length < 3 || !pinOk($('p-pin').value); };
@@ -488,6 +498,7 @@ function drawReview() {
     all.innerHTML = qSteps().map(qOf).map(q => `<button type="button" data-q="${q.id}"><span>${esc(q.s)}</span><b>${esc(answerText(q, s.answers[q.id]))}</b></button>`).join('');
     all.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { S.fromReview = true; show('q-' + b.dataset.q); });
   }
+  $('anon').hidden = !!(player.get() && !S.noNick);
   $('review').innerHTML = rows.map(([k, v, s]) => `<div><dt>${k}</dt><dd>${v}</dd>${s ? `<button type="button" data-go="${s}">${s === 'all' ? 'See' : 'Change'}</button>` : '<span></span>'}</div>`).join('');
   $('review').querySelectorAll('[data-go]').forEach(b => b.onclick = () => b.dataset.go === 'all' ? (all.hidden = !all.hidden) : show(b.dataset.go));
   $('accuracy').textContent = S.memory ? 'By sending, you confirm this is what you know of this place, to the best of your knowledge.'

@@ -132,3 +132,14 @@ svg.arr { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColo
   body.q-mode .step.on[data-step="review"] > * { flex: none; }
   body.q-mode .step.on[data-step="review"] > .accuracy { margin-top: auto; padding-top: 12px; }
 }
+
+/* a profile or anonymous, on a survey's first screen; the reminder before sending (Teja, 18 Nov 2026) */
+.profile-box { margin: 16px 0 0; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--r-ctl); }
+.profile-box[hidden], .play-in[hidden], .anon[hidden] { display: none; }
+.profile-box .pb-h { margin: 0; font: 700 16px/1.3 var(--font-ui); color: var(--ink); }
+.profile-box .pb-t { margin: 4px 0 12px; font-size: 14px; line-height: 1.5; color: var(--text-2); }
+.profile-box .pb-btns { display: flex; gap: 8px; }
+.profile-box .pb-btns .btn { flex: 1; }
+.play-in { margin: 16px 0 0; }
+.anon { margin: 14px 0 0; font-size: 14px; line-height: 1.5; color: var(--text-2); }
+.anon a { color: var(--ink); }
