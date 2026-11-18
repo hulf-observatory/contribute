@@ -1,19 +1,20 @@
-// Bus stops map: every TGSRTC stop, coloured by its latest answer to one topic at a time (shelter, crossing,
-// lighting…); grey = no answer yet. No overall score (Teja, 16 Nov 2026). The leaderboard is its own page.
-import { SURVEY, VIEWS, VIEW_COLORS, loadStops, loadRatings, addedStops, byStop, latest, esc } from '../questions.js?v=20261117h';
+// Bus stops map: every TGSRTC stop, coloured by its current answer to one topic at a time (shelter, crossing,
+// lighting…); grey = no clear answer yet (none, or mixed answers: Teja, 18 Nov 2026). No overall score (16 Nov 2026).
+// The leaderboard is its own page.
+import { SURVEY, VIEWS, VIEW_COLORS, loadStops, loadRatings, loadProfiles, addedStops, byStop, currentOf, esc } from '../questions.js?v=20261118a';
 
 const C = window.CONTRIBUTE;
 const $ = (id) => document.getElementById(id);
 const fmt = (n) => n.toLocaleString('en-IN');
 
-const [base, rs, lb] = await Promise.all([loadStops('../').catch(() => []), loadRatings().catch(() => null),
+const [base, rs, profs, lb] = await Promise.all([loadStops('../').catch(() => []), loadRatings().catch(() => null), loadProfiles().catch(() => null),
   fetch(`${C.API}/${SURVEY}/leaderboard.json`, { credentials: 'omit', cache: 'no-cache' }).then(r => r.json()).catch(() => null)]);
-if (!rs) { $('load-msg').hidden = false; $('load-msg').textContent = "Contributions couldn't load just now; showing the stops only."; }
+if (!rs || !profs) { $('load-msg').hidden = false; $('load-msg').textContent = "Contributions couldn't load just now; showing the stops only."; }
 const ratings = rs || [];
 const added = addedStops(ratings);
 const stops = base.concat(added);
 const per = byStop(ratings);
-const answersOf = new Map([...per].map(([id, list]) => [id, latest(list).answers]));
+const answersOf = new Map(Object.entries(profs || {}).map(([id, p]) => [id, currentOf(p)]));   // current answers
 
 // one line of counts (Teja, 17 Nov 2026); "checked" = someone else said it's still the same
 const checked = ratings.filter(r => r.confirmed > 0).length;
@@ -41,7 +42,7 @@ function drawViews() {
 function drawLegend() {
   const counts = {}; feats.forEach(f => { counts[f.properties.cat] = (counts[f.properties.cat] || 0) + 1; });
   const cats = ['good', 'mid', 'bad'].filter(c => view.labels[c]);
-  $('chips').innerHTML = cats.concat('none').map(c => `<button type="button" class="chip" aria-pressed="${filter === c}" data-f="${c}"><i style="background:${VIEW_COLORS[c]}"></i>${esc(c === 'none' ? 'No answer yet' : view.labels[c])}<span class="n">${fmt(counts[c] || 0)}</span></button>`).join('');
+  $('chips').innerHTML = cats.concat('none').map(c => `<button type="button" class="chip" aria-pressed="${filter === c}" data-f="${c}"><i style="background:${VIEW_COLORS[c]}"></i>${esc(c === 'none' ? 'No clear answer yet' : view.labels[c])}<span class="n">${fmt(counts[c] || 0)}</span></button>`).join('');
 }
 $('views').addEventListener('click', (e) => {
   const b = e.target.closest('.chip'); if (!b) return;
@@ -84,12 +85,12 @@ let pop = null;
 function popup(f) {
   const p = f.properties;
   const when = p.last ? new Date(p.last).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '';
-  const said = p.cat === 'none' ? (p.n ? `${view.label}: no answer yet` : '') : view.labels[p.cat];
+  const said = p.cat === 'none' ? (p.n ? `${view.label}: no clear answer yet` : '') : view.labels[p.cat];
   if (pop) pop.remove();
   pop = new maplibregl.Popup({ offset: 10, maxWidth: '280px' }).setLngLat(f.geometry.coordinates).setHTML(`<div class="pop">
     <b>${esc(p.name)}</b><span class="ctx">${p.towards ? 'towards ' + esc(p.towards) : ''}${p.added ? ' · added by someone' : ''}</span>
     ${said ? `<div class="cond"><i style="background:${p.color}"></i>${esc(said)}</div>` : ''}
-    <div class="ctx">${p.n ? `${p.n} contribution${p.n > 1 ? 's' : ''}, latest ${when}` : 'No details yet. Be first: extra points'}</div>
+    <div class="ctx">${p.n ? `${p.n} contribution${p.n > 1 ? 's' : ''}, latest ${when}` : 'No details yet'}</div>
     <p style="margin:8px 0 0"><a href="../stop/?id=${encodeURIComponent(p.id)}">${p.n ? 'Open the stop' : 'See the stop and add details'} ${ARR}</a></p></div>`).addTo(map);
 }
 
@@ -119,7 +120,7 @@ function drawList() {
   const q = $('find').value.trim().toLowerCase();
   const rows = feats.filter(f => f.properties.n && (!filter || f.properties.cat === filter) && (!q || f.properties.name.toLowerCase().includes(q)))
     .sort((a, b) => b.properties.last.localeCompare(a.properties.last));
-  const facts = (id) => { const a = answersOf.get(id); return VIEWS.map(v => v.of(a) && v.labels[v.of(a)]).filter(Boolean).slice(0, 3).join(' · '); };
+  const facts = (id) => { const a = answersOf.get(id) || {}; return VIEWS.map(v => v.of(a) && v.labels[v.of(a)]).filter(Boolean).slice(0, 3).join(' · '); };
   $('rows').innerHTML = rows.slice(0, shownN).map(f => { const p = f.properties, list = per.get(p.id), ok = list.filter(r => r.confirmed > 0).length;
     return `<li><a href="../stop/?id=${encodeURIComponent(p.id)}"><i class="dot" style="background:${p.color}"></i><span class="t"><b>${esc(p.name)}</b>
       <span class="m">${[p.towards && 'towards ' + esc(p.towards), new Date(p.last).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),

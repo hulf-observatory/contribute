@@ -71,7 +71,7 @@ export const real = (v) => v != null && v !== 'dk' && !(Array.isArray(v) && !v.l
 // real answers (not "Don't know") among the questions shown for this spot or crossing; the server wants at least one
 export const nAnswered = (kind, a) => topicsFor({ kind }).flatMap(t => t.qs).filter(q => shown(q, a) && real(a[q.id])).length;
 export const optLabel = (q, v) => (q.opts.find(o => o[0] === v) || [, v])[1];
-export const POINTS = { spot: 10, crossing: 10, photo: 5, confirm: 2, flag: 2 };
+export const POINTS = { spot: 10, crossing: 10, memory: 5, photo: 5, confirm: 2, flag: 2 };   // from memory: 5 (18 Nov 2026)
 
 // ── map: one topic at a time, same colours as the bus stop map ──
 export const VIEW_COLORS = { good: '#2166AC', mid: '#EF8A62', bad: '#B2182B' };

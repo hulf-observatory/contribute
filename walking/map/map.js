@@ -4,7 +4,8 @@
 // Data: ../roads.json (stretches, built by contribute-api/tools/build_roads.py), /walking/profiles.json, reports.json.
 // Map or list (17 Nov 2026): the list shows road sides, junctions and single spots, newest first; ?p=<profile> or
 // ?r=<row id> opens one on the map.
-import { SURVEY, TOPICS, CROSS_TOPICS, VIEWS, CROSS_VIEWS, VIEW_COLORS, shown, optLabel, real, esc, loadReports } from '../questions.js?v=20261117h';
+import { SURVEY, TOPICS, CROSS_TOPICS, VIEWS, CROSS_VIEWS, VIEW_COLORS, shown, optLabel, real, esc, loadReports } from '../questions.js?v=20261118a';
+import { currentOf, describe } from '../../bus-stops/questions.js?v=20261118a';
 const C = window.CONTRIBUTE;
 const $ = (id) => document.getElementById(id);
 const NONE = '#A9AFB8', FAINT = '#E5E7EB';     // grey: main roads with no profile yet
@@ -19,7 +20,8 @@ const STRETCH = new Map((roads?.stretches || []).map(s => [s.id, s]));
 const JUNCTION = new Map((roads?.junctions || []).map(j => [j.id, j]));
 const PROFILES = prof?.profiles || {};
 const ROWS = rows || [];
-const flat = (p) => p ? Object.fromEntries(Object.entries(p.answers).map(([k, x]) => [k, x.v])) : null;
+// a profile's current answers (Teja, 18 Nov 2026: what most people said; mixed or none left out, so grey on the map)
+const flat = (p) => p ? currentOf(p) : null;
 const loose = ROWS.filter(r => !r.stretch && !r.junction);          // spots and crossings away from main roads
 
 // ── one topic at a time: a footpath topic (junctions faint) or a crossing topic (roads faint) ──
@@ -50,7 +52,7 @@ function drawControls() {
   const chips = (g) => ALLV.filter(v => v.g === g).map(v => `<button type="button" class="chip" aria-pressed="${v === view}" data-v="${v.g}:${v.id}">${esc(v.label)}</button>`).join('');
   $('chips').innerHTML = `<span class="grp">Footpaths</span>${chips('foot')}<span class="grp">Crossings</span>${chips('x')}`;
   $('legend').innerHTML = Object.entries(view.labels).map(([k, l]) => `<span><i style="background:${VIEW_COLORS[k]}"></i>${esc(l)}</span>`).join('')
-    + `<span><i style="background:${NONE}"></i>No profile yet</span><span><b class="key-x"></b>Junction where main roads meet</span><span><b class="key-f"></b>Spot on another street</span>`;
+    + `<span><i style="background:${NONE}"></i>No clear answer yet</span><span><b class="key-x"></b>Junction where main roads meet</span><span><b class="key-f"></b>Spot on another street</span>`;
 }
 function refresh() { map.getSource('sides')?.setData(sidesGeo()); map.getSource('jn')?.setData(junctionsGeo()); map.getSource('dots')?.setData(dotsGeo()); }
 $('chips').addEventListener('click', (e) => { const b = e.target.closest('.chip'); if (!b) return; view = ALLV.find(v => `${v.g}:${v.id}` === b.dataset.v); drawControls(); refresh(); drawList(); });
@@ -88,12 +90,12 @@ map.on('load', () => {
 
 // ── the profile panel ──
 const QS = (kind) => (kind === 'crossing' ? CROSS_TOPICS : TOPICS).flatMap(t => t.qs);
+// each question: the current answer, how many gave each answer, agreed / mixed / one person; older answers apart
 function facts(kind, p) {
   const a = flat(p);
-  return QS(kind).filter(q => shown(q, a) && p.answers[q.id]).map(q => {
-    const x = p.answers[q.id], txt = q.multi ? x.v.map(v => optLabel(q, v)).join(', ') : optLabel(q, x.v);
-    const note = x.of > 1 ? `${x.agree} of the last ${x.of} said this · ${day(x.seen)}` : `One person · ${day(x.seen)}`;
-    return `<li><span>${esc(q.s)}</span><b>${esc(txt)}<small>${note}</small></b></li>`;
+  return QS(kind).filter(q => shown(q, a) && p.answers[q.id] && (p.answers[q.id].of || p.answers[q.id].older)).map(q => {   // not "Don't know" alone
+    const d = describe(q, p.answers[q.id], optLabel);
+    return `<li${d.has ? '' : ' class="none"'}><span>${esc(q.s)}</span><b>${esc(d.txt)}<small>${esc(d.note)}</small>${d.older ? `<small>${esc(d.older)}</small>` : ''}</b></li>`;
   }).join('');
 }
 function histList(p) {
@@ -101,9 +103,11 @@ function histList(p) {
     <ul class="hist">${p.items.map((h, i) => `<li><b>${h.nick ? esc(h.nick) : 'Someone'}</b> <em>${day(h.at)}</em>${i === p.items.length - 1 && p.n <= 20 ? '<span class="tag">Started the profile</span>' : h.prefilled ? '<span class="tag">Updated it</span>' : ''}${h.located === 'memory' ? '<span class="tag">From memory</span>' : ''}</li>`).join('')}</ul>`;
 }
 const ARR = '<svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>';
+// someone disagrees: they add what they see, and it counts with everyone else's (Teja, 18 Nov 2026: instead of
+// "Something looks wrong"); spam goes to the dialog
 const buttons = (p) => `<div class="pbtns"><button type="button" class="btn btn-primary btn-lg fbb" data-id="${esc(p.latest)}" data-k="confirm">Still like this</button>
-  <a class="btn btn-secondary btn-lg" href="../">Changed? Update it when you're there ${ARR}</a>
-  <button type="button" class="linkbtn fbb" data-id="${esc(p.latest)}">Something looks wrong</button></div>`;
+  <a class="btn btn-secondary btn-lg" href="../">Not right? Add what you see ${ARR}</a>
+  <button type="button" class="linkbtn fbb" data-id="${esc(p.latest)}" data-k="spam">Report spam</button></div>`;
 function sideLabel(id) {
   const [sid, side] = id.split(':'), s = STRETCH.get(sid), c = s.c, a = c[0], b = c[c.length - 1];
   const brg = (Math.atan2((b[0] - a[0]) * Math.cos(a[1] * Math.PI / 180), b[1] - a[1]) * 180 / Math.PI + 360) % 360;

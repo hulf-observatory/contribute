@@ -2,9 +2,9 @@
 // (the phone follows the route; only the spots and crossings are sent, not the route). Side of the road by pointing
 // the phone at the road. One question per screen (17 Nov 2026). Phones only; a laptop sees a QR code. Talks to
 // contribute-api (/walking/reports).
-import { mapMark } from '../assets/map-mark.js?v=20261117h';
+import { mapMark } from '../assets/map-mark.js?v=20261118a';
 import { SURVEY, TOPICS, CROSS_TOPICS, QUESTIONS, DIRS, nearestDir, roadSide, sideFromRoad, sideWord, shown, optLabel, nAnswered, POINTS, inHmda, esc,
-  metres, bearing, loadReports, contributions, player, checkPlayer, PLAYER_SAYS } from './questions.js?v=20261117h';
+  metres, bearing, loadReports, contributions, player, checkPlayer, PLAYER_SAYS } from './questions.js?v=20261118a';
 
 const $ = (id) => document.getElementById(id);
 Contribute.phoneOnly({ what: 'Walking', mapHref: 'map/', mapLabel: 'See the walking map' });
@@ -361,7 +361,7 @@ function drawAnswers() {
       const last = w != null && (q.multi ? w.includes(k) : w === k);
       let tag = o.querySelector('.last');
       if (last && !tag) { tag = document.createElement('span'); tag.className = 'last'; o.querySelector('.tick').before(tag); }
-      if (tag) { if (last) tag.textContent = sp.baseTag || 'Last answer'; else tag.remove(); }
+      if (tag) { if (last) tag.textContent = sp.baseTag || 'Current answer'; else tag.remove(); }
     });
   }
   updateNext();
@@ -370,7 +370,7 @@ function drawQn() {
   const sp = S.spot, qs = qSteps(), n = qs.indexOf(cur), el = document.querySelector(`.step[data-step="${cur}"] [data-qn]`); if (!el) return;
   const p = sp && sp.profile;
   el.textContent = `Question ${n + 1} of ${qs.length}` + (n === 0 && sp && sp.baseA ? (sp.same === 'changed' ? ` · "${sp.baseTag}" is what you said there`
-    : ` · "Last answer" is the latest for ${isX() ? 'crossing here' : `this side of ${p && p.name || 'the road'}`}`) : '');
+    : ` · "Current answer" is what most people said here`) : '');
 }
 // ── a main road's profile (Teja, 17 Nov 2026): a single spot or crossing on a stretch or junction that already has
 // answers starts from them; the person changes only what's different. Nothing changed = "still like this". ──
@@ -383,8 +383,11 @@ function profileHere() {
   fetch(`${window.CONTRIBUTE.API}/${SURVEY}/near?item=${sp.kind}&lat=${sp.lat.toFixed(6)}&lng=${sp.lng.toFixed(6)}&side=${side}`, { credentials: 'omit', cache: 'no-store' })
     .then(r => r.json()).then(d => {
       if (!d.profile || S.spot !== sp || Object.keys(sp.answers).length) return;   // nothing there, or they've started answering
-      sp.answers = Object.fromEntries(Object.entries(d.profile.answers).map(([k, x]) => [k, structuredClone(x.v)]));
-      sp.baseA = structuredClone(sp.answers); sp.baseTag = 'Last answer';
+      // the current answers (18 Nov 2026: what most people said; mixed answers left blank)
+      sp.answers = Object.fromEntries(Object.entries(d.profile.answers).filter(([, x]) => x.current != null && !(Array.isArray(x.current) && !x.current.length))
+        .map(([k, x]) => [k, structuredClone(x.current)]));
+      if (!Object.keys(sp.answers).length) return;
+      sp.baseA = structuredClone(sp.answers); sp.baseTag = 'Current answer';
       sp.base = snapA(sp.answers); sp.profile = { latest: d.profile.latest, n: d.profile.n, name: d.name };
       if (isQ(cur)) { drawAnswers(); drawQn(); }
     }).catch(() => {});
@@ -487,6 +490,8 @@ function drawReview() {
   }
   $('review').innerHTML = rows.map(([k, v, s]) => `<div><dt>${k}</dt><dd>${v}</dd>${s ? `<button type="button" data-go="${s}">${s === 'all' ? 'See' : 'Change'}</button>` : '<span></span>'}</div>`).join('');
   $('review').querySelectorAll('[data-go]').forEach(b => b.onclick = () => b.dataset.go === 'all' ? (all.hidden = !all.hidden) : show(b.dataset.go));
+  $('accuracy').textContent = S.memory ? 'By sending, you confirm this is what you know of this place, to the best of your knowledge.'
+    : 'By sending, you confirm this is what you saw, to the best of your knowledge.';
   $('review-hint').hidden = !unchanged();
   $('review-hint').textContent = 'Your answers match the latest ones here.';
   const few = S.mode !== 'walk' && !nAnswered(S.spot.kind, S.spot.answers);
@@ -515,8 +520,9 @@ async function postIt(body, sc = spam) {
   finally { sc.reset(); }
 }
 function thanks(body, ids) {
-  const items = body.items, photos = items.filter(s => s.photo).length, nx = items.filter(s => s.item === 'crossing').length, ns = items.length - nx;
-  const total = ns * POINTS.spot + nx * POINTS.crossing + photos * POINTS.photo;
+  // as on the server (18 Nov 2026): 10 a spot or crossing, 5 from memory, 5 more a photo
+  const items = body.items, photos = items.filter(s => s.photo).length;
+  const total = items.reduce((a, s) => a + (s.here === 'known' ? POINTS.memory : POINTS[s.item]), 0) + photos * POINTS.photo;
   $('thanks-text').textContent = 'Your answers are now public.' + (body.nick ? ` ${total} points to ${body.nick} on the leaderboard.` : '');
   $('to-map').href = ids && ids[0] ? 'map/?r=' + encodeURIComponent(ids[0]) : 'map/';
   $('again').textContent = body.mode === 'walk' ? 'Another walk' : body.mode === 'crossing' ? 'Another crossing' : 'Another spot';

@@ -1,9 +1,9 @@
 // Tell us about a bus stop, at the stop (Teja, 16 Nov 2026): the phone's location lists the nearest stops (or a
 // missing one is added within 100 m of it), then the topic screens, optional photo and improvement, check and send.
 // Phones only; a laptop sees a QR code. Talks to contribute-api.
-import { mapMark } from '../assets/map-mark.js?v=20261117h';
-import { SURVEY, TOPICS, QUESTIONS, MIN_ANSWERS, optLabel, shown, answered, POINTS, loadStops, loadRatings, addedStops,
-  byStop, latest, ANSWER_KEYS, metres, stopLabel, esc, player, checkPlayer, PLAYER_SAYS } from './questions.js?v=20261117h';
+import { mapMark } from '../assets/map-mark.js?v=20261118a';
+import { SURVEY, TOPICS, QUESTIONS, MIN_ANSWERS, optLabel, shown, answered, POINTS, loadStops, loadRatings, loadProfiles, addedStops,
+  byStop, currentOf, ANSWER_KEYS, metres, stopLabel, esc, player, checkPlayer, PLAYER_SAYS } from './questions.js?v=20261118a';
 
 const C = window.CONTRIBUTE;
 const $ = (id) => document.getElementById(id);
@@ -23,7 +23,7 @@ $('topics').innerHTML = QUESTIONS.map(q => `<section class="step" data-step="q-$
 </section>`).join('');
 
 const S = { here: null, stop: null, missing: null, a: {}, photo: null, how: null };
-let STOPS = [], BY_ID = new Map(), RATED = new Map(), cur = 'start';
+let STOPS = [], BY_ID = new Map(), RATED = new Map(), PROFILES = {}, cur = 'start';
 const PRESET = new URLSearchParams(location.search).get('stop');
 
 // ── steps ──
@@ -54,18 +54,18 @@ function ready(s) {
 }
 const isQ = (s) => s.startsWith('q-');
 const qOf = (s) => QUESTIONS.find(q => 'q-' + q.id === s);
-// a stop that already has a profile (Teja, 17 Nov 2026): its latest answer to each question starts the form, so the
-// first person builds the profile and later ones change only what's different. Nothing changed = "still the same".
+// a stop that already has a profile (Teja, 17 Nov 2026): its current answer to each question (18 Nov 2026: what most
+// people said; mixed answers left blank) starts the form, so later people change only what's different. Nothing
+// changed = "still the same", a check on the stop's newest entry.
 const snap = (a) => JSON.stringify(ANSWER_KEYS.filter(k => a[k] != null).map(k => [k, a[k]]));
 function prefill() {
   if (S.missing || !S.stop || S.prefillFor === S.stop.id) return;
   S.prefillFor = S.stop.id;
-  const list = RATED.get(S.stop.id) || [];
-  if (!list.length) { S.base = null; S.baseA = null; return; }
-  const a = latest(list).answers;
+  const p = PROFILES[S.stop.id], a = currentOf(p);
+  if (!p || !Object.keys(a).length) { S.base = null; S.baseA = null; return; }
   S.a = Object.fromEntries(QUESTIONS.filter(q => a[q.id] != null).map(q => [q.id, structuredClone(a[q.id])]));
-  S.baseA = structuredClone(S.a);                // shown as "Last answer" on each question
-  S.base = snap(S.a); S.baseId = list[0].id; S.baseN = list.length;
+  S.baseA = structuredClone(S.a);                // shown as "Current answer" on each question
+  S.base = snap(S.a); S.baseId = p.latest; S.baseN = p.n;
   drawAnswers();
 }
 const unchanged = () => !!S.base && !S.missing && snap(S.a) === S.base && !S.photo && !$('improve').value.trim();
@@ -84,7 +84,7 @@ function show(s, push = true) {
     prefill();
     const q = qOf(s), qs = QUESTIONS.filter(x => shown(x, S.a)), n = qs.indexOf(q);
     $('count').textContent = q.topicTitle.replace(' and seating', '').replace('Comfort and ', '');
-    document.querySelector(`.step[data-step="${s}"] [data-qn]`).textContent = `Question ${n + 1} of ${qs.length}` + (n === 0 && S.base ? ` · "Last answer" is this stop's latest` : '');
+    document.querySelector(`.step[data-step="${s}"] [data-qn]`).textContent = `Question ${n + 1} of ${qs.length}` + (n === 0 && S.base ? ' · "Current answer" is what most people said' : '');
     drawAnswers();
   } else $('count').textContent = '';
   if (s === 'review') drawReview();
@@ -105,7 +105,7 @@ function updateNext() {
   n.hidden = TAP_ON.includes(cur) || (isQ(cur) && !qOf(cur).multi) || (cur === 'where' && S.where !== 'marked');
   if (cur === 'review' && sending) return;
   const optional = { photo: !S.photo, improve: !$('improve').value.trim() };
-  n.textContent = cur === 'review' ? (unchanged() ? 'Confirm nothing has changed' : 'Send') : optional[cur] ? 'Skip' : 'Next';
+  n.textContent = cur === 'review' ? (unchanged() ? 'Nothing changed' : 'Send') : optional[cur] ? 'Skip' : 'Next';
 }
 function go(d) {
   const l = steps(), i = l.indexOf(cur);
@@ -163,7 +163,7 @@ function drawAnswers() {
       o.setAttribute('aria-checked', q.multi ? !!(v || []).includes(k) : k === v);
       const last = was != null && (q.multi ? was.includes(k) : was === k);
       let tag = o.querySelector('.last');
-      if (last && !tag) { tag = document.createElement('span'); tag.className = 'last'; tag.textContent = 'Last answer'; o.querySelector('.tick').before(tag); }
+      if (last && !tag) { tag = document.createElement('span'); tag.className = 'last'; tag.textContent = 'Current answer'; o.querySelector('.tick').before(tag); }
       if (!last && tag) tag.remove();
     });
   }
@@ -412,8 +412,10 @@ function drawReview() {
   $('all-answers').innerHTML = QUESTIONS.filter(q => shown(q, S.a)).map(q => { const v = S.a[q.id];
     return `<button type="button" data-q="${q.id}"><span>${esc(q.s)}</span><b>${v == null ? '–' : esc(q.multi ? v.map(x => optLabel(q, x)).join(', ') : optLabel(q, v))}</b></button>`; }).join('');
   $('all-answers').querySelectorAll('[data-q]').forEach(b => b.onclick = () => { S.fromReview = true; show('q-' + b.dataset.q); });
+  $('accuracy').textContent = S.here === 'known' ? 'By sending, you confirm this is what you know of this place, to the best of your knowledge.'
+    : 'By sending, you confirm this is what you saw, to the best of your knowledge.';
   $('review-hint').hidden = !unchanged();
-  $('review-hint').textContent = "Your answers match what's already there.";
+  $('review-hint').textContent = "Your answers match what's already there. Press \"Nothing changed\" to confirm it.";
   const few = n < MIN_ANSWERS;
   $('send-msg').hidden = !few;
   if (few) $('send-msg').textContent = `Answer at least ${MIN_ANSWERS} questions before sending ("Don't know" doesn't count). Tap "See" to change answers.`;
@@ -449,10 +451,10 @@ async function postRating(body, sc = spam) {
   try { return await Contribute.post(`/${SURVEY}/reports`, { ...body, token, website: $('trap').value }); }
   finally { sc.reset(); }
 }
+// as on the server (18 Nov 2026): every entry the same, first at a stop or an update; from memory half
 function points(body) {
-  const got = [['Telling us about a stop', POINTS.rating]];
+  const got = [['Telling us about a stop', body.here === 'known' ? POINTS.memory : POINTS.rating]];
   if (body.place_type === 'missing') got.push(['Adding a missing stop', POINTS.missing]);
-  else if (!(RATED.get(body.stop_id) || []).length) got.push(['First details for this stop', POINTS.first]);
   if (body.photo) got.push(['Adding a photo', POINTS.photo]);
   return got;
 }
@@ -535,8 +537,9 @@ history.replaceState({ s: 'start' }, '', location.search);
 drawPlay();
 if (openPlay && !player.get()) { setMode(openPlay); show('player'); }
 async function loadAll() {
-  const [stops, ratings] = await Promise.all([loadStops().catch(() => []), loadRatings().catch(() => [])]);
+  const [stops, ratings, profs] = await Promise.all([loadStops().catch(() => []), loadRatings().catch(() => []), loadProfiles().catch(() => ({}))]);
   if (!stops.length) return;
+  PROFILES = profs;
   STOPS = stops.concat(addedStops(ratings));
   BY_ID = new Map(STOPS.map(s => [s.id, s]));
   RATED = byStop(ratings);

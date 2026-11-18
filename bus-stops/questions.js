@@ -73,7 +73,7 @@ export const BANDS = [
   { id: 'fair', label: 'Needs work', color: '#EF8A62', min: .4 },
   { id: 'poor', label: 'Poor', color: '#B2182B', min: 0 },
 ];
-export const UNRATED = { id: 'none', label: 'No details yet', color: '#B8BDC6' };
+export const UNRATED = { id: 'none', label: 'No clear answer yet', color: '#B8BDC6' };
 export const band = (sc) => sc == null ? UNRATED : BANDS.find(b => sc >= b.min);
 
 // map views (Teja, 16 Nov 2026: no overall score; colour stops by one answer at a time). Each view turns a stop's
@@ -92,8 +92,9 @@ export const VIEWS = [
   { id: 'floods', label: 'Floods', of: a => ({ no: 'good', yes: 'bad' })[a.floods] || null, labels: { good: "Doesn't flood", bad: 'Floods when it rains' } },
 ];
 
-// points, as in the survey file on the server (the leaderboard itself is worked out there)
-export const POINTS = { rating: 10, first: 10, photo: 5, missing: 15, confirm: 2, flag: 2 };
+// points, as in the survey file on the server (the leaderboard itself is worked out there). Since 18 Nov 2026 every
+// entry earns the same, first at a stop or not; from memory half
+export const POINTS = { rating: 10, memory: 5, photo: 5, missing: 15, confirm: 2, flag: 2 };
 
 // ── stops: TGSRTC's (stops.json, next to this file) plus the ones residents added (from the ratings) ──
 export async function loadStops(base = '') {
@@ -110,6 +111,28 @@ export function addedStops(ratings) {
   return ratings.filter(r => r.place_type === 'missing').map(r => ({ id: r.stop_id, name: r.stop_name, towards: r.towards || '',
     lat: r.lat, lng: r.lng, buses: 0, routes: [], nRoutes: 0, added: true }));
 }
+// what everyone said, per stop (Teja, 18 Nov 2026), worked out on the server: for each question the count of each
+// answer within its time window, the current answer (agreed: 2+ answers, more than two-thirds the same; 1 answer:
+// that one; otherwise mixed, no current answer), older answers not counted. Always fresh (no-cache).
+export async function loadProfiles() {
+  const d = await (await fetch(`${C.API}/${SURVEY}/profiles.json`, { credentials: 'omit', cache: 'no-cache' })).json();
+  return d.profiles || {};
+}
+const has1 = (v) => v != null && !(Array.isArray(v) && !v.length);
+// a profile's current answers, as one answers object (mixed or none left out); for map colours, facts and pre-filling
+export const currentOf = (p) => p ? Object.fromEntries(Object.entries(p.answers).filter(([, x]) => has1(x.current)).map(([k, x]) => [k, x.current])) : {};
+// one question's line: the answer, and "Yes 3 · No 1 · agreed" / "mixed answers" / "1 person", older answers
+export function describe(q, x, label = optLabel) {
+  if (!x) return null;
+  const multi = Array.isArray(x.current) || q.multi;
+  const counts = Object.entries(x.counts || {}).map(([v, n]) => `${label(q, v)} ${n}`);
+  if (x.dk) counts.push(`Don't know ${x.dk}`);
+  const status = !x.of ? '' : x.of === 1 ? '1 person' : x.mixed || (multi && !has1(x.current)) ? 'mixed answers' : 'agreed';
+  const older = x.older ? `+${x.older} older answer${x.older > 1 ? 's' : ''} not counted` : '';
+  const txt = has1(x.current) ? (multi ? x.current.map(v => label(q, v)).join(', ') : label(q, x.current))
+    : x.of ? 'Mixed answers' : x.older ? 'No recent answer' : 'Not answered';
+  return { txt, has: has1(x.current), mixed: !!x.of && !has1(x.current), note: [counts.join(' · ') + (multi && x.of > 1 ? ` (of ${x.of})` : ''), status === 'mixed answers' ? '' : status].filter(Boolean).join(' · '), older };
+}
 export const ANSWER_KEYS = QUESTIONS.map(q => q.id);
 export const answersOf = (r) => Object.fromEntries(ANSWER_KEYS.filter(k => r[k] != null).map(k => [k, r[k]]));
 
@@ -120,7 +143,7 @@ export function metres(a, b) {
 }
 export const stopLabel = (s) => s.towards ? `${s.name}, towards ${s.towards}` : s.name;
 
-// ratings per stop, newest first; a stop's state is each question's newest answer
+// ratings per stop, newest first (a stop's state comes from its profile on the server since 18 Nov 2026)
 export function byStop(rs) {
   const m = new Map();
   for (const r of [...rs].sort((x, y) => y.observed_at.localeCompare(x.observed_at))) { if (!m.has(r.stop_id)) m.set(r.stop_id, []); m.get(r.stop_id).push(r); }

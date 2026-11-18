@@ -124,3 +124,11 @@ h1 { font: 700 30px/1.2 var(--font-ui); letter-spacing: -.005em; margin: 0 0 10p
 /* the arrow on every link that goes somewhere (17 Nov 2026): thin, pointing up and right */
 svg.arr { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vertical-align: -2px; transition: transform .2s ease; }
 .btn:hover svg.arr, a:hover > svg.arr { transform: translate(2px, -2px); }
+
+/* the check screen's last line, above Send (Teja, 18 Nov 2026): what sending means; no tick box */
+.accuracy { font-size: 14px; line-height: 1.4; color: var(--text-2); margin: 10px 0 0; }
+@media (max-width: 767px) {             /* in the survey on a phone: right above the Back / Send buttons */
+  body.q-mode .step.on[data-step="review"] { display: flex; flex-direction: column; }
+  body.q-mode .step.on[data-step="review"] > * { flex: none; }
+  body.q-mode .step.on[data-step="review"] > .accuracy { margin-top: auto; padding-top: 12px; }
+}

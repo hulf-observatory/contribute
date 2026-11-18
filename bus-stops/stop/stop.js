@@ -1,11 +1,12 @@
-// One bus stop: what people said (shelter, crossing, lighting… as on the map), routes, the latest answer to each
-// question, photos, every contribution with feedback. No overall score (Teja, 16 Nov 2026).
-import { SURVEY, TOPICS, VIEWS, VIEW_COLORS, optLabel, shown, loadStops, loadRatings, addedStops, byStop, latest, POINTS,
-  esc, player, day } from '../questions.js?v=20261117h';
+// One bus stop: what people said (shelter, crossing, lighting… as on the map), routes, each question's current answer
+// with how many gave each answer (Teja, 18 Nov 2026: from the stop's profile on the server), photos, every
+// contribution with feedback. No overall score (Teja, 16 Nov 2026).
+import { SURVEY, TOPICS, VIEWS, VIEW_COLORS, shown, loadStops, loadRatings, loadProfiles, addedStops, byStop, currentOf, describe, POINTS,
+  esc, player, day } from '../questions.js?v=20261118a';
 
 const $ = (id) => document.getElementById(id);
 const id = new URLSearchParams(location.search).get('id');
-const [stops, ratings] = await Promise.all([loadStops('../').catch(() => []), loadRatings().catch(() => [])]);
+const [stops, ratings, profiles] = await Promise.all([loadStops('../').catch(() => []), loadRatings().catch(() => []), loadProfiles().catch(() => null)]);
 const all = stops.concat(addedStops(ratings));
 const s = all.find(x => x.id === id);
 if (!s) { $('notfound').hidden = false; $('page').hidden = true; throw new Error('no such stop'); }
@@ -16,25 +17,22 @@ $('name').textContent = s.name;
 $('ctx').textContent = [s.towards && `Towards ${s.towards}`, s.added ? 'Added by someone; not in the TGSRTC data' : `${s.buses.toLocaleString('en-IN')} buses a day`].filter(Boolean).join(' · ');
 $('routes').innerHTML = s.nRoutes ? s.routes.slice(0, 10).map(r => `<span>${esc(r)}</span>`).join('') + (s.nRoutes > 10 ? `<em>and ${s.nRoutes - 10} more routes</em>` : '') : '';
 $('rate').href = '../?stop=' + encodeURIComponent(s.id);
+// someone disagrees: they add what they see, and it counts with everyone else's (Teja, 18 Nov 2026: instead of "wrong")
+document.querySelectorAll('.addyours').forEach(a => { a.href = $('rate').href; });
 
-const { answers, from } = latest(list);
-// the same short answers the map shows, one per topic that has an answer
+const prof = profiles && profiles[s.id], answers = currentOf(prof);
+// the same short answers the map shows, one per topic that has a current answer
 $('facts').innerHTML = VIEWS.map(v => [v, v.of(answers)]).filter(([, c]) => c).map(([v, c]) => `<li><i style="background:${VIEW_COLORS[c]}"></i>${esc(v.labels[c])}</li>`).join('');
-$('cond-meta').textContent = list.length ? `From ${list.length} contribution${list.length > 1 ? 's' : ''}, latest ${day(list[0].observed_at)}` : 'No one has sent details for this stop yet. Being first earns extra points.';
+$('cond-meta').textContent = list.length ? `From ${list.length} contribution${list.length > 1 ? 's' : ''}, latest ${day(list[0].observed_at)}` : 'No one has sent details for this stop yet.';
 if (!list.length) { ['state-sec', 'photo-sec', 'hist-sec', 'same'].forEach(x => { $(x).hidden = true; }); $('rate').textContent = 'Be the first to add details'; }
 
-// latest state, topic by topic, with how many of the last few said the same
-const agree = (q) => {
-  const said = list.filter(r => r[q.id] != null && r[q.id] !== 'dk').slice(0, 5).map(r => JSON.stringify(r[q.id]));
-  return said.length > 1 ? `${said.filter(x => x === said[0]).length} of the last ${said.length} said this` : '';
-};
-$('state').innerHTML = TOPICS.map(t => `<div class="topic"><h3>${esc(t.title)}</h3>${t.qs.filter(q => shown(q, answers)).map(q => {
-  const v = answers[q.id];
-  if (v == null) return `<div class="row none"><span>${esc(q.s)}</span><b>Not answered</b></div>`;
-  const txt = q.multi ? v.map(x => optLabel(q, x)).join(', ') : optLabel(q, v);
-  const bad = !q.multi && (q.opts.find(o => o[0] === v) || [])[2] === 0;
-  const a = agree(q);
-  return `<div class="row"><span>${esc(q.s)}</span><b class="${bad ? 'bad' : ''}">${esc(txt)}<small>${a || day(from[q.id].observed_at)}</small></b></div>`;
+// each question: the current answer, how many gave each answer, agreed / mixed / one person; older answers apart
+if (list.length && !prof) $('state-sub').textContent = "The answers couldn't load just now. Please try again later.";
+$('state').innerHTML = !prof ? '' : TOPICS.map(t => `<div class="topic"><h3>${esc(t.title)}</h3>${t.qs.filter(q => shown(q, answers)).map(q => {
+  const d = describe(q, prof.answers[q.id]);
+  if (!d) return `<div class="row none"><span>${esc(q.s)}</span><b>Not answered</b></div>`;
+  const v = prof.answers[q.id].current, bad = d.has && !q.multi && (q.opts.find(o => o[0] === v) || [])[2] === 0;
+  return `<div class="row${d.has ? '' : ' none'}"><span>${esc(q.s)}</span><b class="${bad ? 'bad' : ''}">${esc(d.txt)}<small>${esc(d.note)}</small>${d.older ? `<small>${esc(d.older)}</small>` : ''}</b></div>`;
 }).join('')}</div>`).join('');
 
 // photos
