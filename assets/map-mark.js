@@ -36,7 +36,8 @@ function loadMapLib() {
 
 // host: an empty element; onChange({ lat, lng, ok }) after every move (ok = zoomed in enough, inside the HMDA area).
 // points: optional () => GeoJSON points (bus stops; property has = 1 for darker dots); tapping one puts the pin on it.
-export function mapMark(host, { onChange, label = 'Search an area, or paste a Google Maps link or coordinates', points = null, mark = 'pin' } = {}) {   // mark: what the centre mark is called in the hints
+// onPick({ lat, lng }): optional; a place was chosen from the search, or pasted (the map has gone there).
+export function mapMark(host, { onChange, onPick = null, label = 'Search an area, or paste a Google Maps link or coordinates', points = null, mark = 'pin' } = {}) {   // mark: what the centre mark is called in the hints
   const n = Math.random().toString(36).slice(2, 7);
   host.innerHTML = `<div class="field mm-field"><label class="field-label" for="mm-q-${n}">${label}</label>
       <div class="search"><input class="inp" type="search" id="mm-q-${n}" placeholder="Ameerpet, or a link, or 17.4178, 78.4487"><div class="ps-results" id="mm-r-${n}" hidden></div></div>
@@ -64,6 +65,7 @@ export function mapMark(host, { onChange, label = 'Search an area, or paste a Go
     map.jumpTo({ center: [lng, lat], zoom: MARK_ZOOM + 2 });
     $('mm-q').value = ''; $('mm-r').hidden = true;
     say(`Found it: ${lat.toFixed(5)}, ${lng.toFixed(5)}. Move the map if the ${mark} isn't quite on the place.`);
+    if (onPick) onPick({ lat, lng });
   }
   $('mm-q').addEventListener('input', async (e) => {
     const got = pastedPlace($('mm-q').value);
@@ -82,7 +84,7 @@ export function mapMark(host, { onChange, label = 'Search an area, or paste a Go
     } catch { if (mine === asked) say("We couldn't check the link just now. Paste the coordinates, or find the place on the map."); }
   });
   createPlaceSearch({ input: $('mm-q'), results: $('mm-r'), local: () => list, getMap: () => map, marker: { set() {}, clear() {} },
-    onSelect: (p) => { if (map) map.jumpTo({ center: p.center, zoom: MARK_ZOOM + 1 }); } });   // street level at once: only a nudge left
+    onSelect: (p) => { if (map) map.jumpTo({ center: p.center, zoom: MARK_ZOOM + 1 }); if (onPick && p.center) onPick({ lng: p.center[0], lat: p.center[1] }); } });   // street level at once: only a nudge left
   function report() {
     const c = map.getCenter(), z = map.getZoom(), inArea = inside(c.lng, c.lat), ok = z >= MARK_ZOOM - .01 && inArea;
     $('mm-hint').textContent = !inArea ? `The ${mark} is outside the Hyderabad area (HMDA).` : ok ? `The place is under the ${mark}. Move the map to adjust.`
@@ -116,6 +118,7 @@ export function mapMark(host, { onChange, label = 'Search an area, or paste a Go
       });
     },
     jump(lng, lat, zoom = 17) { if (map) map.jumpTo({ center: [lng, lat], zoom }); },
+    focus() { $('mm-q').focus(); },                // the search box: "Search for the area" starts by typing
   };
   if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__mapMark = api;   // local checks only
   return api;

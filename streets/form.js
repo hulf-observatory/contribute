@@ -11,7 +11,7 @@
 // no north or south: face the road, we work out the side (compass, else the nearest side) and say it with a landmark;
 // the person says yes or no. One thing leads to the next (a broken-footpath report → the footpath's questions, filled
 // in). A laptop sees the code for a phone and can add a place it knows on the map.
-import { mapMark } from '../assets/map-mark.js?v=20261120c';
+import { mapMark } from '../assets/map-mark.js?v=20261122a';
 import { SURVEY, SETS, ITEM, MIN, allQs, shown, real, nAnswered, optLabel, PROBLEMS, BLOCKED_BY, NEEDS, problemName, needName, REQUEST_COLOR,
   POINTS, VIEW_COLORS, footColor, crossColor, metres, angle, outward, bearingNear, inHmda, esc, player, checkPlayer,
   PLAYER_SAYS, currentOf, profileLines } from '../walking/questions.js?v=20261120a';
@@ -71,8 +71,8 @@ const curQ = () => allQs(qParts(cur).k).find(q => q.id === qParts(cur).id);
 const adding = () => !!S.adds && S.adds === S.cur;
 const moreNew = (t) => Object.fromEntries(qList(t.k, 'more', t.a).filter(q => t.addSeen.has(q.id) && t.a[q.id] != null).map(q => [q.id, t.a[q.id]]));
 const nMore = () => S.adds ? Object.keys(moreNew(S.adds)).length : 0;
-const TAP_ON = ['start', 'look', 'choose', 'near', 'pick', 'sidepick', 'face', 'check', 'player', 'thanks'];   // 'more' keeps the bottom button: it is Send
-const BAR = { look: 0, sidepick: 30, pick: 30, mark: 8, choose: 15, near: 30, face: 30, check: 55, stopname: 40, pin: 60, blockedby: 60, other: 60, photo: 85, more: 100 };
+const TAP_ON = ['start', 'where', 'look', 'choose', 'near', 'pick', 'sidepick', 'face', 'check', 'player', 'thanks'];   // 'more' keeps the bottom button: it is Send
+const BAR = { look: 0, where: 5, sidepick: 30, pick: 30, mark: 8, choose: 15, near: 30, face: 30, check: 55, stopname: 40, pin: 60, blockedby: 60, other: 60, photo: 85, more: 100 };
 
 const secOf = (s) => s === 'sidepick' ? 'pick' : s;      // "Which side of the road?" is the same screen as the other map choices
 function show(s, push = true) {
@@ -83,6 +83,7 @@ function show(s, push = true) {
   document.querySelectorAll('.step').forEach(x => x.classList.toggle('on', x.dataset.step === secOf(s)));
   const inQ = !['start', 'thanks', 'player'].includes(s);
   document.body.classList.toggle('q-mode', inQ);
+  document.body.classList.toggle('fit', s === 'start' || s === 'thanks');
   $('progress').hidden = !inQ; $('nav').hidden = !inQ;
   const n = S.sent.length + S.doneIds.size;
   $('sendbox').hidden = !(s === 'photo' || s === 'more'); if (!$('sendbox').hidden) drawSendbox();
@@ -100,9 +101,9 @@ function show(s, push = true) {
     $('bar').style.width = `${BAR[s] ?? 8}%`;
     $('count').textContent = n ? `${n} sent` : '';
   }
-  ({ start: drawPlay, mark: () => marker.open(), choose: drawChoose, near: drawNear, face: () => { $('face-ask').hidden = false; $('face-confirm').hidden = true; },
+  ({ start: drawPlay, where: drawWhere, mark: openMark, choose: drawChoose, near: drawNear, face: () => { $('face-ask').hidden = false; $('face-confirm').hidden = true; },
     pin: openPin, photo: drawPhoto, more: drawMore, blockedby: drawBlocked, sidepick: openPick, pick: openPick,
-    thanks: () => { const p = S.noNick ? null : player.get(); $('thanks-prof').hidden = !p; if (p) $('thanks-prof-a').href = profileUrl(p.nick); const j = $('thanks-join-line'); if (j) j.hidden = !!p; drawHub(); },
+    thanks: drawHub,
     player: () => { S.noNick = false; const p = player.get(); $('p-nick').value = p ? p.nick : $('p-nick').value; $('p-pin').value = ''; $('p-msg').hidden = true; playerReady(); } }[s] || (() => {}))();
   updateNext();
   window.scrollTo({ top: 0 });
@@ -110,7 +111,7 @@ function show(s, push = true) {
   const h = st.querySelector('.qt, h1'); if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }); }
 }
 function ready() {
-  if (cur === 'mark') return !!(S.mark && S.mark.ok);
+  if (cur === 'mark') return !!(S.mark && S.mark.ok) && !S.loading;
   if (cur === 'stopname') return $('stop-name').value.trim().length >= 2;
   if (cur === 'pin') return !!S.pinOk;
   if (cur === 'other') return $('ot-text').value.trim().length >= 3;
@@ -128,7 +129,7 @@ function updateNext() {
   if (cur === 'more') { b.textContent = 'Send'; return; }
   if (stop) { b.textContent = nMore() ? 'Stop and send' : 'Not now'; return; }
   const optional = { photo: !(S.cur && (S.cur.photo || S.cur.note)), blockedby: !(S.cur && S.cur.blocked_by && S.cur.blocked_by.length) };
-  b.textContent = cur === 'mark' ? 'Use this place' : cur === 'pin' ? 'Here' : cur === 'photo' ? (optional.photo ? 'Send without a photo' : 'Send') : optional[cur] ? 'Skip' : 'Next';
+  b.textContent = cur === 'mark' ? (S.loading ? 'Looking at what is around…' : 'Use this place') : cur === 'pin' ? 'Here' : cur === 'photo' ? (optional.photo ? 'Send without a photo' : 'Send') : optional[cur] ? 'Skip' : 'Next';
   if (cur === 'photo') {
     const f = few(); $('photo-few').hidden = !f;
     if (f) $('photo-few').textContent = `Answer at least ${MIN[S.cur.k]} question${MIN[S.cur.k] > 1 ? 's' : ''} about the ${SETS[S.cur.k].name.toLowerCase()} ("Don't know" doesn't count). Press Back to change an answer.`;
@@ -166,55 +167,81 @@ function leave() {
 }
 $('exit').onclick = leave;
 
-// ── the first screen: Start asks for the phone's location; "not there" and laptops use the map ──
+// ── a simpler way in (Teja, 19 Nov 2026): the first screen asks what to tell us about; "Where is it?" comes next:
+// the phone's location, or (not there now, or no location) search for the area, or pick the place on a map ──
+$('start-choices').innerHTML = Object.entries(CHOICES).map(([k, c]) => `<button type="button" class="choice plain" data-want="${k}"><span><b>${c.name}</b></span></button>`).join('');
+$('start-choices').addEventListener('click', (e) => { const b = e.target.closest('[data-want]'); if (!b) return; S.want = b.dataset.want; S.gpsFailed = false; show('where'); });
 function begin(place) {
   Object.assign(S, { place, near: null, side: null, sideSkipped: false, afterFace: null, choice: null, items: [], checks: [], cur: null, last: null, sent: [], doneIds: new Set(), adds: null, picked: { s: [], j: [], l: [] }, spot: null });
-  DONE = false; stack = ['start']; cur = 'start';
+  DONE = false; stack = ['start']; cur = 'where';
   loadPlace();
 }
-// the phone's location didn't come: say why, and make the map the main button (Teja, 20 Nov 2026)
-function gpsFailed(t) {
-  S.gpsFailed = true; $('start-go').disabled = false; drawPlay();
-  $('gps-msg').textContent = t; $('gps-msg').hidden = false;
+const LOC_SAYS = "Use my phone's location";
+function locBusy(t) {                               // after a failure the other two ways lead: the button turns light and short
+  const b = $('loc-go'), fail = !!S.gpsFailed;
+  b.disabled = !!t; b.firstElementChild.textContent = t || (fail ? 'Try my location again' : LOC_SAYS);
+  b.classList.toggle('again', fail); b.classList.toggle('btn-primary', !fail); b.classList.toggle('btn-secondary', fail);
+  $('where-or').hidden = !PHONE || fail;
 }
-$('start-go').onclick = () => {
-  if (!PHONE) { S.mark = null; return show('mark'); }
-  if (!('geolocation' in navigator)) return gpsFailed('This browser cannot share a location. Pick the place on a map instead.');
-  S.gpsFailed = false; drawPlay();
-  $('start-go').disabled = true; $('start-go').textContent = 'Finding where you are…'; $('gps-msg').hidden = true;
+function drawWhere() {
+  $('where-for').textContent = S.want ? CHOICES[S.want].name : '';
+  $('loc-go').hidden = !PHONE;                      // a laptop: the two ways that need no phone
+  $('gps-msg').hidden = !S.gpsFailed; locBusy('');
+}
+// the phone's location didn't come: say why; the other two ways are right below
+function gpsFailed(t) { S.gpsFailed = true; locBusy(''); $('gps-msg').textContent = t; $('gps-msg').hidden = false; }
+$('loc-go').onclick = () => {
+  if (!('geolocation' in navigator)) return gpsFailed('This browser cannot share a location. Search for the area or pick the place on a map instead.');
+  S.gpsFailed = false; $('gps-msg').hidden = true; locBusy('Finding where you are…');
   navigator.geolocation.getCurrentPosition((p) => {
-    $('start-go').disabled = false; drawPlay();
+    if (cur !== 'where') return;                    // left the screen meanwhile
     const { latitude: lat, longitude: lng, accuracy } = p.coords;
     if (!inHmda(lng, lat)) return gpsFailed('Your phone places you outside the Hyderabad area (HMDA). This survey is for Hyderabad.');
     begin({ lat, lng, acc: Math.round(accuracy), memory: false });
   }, (err) => gpsFailed(err.code === 1
-      ? "Location is off for this site. Pick the place on a map instead (what you add is then marked “from memory”), or turn location on in your browser's settings for this page and try again."
-      : "We couldn't get your location. Pick the place on a map instead, or try again in a moment, ideally in the open."),
+      ? 'Location is off for this site. Search for the area or pick the place on a map instead.'
+      : "We couldn't get your location. Search for the area or pick the place on a map instead."),
   { enableHighAccuracy: true, timeout: 20000, maximumAge: 15000 });
 };
-$('to-mark').onclick = (e) => { e.preventDefault(); S.mark = null; show('mark'); };
+// "Search for the area" and "Pick the place on a map" are the same map; the first starts in its search box
+const toMark = (mode) => { S.mark = null; S.markMode = mode; show('mark'); };
+$('to-search').onclick = () => toMark('search');
+$('to-mark').onclick = () => toMark('map');
+async function openMark() {
+  const search = S.markMode === 'search';
+  const foot = S.want === 'walk' ? ' For a footpath, put the dot on the side of the road you mean.' : '';
+  $('mark-hint').textContent = search ? (S.want === 'stop' ? 'Type an area, a road or a landmark. The map of its bus stops opens next.' : `Type an area, a road or a landmark, then move the map so the dot is on the place.${foot}`)
+    : `Move the map so the dot is on the place.${foot} What you add is marked "from memory".`;
+  await marker.open();
+  if (search && cur === 'mark') marker.focus();
+}
+// a bus stop is then chosen on the next map, so an area found by searching goes straight on to it (area: the map opens on
+// the neighbourhood, not on one spot). Everything else needs the dot put on the exact place first.
+function markPicked({ lat, lng }) {
+  if (cur !== 'mark' || S.markMode !== 'search' || S.loading || S.want !== 'stop' || !inHmda(lng, lat)) return;
+  S.place = { lat, lng, acc: null, memory: true, area: true }; loadPlace();
+}
 // just looking: every question the form asks, in one list; nothing to answer, nothing sent (Teja, 19 Nov 2026)
-$('to-look').onclick = (e) => {
-  e.preventDefault();
+function openLook() {
   const qs = (list) => list.map(q => `<li>${esc(q.q)}<small>${q.opts.filter(o => o[0] !== 'dk').map(o => esc(o[1])).join(' · ')}${q.multi ? ' (tick all that fit)' : ''}</small></li>`).join('');
   const thing = (k, name) => `<h3>${name}</h3><h4>First</h4><ol>${qs(SETS[k].core)}</ol><h4>After sending, if you have a minute</h4><ol>${qs(SETS[k].more)}</ol>`;
   $('lookbox').className = 'look';
-  $('lookbox').innerHTML = `<h4>How it goes</h4><ol><li>Where you are<small>Your phone's location, or a place you pick on a map ("from memory")</small></li>
-      <li>What you want to tell us about<small>A bus stop · a footpath or crossing · street lights · a problem · an improvement</small></li>
+  $('lookbox').innerHTML = `<h4>How it goes</h4><ol><li>What you want to tell us about<small>A bus stop · a footpath or crossing · street lights · a problem · an improvement</small></li>
+      <li>Where it is<small>Your phone's location; or search for the area, or pick the place on a map ("from memory")</small></li>
       <li>What's already nearby<small>Check something others described, or describe something new</small></li>
-      <li>A few questions, then a photo if you like, and Send</li><li>After sending<small>More questions about the same place if you have a minute, or something else here</small></li></ol>`
+      <li>A few questions, then a photo if you like, and Send</li><li>After sending<small>More details about the same place if you have a minute, adding it to a profile, or something else here</small></li></ol>`
     + thing('stop', 'A bus stop') + thing('foot', 'A footpath') + '<p style="margin-top:8px">On a main road we first ask which side you are on: face the road, and say yes or no to the side we show.</p>' + thing('cross', 'A crossing')
     + `<h3>Street lights</h3><ul><li>A street light isn't working</li><li>It's dark here, no street lights</li><li>Ask for street lights here</li></ul>`
     + `<h3>Report a problem</h3><ul>${PROBLEMS.filter(p => !LIGHT_PROBLEMS.includes(p[0])).map(p => `<li>${esc(p[0] === 'other' ? 'Something else, in your own words' : p[1])}</li>`).join('')}<li>Flooding<small>Opens the separate flood report</small></li></ul>`
     + `<h3>Suggest an improvement</h3><ul>${NEEDS.filter(p => p[0] !== 'lights').map(p => `<li>${esc(p[0] === 'other' ? 'Something else, in your own words' : p[1])}</li>`).join('')}</ul>`;
   show('look');
-};
+}
 document.querySelectorAll('[data-fakeplace]').forEach(a => a.onclick = (e) => { e.preventDefault(); const [lat, lng] = a.dataset.fakeplace.split(',').map(Number); begin({ lat, lng, acc: 8, memory: false }); });
-const marker = mapMark($('markbox'), { mark: 'dot', onChange: ({ lat, lng, ok }) => { S.mark = { lat, lng, ok }; updateNext(); } });
+const marker = mapMark($('markbox'), { mark: 'dot', onPick: (pl) => markPicked(pl), onChange: ({ lat, lng, ok }) => { S.mark = { lat, lng, ok }; updateNext(); } });
 // a laptop: the code that opens this page on a phone, and "add a place you know" on the map
 if (!PHONE) {
   const url = location.origin + location.pathname;
-  $('desk').hidden = false; $('start-fine').hidden = true; $('to-mark').hidden = true; $('desk-url').textContent = url.replace(/^https?:\/\//, '');
+  $('desk').hidden = false; $('desk-url').textContent = url.replace(/^https?:\/\//, '');
   const s = document.createElement('script');
   s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js';
   s.onload = () => { try { const q = window.qrcode(0, 'M'); q.addData(url); q.make(); $('desk-qr').innerHTML = q.createSvgTag({ cellSize: 5, margin: 2, scalable: true }); } catch { /* the address is shown too */ } };
@@ -225,13 +252,16 @@ if (!PHONE) {
 const N = () => S.near || { stretches: [], junctions: [], stops: [], rows: [], profiles: {}, stop_profiles: {} };
 async function loadPlace() {
   S.near = null; S.side = null; S.sideSkipped = false;
-  show(cur === 'mark' ? 'choose' : 'choose', cur !== 'start' ? true : false);
+  const want = S.want, from = cur;                  // chosen on the first screen: it opens once what's around has arrived
+  if (!want) show('choose', cur !== 'start');
+  else { S.loading = true; if (cur === 'where') locBusy('Looking at what is around…'); updateNext(); }
   try {
     const r = await fetch(`${C.API}/${SURVEY}/around?lat=${S.place.lat.toFixed(5)}&lng=${S.place.lng.toFixed(5)}`, { credentials: 'omit', cache: 'no-store' });
     if (!r.ok) throw new Error(r.status);
     S.near = await r.json();
   } catch { S.near = { stretches: [], junctions: [], stops: [], rows: [], profiles: {}, stop_profiles: {}, failed: true }; }
   seedX();
+  if (want) { S.loading = false; if (cur !== from) return; if (cur === 'where') locBusy(''); updateNext(); return openChoice(want); }
   if (S.afterLoad) { const f = S.afterLoad; S.afterLoad = null; return f(); }   // a choice was tapped before this arrived
   if (cur === 'choose') drawChoose();
   if (cur === 'near') drawNear();
@@ -272,20 +302,23 @@ const aboutLight = (r) => (r.item === 'problem' && LIGHT_PROBLEMS.includes(r.pro
 const lightRows = () => N().rows.filter(aboutLight);
 const junctions = () => N().junctions.filter(j => j.d <= NEAR_JUNCTION_M);
 function drawChoose() {
-  const n = N(), mem = S.place && S.place.memory;
-  $('h-choose').textContent = mem ? 'What do you want to tell us about this place?' : 'What do you want to tell us about?';
-  $('ch-hint').textContent = !S.near ? 'Looking at what is around…' : mem ? 'From memory: what you add is marked so.' : '';
+  const n = N(), again = S.sent.length + S.doneIds.size > 0;
+  $('h-choose').textContent = again ? 'Anything else here?' : 'Choose one';
+  $('ch-hint').textContent = !S.near ? 'Looking at what is around…' : '';
   $('near-msg').hidden = !(S.near && S.near.failed);
   $('near-msg').textContent = "We couldn't load what's already here just now. You can still add something new.";
   const stops = n.stops.filter(x => x.d <= 300).length, js = junctions().length;
   const hint = !S.near ? {} : {
-    stop: stops ? `${stops} stop${stops === 1 ? '' : 's'} near here` : '',
-    walk: js ? `${js} crossing${js === 1 ? '' : 's'} near here` : '',
-    light: lightRows().length ? `${lightRows().length} already reported near here` : '',
-    problem: rowsOf('problem').filter(r => !aboutLight(r)).length ? `${rowsOf('problem').filter(r => !aboutLight(r)).length} already reported near here` : '',
-    improve: rowsOf('request').filter(r => !aboutLight(r)).length ? `${rowsOf('request').filter(r => !aboutLight(r)).length} asked for near here` : '' };
+    stop: stops ? `${stops} near here` : '',
+    walk: js ? `${js} crossing${js === 1 ? '' : 's'} near` : '',
+    light: lightRows().length ? `${lightRows().length} reported` : '',
+    problem: rowsOf('problem').filter(r => !aboutLight(r)).length ? `${rowsOf('problem').filter(r => !aboutLight(r)).length} reported` : '',
+    improve: rowsOf('request').filter(r => !aboutLight(r)).length ? `${rowsOf('request').filter(r => !aboutLight(r)).length} asked for` : '' };
+  $('leadlist').innerHTML = again ? LEADS_HTML : '';
   $('choices').innerHTML = Object.entries(CHOICES).map(([k, c]) =>
-    `<button type="button" class="choice" data-choice="${k}"><span class="gl">${GLYPH[k]}</span><span><b>${c.name}</b><small>${c.blurb}</small>${hint[k] ? `<small class="n">${esc(hint[k])}</small>` : ''}</span></button>`).join('');
+    `<button type="button" class="choice plain" data-choice="${k}"><span><b>${again && k === S.choice ? c.again : c.name}</b></span>${hint[k] ? `<small class="n">${esc(hint[k])}</small>` : ''}</button>`).join('');
+  const st = $('choices').closest('.step');        // a small phone: one fewer suggestion rather than a screen that scrolls
+  while (PHONE && st.scrollHeight > st.clientHeight + 1 && $('leadlist').children.length > 1) $('leadlist').lastElementChild.remove();
 }
 $('choices').addEventListener('click', (e) => { const b = e.target.closest('[data-choice]'); if (b) openChoice(b.dataset.choice); });
 function openChoice(k) { S.choice = k; if (k === 'walk') askSide(() => show('near')); else show('near'); }
@@ -392,7 +425,7 @@ function spotItem(side) {                           // side: on "Which side of t
 function stopItem(st) {
   const p = sprofOf(st.id);
   return { key: 's:' + st.id, k: 'Bus stop', tag: stopSide(st), t: st.name, pos: [st.lng, st.lat], done: !!p && checked(p.latest),
-    lines: [`${away(st.d)}${st.towards ? ' · buses towards ' + st.towards : ''}`, st.d > FAR_STOP && !S.place.memory ? FAR_SAYS : ''], meta: profLine(p),
+    lines: [S.place.area ? (st.towards ? 'Buses towards ' + st.towards : '') : `${away(st.d)}${st.towards ? ' · buses towards ' + st.towards : ''}`, st.d > FAR_STOP && !S.place.memory ? FAR_SAYS : ''], meta: profLine(p),
     btns: [[p ? 'Check' : 'Describe', () => startStop(st)]] };
 }
 function junctionItem(j) {
@@ -492,9 +525,12 @@ $('pk-cards').addEventListener('click', (e) => {
 });
 $('pk-hint').addEventListener('click', (e) => { if (e.target.closest('#chg-side')) { e.preventDefault(); openSidePick(() => show('near')); } });
 function pkFit() {
-  const b = new maplibregl.LngLatBounds([S.place.lng, S.place.lat], [S.place.lng, S.place.lat]);
+  const b = new maplibregl.LngLatBounds([S.place.lng, S.place.lat], [S.place.lng, S.place.lat]), pad = { top: 36, left: 40, right: 40, bottom: $('pk-cards').offsetHeight + 28 };
   for (const it of PK.items) if (!it.add) b.extend(it.pos);
-  PK.map.fitBounds(b, { padding: { top: 36, left: 40, right: 40, bottom: $('pk-cards').offsetHeight + 28 }, maxZoom: 17.2, duration: 0 });
+  if (S.place.area) {                               // an area found by searching: the neighbourhood and every stop in it
+    PK.map.jumpTo({ center: [S.place.lng, S.place.lat], zoom: 14.8, padding: pad });
+    loadViewAt(S.place.lng, S.place.lat).then((ok) => { if (ok && secOf(cur) === 'pick') pkPaint(); });
+  } else PK.map.fitBounds(b, { padding: pad, maxZoom: 17.2, duration: 0 });
   PK.home = { center: PK.map.getCenter(), zoom: PK.map.getZoom() }; $('pk-home').hidden = true;
 }
 $('pk-home').onclick = () => { if (PK.map && PK.home) PK.map.easeTo({ ...PK.home, duration: 400 }); };
@@ -508,7 +544,7 @@ async function pkMoved() {                          // the map was moved: offer 
 function openPick() {
   const mode = pkMode();
   $('pk-h').textContent = !S.near ? 'Looking…' : mode === 'stop' ? 'Which bus stop?' : mode === 'walk' ? 'Which footpath or crossing?' : 'Which side of the road?';
-  $('pk-hint').innerHTML = !S.near ? '' : mode === 'stop' ? 'Swipe the card, or tap a dot. Move the map to see more.'
+  $('pk-hint').innerHTML = !S.near ? '' : mode === 'stop' ? (S.place.area ? 'Tap the dot of the stop you mean. Move the map to see more.' : 'Swipe the card, or tap a dot. Move the map to see more.')
     : mode === 'side' ? 'Tap the side you mean on the map, or swipe the card. For a side street, tap the street.'
     : S.side ? `On ${esc(S.side.mine.name)}. <a href="#" id="chg-side" style="color:var(--ink)">Not the right side? Change it</a>` : 'Swipe the card, or tap a dot. Tap a side street to describe its footpath.';
   $('pk-home').textContent = S.place.memory ? 'Back to the place' : 'Back to where I am';
@@ -555,6 +591,7 @@ function openPick() {
   } else { PK.map.resize(); pkPaint(); pkFit(); }
   if (!PK.me) PK.me = new maplibregl.Marker({ element: mkEl('me') }).setLngLat(at).addTo(PK.map); else PK.me.setLngLat(at);
   PK.me.getElement().classList.toggle('placed', !!S.place.memory);
+  PK.me.getElement().style.display = S.place.area ? 'none' : '';   // an area found by searching has no one spot to mark
 }
 $('cf-yes').onclick = () => doneFace();
 $('cf-no').onclick = () => { setSide(S.side.other, 'switched', S.side.deg); doneFace(); };
@@ -607,6 +644,8 @@ const stopCtx = (st) => ({ stop_id: st.id, name: st.name, towards: st.towards, s
 // a junction picked far away on the map: saved where the junction is, from memory
 const crossCtx = (j) => ({ junction: j.id, title: j.name, ...(j.d > NEAR_JUNCTION_M ? { far: true, lat: j.c[1], lng: j.c[0] } : {}) });
 function startStop(st) {
+  // an area found by searching: the stop chosen becomes the place remembered, so what is added next here is near it
+  if (S.place.area) { S.place = { lat: st.lat, lng: st.lng, acc: null, memory: true }; st = { ...st, d: 0 }; }
   const p = sprofOf(st.id);
   if (p) return showCheck({ kind: 'stop', stop: st, p, title: stopTitle(st) });
   startThing('stop', stopCtx(st));
@@ -923,7 +962,7 @@ $('photo-in').addEventListener('change', async (e) => {
 // ── "Send this?" for a check; and after every send, "Anything else here?": one thing leads to the next ──
 const PRE = { broken: { footpath: 'yes', broken: 'places' }, blocked: { footpath: 'yes', blocked: 'places' }, nofoot: { footpath: 'no' } };
 const WORN = ['places', 'mostly'];
-let LEADS = [];
+let LEADS = [], LEADS_HTML = '';                 // what follows from the thing just sent: shown first on "Anything else here?"
 function drawMore() {
   const t = S.adds, n = nMore();
   $('more-h').textContent = t ? 'Send these answers?' : 'Send this?';
@@ -931,21 +970,21 @@ function drawMore() {
   updateNext();
 }
 function drawSendbox() {
-  const p = player.get();
-  $('anon').hidden = !!(p && !S.noNick) || !!S.adds;
   $('accuracy').textContent = S.place && S.place.memory ? 'You confirm this is what you know of this place.' : 'You confirm this is what you saw.';
   if (!sending) $('send-msg').hidden = true;
 }
 function drawHub() {
-  $('hub').hidden = !S.place;                      // an unsent entry sent from the first screen: no place to add to
-  if (!S.place) return;
+  drawProf();
+  $('else-go').hidden = !S.place; $('more-box').hidden = true; LEADS = []; LEADS_HTML = '';
+  if (!S.place) return;                            // an unsent entry sent from the first screen: no place to add to
   const has = (k) => S.sent.some(i => i.k === k), t = S.last;
-  LEADS = [];
   const lead = (label, s, fn) => { LEADS.push(fn); return answerBtn(`data-lead="${LEADS.length - 1}"`, `${esc(label)}${s ? `<small>${esc(s)}</small>` : ''}`, '', ' go'); };
   const L = [];
   // the extra questions about the thing just sent: their answers are added to it
-  if (t && S.sent.includes(t) && SETS[t.k] && t.rkey && !t.more && qList(t.k, 'more', t.a).length)
-    L.push(lead(`About this ${SETS[t.k].name.toLowerCase()}`, SETS[t.k].moreSays, () => tellMore(t)));
+  if (t && S.sent.includes(t) && SETS[t.k] && t.rkey && !t.more && qList(t.k, 'more', t.a).length) {
+    $('more-box').hidden = false; $('more-box-t').textContent = `${SETS[t.k].moreSays}. About a minute.`;
+    $('more-go').onclick = () => onward(() => tellMore(t));
+  }
   if (t && S.sent.includes(t)) {
     if (t.k === 'problem' && PRE[t.problem] && !has('foot'))
       L.push(lead('About the footpath here', 'A few quick questions; your report is filled in already', () => { S.choice = 'walk'; askSide(() => footHere({ mine: PRE[t.problem], lead: 'problem' })); }));
@@ -970,19 +1009,51 @@ function drawHub() {
       L.push(lead('About the footpath at this stop', 'Is there one? Is it broken or blocked?', () => { S.choice = 'walk'; startThing('foot', { lat: sp.lat, lng: sp.lng, side_how: 'stop', lead: 'stop', title: `At the stop: ${t.name}` }); }));
     if (j && !has('cross')) L.push(lead('About the crossing near this stop', `${j.name} · ${j.d} m away`, () => { S.choice = 'walk'; const p = N().profiles[j.id]; p ? showCheck({ kind: 'junction', j, p, title: j.name }) : startThing('cross', { junction: j.id, title: j.name }); }));
   }
-  $('lead-h').hidden = !L.length; $('leadlist').innerHTML = L.join('');
-  $('morelist').innerHTML = Object.entries(CHOICES).map(([k, c]) => answerBtn(`data-add="${k}"`, k === S.choice ? c.again : c.name, '', ' go')).join('');
+  LEADS_HTML = L.slice(0, 2).join('');             // two at most: with the five choices they fit one phone screen
+  if (cur === 'choose') drawChoose();
 }
+// "Add this to your profile" (Teja, 19 Nov 2026): a profile is offered after sending, not before starting. What was
+// just sent without one (S.claim) is then put on the player's name by the server, with its points.
+let claimSpam = null;
+function drawProf() {
+  const p = S.noNick ? null : player.get(), c = S.claim, busy = !!S.claiming;
+  $('thanks-prof').hidden = !(p && !c); $('prof-box').hidden = !c;
+  if (p) { $('thanks-prof-n').textContent = p.nick; $('thanks-prof-a').href = profileUrl(p.nick); }
+  if (!c) return;
+  claimSpam = claimSpam || Contribute.spamCheck($('ts-claim'));
+  $('prof-box-h').textContent = p ? `Add this to ${p.nick}'s profile` : 'Add this to your profile';
+  const n = c.claims.length + c.checks.length, pts = c.pts ? `${c.pts} point${c.pts === 1 ? '' : 's'}` : '';
+  $('prof-box-t').textContent = busy ? 'Adding it…' : p ? (pts ? `${pts} are waiting.` : 'It is not on your profile yet.')
+    : `${pts ? `Keep your ${pts}${n > 1 ? `, from the ${n} things you sent` : ''}: just` : 'Just'} a nickname and a 4-digit PIN. No name, phone number or email.`;
+  $('prof-btns').hidden = !!p; $('prof-retry').hidden = !p || busy; $('prof-retry').textContent = S.claimFail ? 'Try again' : 'Add it';
+  $('prof-msg').hidden = !S.claimFail || busy; $('prof-msg').textContent = S.claimFail || '';
+  if (p && !busy && !S.claimFail) runClaim();       // just logged in or joined: add it without another tap
+}
+async function runClaim() {
+  const p = player.get(), c = S.claim;
+  if (!p || !c || S.claiming) return;
+  S.claiming = true; S.claimFail = null; drawProf();
+  try {
+    await postIt({ mode: 'claim', nick: p.nick, nick_pin: p.pin, device: Contribute.device(), claims: c.claims, checks: c.checks }, claimSpam);
+    if (S.claim === c) S.claim = null;
+  } catch (err) {
+    S.claimFail = err.server && err.status === 400 ? `We couldn't add it (${err.message}).` : err.server && err.status === 403 ? 'The spam check did not finish. Please press Try again.'
+      : err.server && err.status === 429 ? 'Too many tries from this connection just now. Please wait a minute.' : "We couldn't add it just now; the signal may be weak.";
+  }
+  S.claiming = false;
+  if (cur === 'thanks') drawProf();
+}
+$('prof-retry').onclick = () => { S.claimFail = null; runClaim(); };
+for (const [id, m] of [['prof-create', 'create'], ['prof-login', 'login']]) $(id).onclick = () => onward(() => { setPMode(m); show('player'); });
+$('else-go').onclick = () => onward(() => show('choose'));
 // from "Anything else here?": the next thing starts with nothing waiting, and Back comes back here
 const onward = (fn) => { DONE = false; S.items = []; S.checks = []; S.cur = null; S.adds = null; fn(); };
 function tellMore(t) { S.cur = t; S.adds = t; t.addSeen = new Set(); show(`q-${t.k}-${qList(t.k, 'more', t.a)[0].id}`); }
-$('thanks-text').addEventListener('click', (e) => { if (e.target.closest('#thanks-join')) { e.preventDefault(); onward(() => { setPMode('create'); show('player'); }); } });
 function footHere(extra) {                          // the footpath where the person is: their side if known, else a single point
   if (S.side) return startThing('foot', { ...sideCtx(S.side.mine, 'mine', sideWords()[0]), ...extra });
   startThing('foot', { ...spotCtx(), ...extra });
 }
 $('leadlist').addEventListener('click', (e) => { const b = e.target.closest('[data-lead]'); if (b) onward(LEADS[+b.dataset.lead]); });
-$('morelist').addEventListener('click', (e) => { const b = e.target.closest('[data-add]'); if (b) onward(() => openChoice(b.dataset.add)); });
 
 // ── the player: nickname + 4-digit PIN, checked with the server ──
 const cleanNick = (v) => v.trim().replace(/\s+/g, ' ');
@@ -990,13 +1061,7 @@ const pinOk = (v) => /^\d{4}$/.test(v);
 const profileUrl = (n) => `../profile/?n=${encodeURIComponent(n)}`;
 function drawPlay() {
   const p = player.get();
-  $('play-box').hidden = !!p; $('play-in').hidden = !p;
-  $('start-go').textContent = !PHONE ? 'Add a place you know on the map' : S.gpsFailed ? 'Try my location again' : p ? 'Start' : 'Start anonymously';
-  // after the location failed, the map is the way on: it becomes the main button
-  const fail = PHONE && !!S.gpsFailed;
-  $('to-mark').textContent = fail ? 'Pick the place on a map' : 'Not there? Pick the place on a map';
-  $('to-mark').classList.toggle('btn-primary', fail); $('to-mark').classList.toggle('btn-secondary', !fail);
-  $('start-go').classList.toggle('btn-primary', !fail); $('start-go').classList.toggle('btn-secondary', fail);
+  $('play-in').hidden = !p;
   if (p) { $('play-name').textContent = p.nick; $('play-prof').href = profileUrl(p.nick); }
 }
 let pmode = 'create';
@@ -1009,7 +1074,6 @@ function setPMode(m) {
   $('p-switch').textContent = c ? 'Log in' : 'Pick a nickname';
   $('p-msg').hidden = true;
 }
-for (const [id, m] of [['play-create', 'create'], ['play-login', 'login'], ['anon-create', 'create'], ['anon-login', 'login']]) $(id).onclick = (e) => { e.preventDefault(); setPMode(m); show('player'); };
 $('p-switch').onclick = (e) => { e.preventDefault(); setPMode(pmode === 'create' ? 'login' : 'create'); };
 $('play-out').onclick = (e) => { e.preventDefault(); player.clear(); drawPlay(); };
 const playerReady = () => { $('p-go').disabled = cleanNick($('p-nick').value).length < 3 || !pinOk($('p-pin').value); };
@@ -1084,11 +1148,20 @@ function thanks(body, r) {
   // the thing just sent: its id and the key that lets "Tell us more" add answers to it
   if (!more && S.items.length === 1) { const t = S.items[0], rid = ((t.k === 'stop' ? r.stops : r.ids) || [])[0]; if (rid && r.keys && r.keys[rid]) Object.assign(t, { rid, rkey: r.keys[rid], rsv: t.k === 'stop' ? 'bus-stops' : SURVEY }); }
   if (more && S.adds) S.adds.more = true;
-  $('thanks-h').textContent = more ? 'Added. Thank you' : body.nick && pts ? `+${pts} points` : 'Thank you';
-  $('thanks-text').innerHTML = (more ? 'Your answers are added to what you sent.' : body.nick ? `For ${esc(body.nick)}. Your answers are now public.`
-      : 'Your answers are now public. <span id="thanks-join-line"><a href="#" id="thanks-join" style="color:var(--ink)">Create a profile</a> to get points next time.</span>')
+  if (!more) {                                     // sent without a profile: it can still be added to one, with its points
+    const claims = [...(r.ids || []).map(id => ({ survey: SURVEY, id })), ...(r.stops || []).map(id => ({ survey: 'bus-stops', id }))]
+      .filter(x => r.keys && r.keys[x.id]).map(x => ({ ...x, key: r.keys[x.id] }));
+    const checks = (body.checks || []).filter((_, i) => (r.checks || [])[i] !== false).map(({ survey, id, kind }) => ({ survey, id, kind }));
+    // everything sent without a profile since the page opened waits together (the server takes what is under two hours old)
+    const was = S.claim || { claims: [], checks: [], pts: 0 };
+    if (!body.nick && claims.length + checks.length) S.claim = { claims: [...was.claims, ...claims].slice(-100), checks: [...was.checks, ...checks].slice(-20), pts: was.pts + pts };
+    S.claimFail = null;
+  }
+  $('thanks-h').textContent = more ? 'Added. Thank you' : pts ? `+${pts} points` : 'Thank you';
+  $('thanks-text').textContent = (more ? 'Your answers are added to what you sent.' : 'Your answers are now public. Thank you.')
     + (got ? ` ${got === 1 ? 'One check was' : got + ' checks were'} already sent from this phone, so not counted again.` : '');
   $('to-map').href = r.ids && r.ids[0] ? '../walking/map/?from=streets&r=' + encodeURIComponent(r.ids[0]) : '../walking/map/?from=streets';
+  { const t0 = S.items[0]; if (S.place && S.place.area && t0 && t0.lat != null) S.place = { lat: t0.lat, lng: t0.lng, acc: null, memory: true }; }   // a stop added to the map in a searched area: it is the place now
   S.sent.push(...S.items); for (const c of S.checks) S.doneIds.add(c.id);
   if (S.items.some(i => i.k === 'foot' && !i.stretch)) S.spot = null;   // the spot tapped on a side street has been used
   S.items = []; S.checks = []; S.cur = null; S.adds = null;
@@ -1144,31 +1217,13 @@ function showDraft() {
 showDraft();
 // Done: back to the first screen, a fresh start
 $('again').onclick = () => {
-  DONE = false; Object.assign(S, { place: null, near: null, side: null, items: [], checks: [], cur: null, last: null, choice: null, sent: [], doneIds: new Set(), adds: null }); stack = [];
+  DONE = false; Object.assign(S, { place: null, near: null, side: null, items: [], checks: [], cur: null, last: null, choice: null, sent: [], doneIds: new Set(), adds: null, want: null }); stack = [];
   show('start', false);
 };
 
-// ── first screen: who is logged in, links that open the nickname screen, counts, top contributors ──
+// ── first screen: who is logged in; an address ending in #create or #login opens the nickname screen ──
 drawPlay();
 const openPlay = { '#play': 'create', '#create': 'create', '#login': 'login' }[location.hash];
 if (openPlay && !player.get()) { setPMode(openPlay); show('player'); }
-fetch(`${C.API}/${SURVEY}/reports.json`, { credentials: 'omit', cache: 'no-cache' }).then(r => r.json()).then(d => {
-  const rows = d.features.map(f => f.properties).filter(r => !r.pair), many = (n, w) => `${n.toLocaleString('en-IN')} ${w}${n === 1 ? '' : 's'}`;
-  const c = (it) => rows.filter(r => r.item === it).length;
-  if (rows.length) $('meta').textContent = 'So far: ' + [many(c('spot'), 'footpath'), many(c('crossing'), 'crossing'), many(c('problem'), 'problem'), many(c('request'), 'suggestion')].join(', ');
-}).catch(() => {});
-// top contributors: the last 7 days, or all time (Teja, 19 Nov 2026); the server works the board out
-fetch(`${C.API}/${SURVEY}/leaderboard.json`, { credentials: 'omit', cache: 'no-cache' }).then(r => r.json()).then(lb => {
-  const me = (player.get()?.nick || '').toLowerCase();
-  const draw = (p) => {
-    const list = (lb[p] || []).slice(0, 5);
-    $('topc-list').innerHTML = list.map(([n, pts], i) => `<li><span>${i + 1}</span><a href="${profileUrl(n)}">${esc(n)}${n.toLowerCase() === me ? ' (you)' : ''}</a><b>${pts.toLocaleString('en-IN')}</b></li>`).join('')
-      || `<li class="none">${p === 'week' ? 'No points in the last 7 days yet. Be the first.' : 'No points yet. Be the first.'}</li>`;
-    document.querySelectorAll('#topc-seg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.p === p));
-  };
-  $('topc').hidden = false;
-  draw(lb.week ? 'week' : 'all');
-  if (!lb.week) document.querySelector('#topc-seg [data-p="week"]').hidden = true;      // an older server: all time only
-  $('topc-seg').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) draw(b.dataset.p); });
-}).catch(() => {});
+if (location.hash === '#questions') openLook();     // no longer linked from the first screen (19 Nov 2026); the address still works
 if (LOCAL) window.__test = { S, show, next, cands, byHeading, guessSide, landmark, maps: () => ({ mini, smap, pinMap, pk: PK.map }), PK, X };
