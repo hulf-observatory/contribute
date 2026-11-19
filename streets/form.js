@@ -10,7 +10,7 @@
 import { mapMark } from '../assets/map-mark.js?v=20261120c';
 import { SURVEY, SETS, ITEM, MIN, allQs, shown, real, nAnswered, optLabel, PROBLEMS, BLOCKED_BY, NEEDS, problemName, needName, REQUEST_COLOR,
   POINTS, VIEW_COLORS, footColor, crossColor, metres, angle, outward, bearingNear, inHmda, esc, player, checkPlayer,
-  PLAYER_SAYS, currentOf, profileLines } from '../walking/questions.js?v=20261119a';
+  PLAYER_SAYS, currentOf, profileLines } from '../walking/questions.js?v=20261120a';
 
 const C = window.CONTRIBUTE;
 const $ = (id) => document.getElementById(id);
@@ -61,7 +61,7 @@ const isQ = (s) => s.startsWith('q-');
 const qParts = (s) => { const [, k, id] = s.split('-'); const part = SETS[k].core.some(q => q.id === id) ? 'core' : 'more'; return { k, id, part }; };
 const qList = (k, part, a) => SETS[k][part].filter(q => shown(q, a));
 const TAP_ON = ['start', 'look', 'choose', 'near', 'face', 'check', 'player', 'thanks'];   // 'more' keeps the bottom button: it is Send
-const BAR = { look: 0, mark: 8, choose: 15, near: 30, face: 30, check: 55, stopname: 40, pin: 60, blockedby: 60, other: 60, photo: 85, more: 100 };
+const BAR = { look: 0, sidepick: 30, mark: 8, choose: 15, near: 30, face: 30, check: 55, stopname: 40, pin: 60, blockedby: 60, other: 60, photo: 85, more: 100 };
 
 function show(s, push = true) {
   if (DONE && s !== 'thanks') s = 'thanks';
@@ -80,6 +80,7 @@ function show(s, push = true) {
       + (i === 0 && S.cur.base ? ' · "Current answer" is what most people said' : '');
     $('bar').style.width = `${50 + (SETS[k][part].findIndex(q => q.id === id) + 1) / SETS[k][part].length * 30}%`;
     $('count').textContent = S.cur.title || '';
+    if (k === 'foot' && id === 'footpath') $('h-foot-footpath').textContent = S.cur.stretch ? 'Is there a footpath on this side?' : 'Is there a footpath here?';
     S.cur.seen.add(id);
     drawAnswers();
   } else {
@@ -87,7 +88,7 @@ function show(s, push = true) {
     $('count').textContent = n ? `${n} sent` : '';
   }
   ({ start: drawPlay, mark: () => marker.open(), choose: drawChoose, near: drawNear, face: () => { $('face-ask').hidden = false; $('face-confirm').hidden = true; },
-    pin: openPin, photo: drawPhoto, more: drawMore, blockedby: drawBlocked,
+    pin: openPin, photo: drawPhoto, more: drawMore, blockedby: drawBlocked, sidepick: drawSidePick,
     thanks: () => { const p = S.noNick ? null : player.get(); $('thanks-prof').hidden = !p; if (p) $('thanks-prof-a').href = profileUrl(p.nick); drawHub(); },
     player: () => { S.noNick = false; const p = player.get(); $('p-nick').value = p ? p.nick : $('p-nick').value; $('p-pin').value = ''; $('p-msg').hidden = true; playerReady(); } }[s] || (() => {}))();
   updateNext();
@@ -99,6 +100,7 @@ function ready() {
   if (cur === 'mark') return !!(S.mark && S.mark.ok);
   if (cur === 'stopname') return $('stop-name').value.trim().length >= 2;
   if (cur === 'pin') return !!S.pinOk;
+  if (cur === 'sidepick') return SP.pick != null;
   if (cur === 'other') return $('ot-text').value.trim().length >= 3;
   if (cur === 'photo') return !few() && !sending;
   if (cur === 'more') return !sending && S.items.length + S.checks.length > 0;
@@ -112,7 +114,7 @@ function updateNext() {
   if (sending) return;                           // the button says "Sending…"
   if (cur === 'more') { b.textContent = 'Send'; return; }
   const optional = { photo: !(S.cur && (S.cur.photo || S.cur.note)), blockedby: !(S.cur && S.cur.blocked_by && S.cur.blocked_by.length) };
-  b.textContent = cur === 'mark' ? 'Use this place' : cur === 'pin' ? 'Here' : cur === 'photo' ? (optional.photo ? 'Send without a photo' : 'Send') : optional[cur] ? 'Skip' : 'Next';
+  b.textContent = cur === 'mark' ? 'Use this place' : cur === 'pin' ? 'Here' : cur === 'sidepick' ? 'This side' : cur === 'photo' ? (optional.photo ? 'Send without a photo' : 'Send') : optional[cur] ? 'Skip' : 'Next';
   if (cur === 'photo') {
     const f = few(); $('photo-few').hidden = !f;
     if (f) $('photo-few').textContent = `Answer at least ${MIN[S.cur.k]} question${MIN[S.cur.k] > 1 ? 's' : ''} about the ${SETS[S.cur.k].name.toLowerCase()} ("Don't know" doesn't count). Press Back to change an answer.`;
@@ -128,6 +130,7 @@ function next() {
   if (cur === 'mark') { S.place = { lat: S.mark.lat, lng: S.mark.lng, acc: null, memory: true }; return loadPlace(); }
   if (cur === 'stopname') { Object.assign(S.cur, { name: $('stop-name').value.trim(), towards: $('stop-towards').value.trim() }); S.cur.title = S.cur.name + (S.cur.towards ? `, towards ${S.cur.towards}` : ''); return pinThen(() => firstQ()); }
   if (cur === 'pin') { const c = pinMap.getCenter(); Object.assign(S.cur, { lat: c.lat, lng: c.lng }); return S.pinNext(); }
+  if (cur === 'sidepick') { setSide(SP.cs[SP.pick], 'map'); return doneFace(); }
   if (cur === 'blockedby') return show('photo');
   if (cur === 'other') { S.cur.said = $('ot-text').value.trim(); S.cur.title = S.cur.said; return show('photo'); }
   if (cur === 'photo') return finishThing();
@@ -209,10 +212,7 @@ async function loadPlace() {
     if (!r.ok) throw new Error(r.status);
     S.near = await r.json();
   } catch { S.near = { stretches: [], junctions: [], stops: [], rows: [], profiles: {}, stop_profiles: {}, failed: true }; }
-  if (S.place.memory) {                             // not there: the dot itself says which side of the road
-    const c = cands().filter(x => x.d < 45 && nearestOn(x.c, S.place).side === x.side)[0];
-    if (c) S.side = { mine: c, other: opposite(c), how: 'map', deg: null };
-  }
+  if (S.afterLoad) { const f = S.afterLoad; S.afterLoad = null; return f(); }   // a choice was tapped before this arrived
   if (cur === 'choose') drawChoose();
   if (cur === 'near') drawNear();
 }
@@ -272,8 +272,14 @@ const SIDE_HOW = { compass: 'compass', guess: 'guess', switched: 'switched', map
 const sideWords = () => S.place.memory ? ['The side you marked', 'The opposite side'] : ['Your side', 'The opposite side'];
 
 // ── which side of the road: asked only when a footpath needs it, once ──
-const needFace = () => !!S.near && !S.place.memory && N().stretches.length > 0 && !S.side && !S.sideSkipped;
-function askSide(then) { if (!needFace()) return then(); S.afterFace = then; show('face'); }
+// Asked once, before a footpath: at the place by facing the road; from memory (or when that can't be done) by choosing
+// the side on a list and a map. If what's nearby hasn't arrived yet, the question waits for it (it used to be skipped).
+function askSide(then) {
+  if (!S.near) { S.afterLoad = () => askSide(then); $('ch-hint').textContent = 'Looking at what is around…'; return; }
+  if (!N().stretches.length || S.side || S.sideSkipped) return then();
+  if (S.place.memory) return openSidePick(then);
+  S.afterFace = then; show('face');
+}
 function doneFace() { const f = S.afterFace; S.afterFace = null; cur = stack.pop() || 'choose'; f(); }
 async function readCompass() {                      // the phone's compass for about a second; null when there is none
   try {
@@ -303,7 +309,50 @@ document.querySelectorAll('[data-sim]').forEach(a => a.onclick = (e) => {
   setSide(v === 'far' ? far : g, v === 'none' ? 'guess' : 'compass', v === 'none' ? null : Math.round(((v === 'far' ? far : g).n + 180) % 360));
   drawConfirm();
 });
-$('face-skip').onclick = (e) => { e.preventDefault(); S.side = null; S.sideSkipped = true; doneFace(); };
+$('face-skip').onclick = (e) => { e.preventDefault(); const f = S.afterFace; cur = stack.pop() || 'choose'; openSidePick(f); };
+// ── choose the side yourself: two plain choices (named by a bus stop on that side where there is one) and a map to tap ──
+const SP = { road: null, cs: [], pick: null };
+function openSidePick(then) { S.sideSkipped = false; S.afterFace = then; SP.road = S.side ? S.side.mine.name : null; SP.pick = null; show('sidepick'); }
+const onSide = (c) => nearestOn(c.c, S.place).side === c.side;         // the dot (you, or the place you picked) is on this side
+function drawSidePick() {
+  const names = [...new Set(cands().map(c => c.name))];
+  if (!SP.road || !names.includes(SP.road)) SP.road = names[0];
+  const a = guessSide(SP.road), b = a && opposite(a);
+  SP.cs = [a, b].filter(Boolean);
+  if (SP.pick == null && S.side) { const i = SP.cs.findIndex(c => c.stretch === S.side.mine.stretch && c.side === S.side.mine.side); if (i >= 0) SP.pick = i; }
+  if (SP.pick == null && S.place.memory) { const i = SP.cs.findIndex(c => c.d < 45 && onSide(c)); if (i >= 0) SP.pick = i; }   // the dot was put on a side
+  $('sp-roads').hidden = names.length < 2;
+  $('sp-roadchips').innerHTML = names.map(nm => `<button type="button" aria-pressed="${nm === SP.road}" data-road="${esc(nm)}">${esc(nm)}</button>`).join('');
+  $('sp-hint').textContent = `On ${SP.road}. Tap the side you mean, here or on the map.`;
+  const mem = S.place.memory;
+  let labels = SP.cs.map(c => { const lm = landmark(c); return lm ? [`The side with the ${lm.name} bus stop`, lm.towards ? `Buses towards ${lm.towards}` : ''] : [onSide(c) ? (mem ? 'The side where you put the dot' : 'The side the blue dot is on') : 'The opposite side', '']; });
+  if (labels.length === 2 && labels[0][0] === labels[1][0]) labels = [[`The side nearer the ${mem ? '' : 'blue '}dot`, ''], ['The side farther from it', '']];
+  $('sp-opts').innerHTML = SP.cs.map((c, i) => `<button type="button" class="answer" role="radio" aria-checked="${SP.pick === i}" data-sp="${i}"><span>${esc(labels[i][0])}${labels[i][1] ? `<small>${esc(labels[i][1])}</small>` : ''}</span><i class="tick"></i></button>`).join('');
+  drawPickMap(); updateNext();
+}
+$('sp-opts').addEventListener('click', (e) => { const b = e.target.closest('[data-sp]'); if (!b) return; SP.pick = +b.dataset.sp; drawSidePick(); });
+$('sp-roadchips').addEventListener('click', (e) => { const b = e.target.closest('[data-road]'); if (!b) return; SP.road = b.dataset.road; SP.pick = null; drawSidePick(); });
+$('sp-skip').onclick = (e) => { e.preventDefault(); S.side = null; S.sideSkipped = true; doneFace(); };
+let pmap = null, pMe = null;
+const pickGeo = () => ({ type: 'FeatureCollection', features: SP.cs.map((c, i) => ({ type: 'Feature', properties: { i, side: c.side, on: i === SP.pick ? 1 : 0 }, geometry: { type: 'LineString', coordinates: c.c } })) });
+function drawPickMap() {
+  const at = [S.place.lng, S.place.lat];
+  if (!pmap) {
+    pmap = new maplibregl.Map({ container: 'pickmap', style: STYLE, center: at, zoom: 17.4, minZoom: 15, maxZoom: 19.5, attributionControl: { compact: true } });
+    compact(pmap);
+    pmap.on('load', () => {
+      pmap.addSource('p', { type: 'geojson', data: pickGeo() });
+      for (const s of ['l', 'r']) pmap.addLayer({ id: 'p-' + s, type: 'line', source: 'p', filter: ['==', ['get', 'side'], s], layout: { 'line-cap': 'round' },
+        paint: { 'line-color': ['case', ['==', ['get', 'on'], 1], '#111827', '#9CA3AF'], 'line-width': ['case', ['==', ['get', 'on'], 1], 9, 6],
+          'line-offset': ['interpolate', ['exponential', 2], ['zoom'], 15, s === 'l' ? -3 : 3, 19, s === 'l' ? -22 : 22] } });
+      pmap.on('click', (e) => {
+        const f = pmap.queryRenderedFeatures([[e.point.x - 16, e.point.y - 16], [e.point.x + 16, e.point.y + 16]], { layers: ['p-l', 'p-r'] })[0];
+        if (f) { SP.pick = f.properties.i; drawSidePick(); }
+      });
+    });
+  } else { pmap.resize(); pmap.jumpTo({ center: at, zoom: 17.4 }); pmap.getSource('p')?.setData(pickGeo()); }
+  if (!pMe) pMe = new maplibregl.Marker({ element: mkEl('me') }).setLngLat(at).addTo(pmap); else pMe.setLngLat(at);
+}
 $('cf-yes').onclick = () => doneFace();
 $('cf-no').onclick = () => { setSide(S.side.other, 'switched', S.side.deg); doneFace(); };
 $('roadchips').addEventListener('click', (e) => { const b = e.target.closest('[data-road]'); if (!b) return; setSide(guessSide(b.dataset.road), 'guess'); drawConfirm(); });
@@ -377,7 +426,8 @@ function listSides() {
       out.push(row({ col: p ? (v ? VIEW_COLORS[v] : '#8C8C8C') : GREY, shape: 'ln', t: word, done: !!p && checked(p.latest), sub: [`${c.name}${lm ? ` · the ${lm.name} bus stop side` : ''}`, p ? `${people(p.n)} · ${day(p.seen)}` : 'No details yet'],
         btns: [[p ? 'Check' : 'Describe', () => p ? showCheck({ kind: 'side', p, ctx, title: ctx.title }) : startThing('foot', ctx)]] }));
     }
-  } else out.push(row({ col: GREY, shape: 'ln', t: 'The footpath here', sub: [n.stretches.length ? 'Side of the road not set' : 'Not on a main road: kept as a single point'], btns: [['Describe', () => startThing('foot', { title: 'The footpath here' })]] }));
+  } else out.push(row({ col: GREY, shape: 'ln', t: 'The footpath here', sub: [n.stretches.length ? 'Side of the road not chosen' : 'A smaller street: saved as a single spot'],
+    btns: [...(n.stretches.length ? [['Choose side', () => openSidePick(() => show('near'))]] : []), ['Describe', () => startThing('foot', { title: 'The footpath here' })]] }));
   for (const r of rowsOf('spot')) out.push(row({ col: VIEW_COLORS[footColor(r.answers)] || GREY, shape: 'ln', t: 'A footpath spot someone described', sub: [`${r.d} m away · seen ${day(r.seen)}`], done: checked(r.id),
     btns: [['Check', () => showCheck({ kind: 'spot', row: r, title: 'The footpath here' })]] }));
   return out.join('');
@@ -389,7 +439,7 @@ function listCrossings() {
       btns: [[p ? 'Check' : 'Describe', () => p ? showCheck({ kind: 'junction', j, p, title: j.name }) : startThing('cross', { junction: j.id, title: j.name })]] })); }
   for (const r of rowsOf('crossing')) out.push(row({ col: '#111827', t: 'A crossing between junctions', sub: [`${r.d} m away · seen ${day(r.seen)}`], done: checked(r.id),
     btns: [['Check', () => showCheck({ kind: 'crossing', row: r, title: 'A crossing between junctions' })]] }));
-  return out.join('') || '<li class="none">No junction of main roads within 150 m.</li>';
+  return out.join('') || '<li class="none">No junction of main roads within 150 m. A crossing here can still be added, below.</li>';
 }
 const typeBtns = (kind, list) => list.map(p => answerBtn(`data-type="${kind}:${p[0]}"`, `${esc(p[1])}${p[0] === 'other' ? '<small>Say it in your own words</small>' : ''}`, '', ' go')).join('');
 function drawNear() {
@@ -403,9 +453,9 @@ function drawNear() {
     L.push(`<ul class="near">${listStops()}</ul><div class="grid2" style="margin-top:10px"><button type="button" class="btn btn-secondary" data-new="stop">My stop isn't listed</button></div>`);
   } else if (c === 'walk') {
     $('h-near').textContent = 'Which footpath or crossing?';
-    $('near-hint').textContent = S.side ? `On ${S.side.mine.name}.` : '';
+    $('near-hint').innerHTML = S.side ? `On ${esc(S.side.mine.name)}. <a href="#" id="chg-side" style="color:var(--ink)">Not the right side? Change it</a>` : '';
     L.push(`<p class="what-h" style="margin-top:0">Footpath</p><ul class="near">${listSides()}</ul><p class="what-h">Crossing</p><ul class="near">${listCrossings()}</ul>
-      <div class="grid2" style="margin-top:10px"><button type="button" class="btn btn-secondary" data-new="cross">A crossing between junctions</button></div>`);
+      <div class="grid2" style="margin-top:10px"><button type="button" class="btn btn-secondary" data-new="cross">Add a crossing here</button></div>`);
   } else if (c === 'problem') {
     $('h-near').textContent = "What's the problem?";
     $('near-hint').textContent = 'Pick one. If someone has already reported it here, tell us whether it is still there.';
@@ -427,6 +477,7 @@ function drawNear() {
   $('nearlists').innerHTML = L.join('');
 }
 function quickCheck(r, kind, title) { S.items = []; S.checks = [{ survey: SURVEY, id: r.id, kind, title }]; S.last = null; show('more'); }
+$('near-hint').addEventListener('click', (e) => { if (e.target.closest('#chg-side')) { e.preventDefault(); openSidePick(() => show('near')); } });
 $('nearlists').addEventListener('click', (e) => {
   const a = e.target.closest('[data-act]'); if (a && !a.disabled) return ACTS[+a.dataset.act]();
   const nw = e.target.closest('[data-new]');
@@ -662,6 +713,14 @@ function drawHub() {
         S.choice = 'problem'; S.cur = newThing('problem', { problem: blocked ? 'blocked' : 'broken', title: problemName(blocked ? 'blocked' : 'broken'), lead: 'footpath', blocked_by: blocked ? t.a.blocked_by || [] : null });
         pinThen(() => show('photo')); }));
     }
+  }
+  if (t && S.sent.includes(t)) {
+    const lightsOff = (t.k === 'foot' && t.a.lights === 'broken') || (t.k === 'cross' && t.a.x_lit === 'poor') || (t.k === 'stop' && t.a.light_state === 'poor');
+    const noLights = (t.k === 'foot' && t.a.lights === 'none') || (t.k === 'cross' && t.a.x_lit === 'no') || (t.k === 'stop' && t.a.light === 'no') || (t.k === 'problem' && t.problem === 'dark');
+    if (lightsOff && !S.sent.some(i => i.k === 'problem' && i.problem === 'light'))
+      L.push(lead("Report the street light that isn't working", 'Adds it as a problem others can confirm', () => { S.choice = 'problem'; pickProblem('light'); }));
+    if (noLights && !S.sent.some(i => i.k === 'request' && i.need === 'lights'))
+      L.push(lead('Ask for street lights here', 'Others nearby can say they need them too', () => { S.choice = 'improve'; pickNeed('lights'); }));
   }
   if (t && t.k === 'stop') {
     const sp = t.missing ? { lat: t.lat, lng: t.lng } : { lat: t.slat, lng: t.slng }, j = junctions().find(x => !checked((N().profiles[x.id] || {}).latest) && !S.sent.some(i => i.junction === x.id));

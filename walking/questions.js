@@ -71,7 +71,7 @@ export const qById = (k, id) => allQs(k).find(q => q.id === id);
 // problems and requests: pins (colours as on the map)
 export const PROBLEMS = [['broken', 'Broken footpath', '#B2182B'], ['blocked', 'Blocked footpath', '#B2182B'], ['nofoot', 'No footpath here', '#B2182B'],
   ['drain', 'Open drain or manhole', '#B2182B'], ['water', 'Waterlogging', '#EF8A62'], ['waste', 'Garbage or waste', '#EF8A62'],
-  ['smell', 'Bad smell', '#EF8A62'], ['dark', 'Dark spot', '#EF8A62'], ['other', 'Something else', '#6B7280']];
+  ['smell', 'Bad smell', '#EF8A62'], ['light', 'Street light not working', '#EF8A62'], ['dark', 'Dark spot, no street lights', '#EF8A62'], ['other', 'Something else', '#6B7280']];
 export const BLOCKED_BY = FOOT.core.find(q => q.id === 'blocked_by').opts;
 export const NEEDS = [['crossing', 'A crossing'], ['footpath', 'A footpath'], ['stop', 'A bus stop'], ['lights', 'Street lights'], ['other', 'Something else']];
 export const problemName = (v) => (PROBLEMS.find(p => p[0] === v) || [, 'A problem'])[1];

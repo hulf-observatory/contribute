@@ -5,7 +5,7 @@
 // "gone", "me too"). Map or list; ?p=<profile> or ?r=<row id> opens one.
 // Data: ../roads.json, /walking/profiles.json, /walking/reports.json, /bus-stops/reports.json and profiles.json.
 import { SURVEY, SETS, allQs, shown, optLabel, real, esc, loadReports, currentOf, profileLines, PROBLEMS, BLOCKED_BY, problemName, needName,
-  REQUEST_COLOR, VIEW_COLORS, footColor, crossColor, compass8, outward } from '../questions.js?v=20261119a';
+  REQUEST_COLOR, VIEW_COLORS, footColor, crossColor, compass8, outward } from '../questions.js?v=20261120a';
 import { loadRatings, loadProfiles as loadStopProfiles } from '../../bus-stops/questions.js?v=20261119a';
 const C = window.CONTRIBUTE;
 const $ = (id) => document.getElementById(id);

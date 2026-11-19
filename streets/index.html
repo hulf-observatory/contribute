@@ -397,7 +397,7 @@
           <text x="170" y="186" text-anchor="middle" font-family="Lato, sans-serif" font-size="12" fill="#6B7280">You, facing the road</text>
         </svg>
         <button type="button" class="btn btn-primary big-btn" id="facing">I'm facing the road</button>
-        <p class="small"><a href="#" id="face-skip">I can't do this now</a></p>
+        <p class="small"><a href="#" id="face-skip">Can't do this? Choose the side on a map</a></p>
         <p class="demo" data-demo hidden>At a desk, the phone says I'm on: <a href="#" data-sim="near">the nearer side</a> · <a href="#" data-sim="far">the far side</a> · <a href="#" data-sim="none">no compass</a></p>
       </div>
       <div id="face-confirm" hidden>
@@ -406,6 +406,16 @@
         <div id="roadpick" hidden><p class="qtopic" style="margin:2px 0 6px">Facing a different road?</p><div class="chips" id="roadchips" style="margin-bottom:12px"></div></div>
         <div class="pair" style="max-width:none"><button type="button" class="btn btn-secondary btn-lg" id="cf-no">No, the other side</button><button type="button" class="btn btn-primary btn-lg" id="cf-yes">Yes, my side</button></div>
       </div>
+    </section>
+
+    <!-- choose the side yourself: from memory, when the compass step can't be done, or to change it (Teja, 20 Nov 2026) -->
+    <section class="step" data-step="sidepick">
+      <h2 class="qt">Which side of the road?</h2>
+      <p class="hint" id="sp-hint">Tap the side you mean, here or on the map.</p>
+      <div id="sp-roads" hidden><p class="qtopic" style="margin:2px 0 6px">Which road?</p><div class="chips" id="sp-roadchips" style="margin-bottom:10px"></div></div>
+      <div class="answers" id="sp-opts" style="gap:8px"></div>
+      <div class="side-map" style="margin-top:12px"><div id="pickmap"></div></div>
+      <p class="small"><a href="#" id="sp-skip">I'm not sure which side</a></p>
     </section>
 
     <!-- checking something already described -->
@@ -533,6 +543,6 @@
 </footer>
 
 <script src="../assets/common.js?v=20261120a"></script>
-<script type="module" src="form.js?v=20261120i"></script>
+<script type="module" src="form.js?v=20261120k"></script>
 </body>
 </html>
