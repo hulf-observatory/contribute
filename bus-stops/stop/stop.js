@@ -16,7 +16,7 @@ document.title = `${s.name} bus stop · Hyderabad Urban Observatory`;
 $('name').textContent = s.name;
 $('ctx').textContent = [s.towards && `Towards ${s.towards}`, s.added ? 'Added by someone; not in the TGSRTC data' : `${s.buses.toLocaleString('en-IN')} buses a day`].filter(Boolean).join(' · ');
 $('routes').innerHTML = s.nRoutes ? s.routes.slice(0, 10).map(r => `<span>${esc(r)}</span>`).join('') + (s.nRoutes > 10 ? `<em>and ${s.nRoutes - 10} more routes</em>` : '') : '';
-$('rate').href = '../?stop=' + encodeURIComponent(s.id);
+$('rate').href = '../../streets/';             // the one entry for walking and public transport (20 Nov 2026); at the stop it lists the stops near you
 // someone disagrees: they add what they see, and it counts with everyone else's (Teja, 18 Nov 2026: instead of "wrong")
 document.querySelectorAll('.addyours').forEach(a => { a.href = $('rate').href; });
 

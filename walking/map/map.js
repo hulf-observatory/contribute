@@ -14,7 +14,7 @@ const day = (d) => d ? new Date(d.length > 10 ? d : d + 'T12:00').toLocaleDateSt
 const people = (n) => `${n} ${n === 1 ? 'person' : 'people'}`;
 const fmt = (n) => n.toLocaleString('en-IN');
 // the form to add to: the new single entry when the person came from it (until it replaces the walking form for everyone)
-const FORM = new URLSearchParams(location.search).get('from') === 'streets' ? '../../streets/' : '../';
+const FORM = '../../streets/';
 document.querySelectorAll('[data-form]').forEach(a => { a.href = FORM; });
 
 const [roads, prof, rows, srows, sprof] = await Promise.all([
