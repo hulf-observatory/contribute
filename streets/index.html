@@ -296,6 +296,9 @@
   #sendbox .small, #sendbox .anon { margin: 8px 0 0; }
   #sendbox #send-msg { margin: 0 0 8px; }
   #hub[hidden], #thanks-join-line[hidden] { display: none; }
+  /* five choices on one phone screen */
+  @media (max-width: 767px) { body.q-mode .choice { grid-template-columns: 38px 1fr auto; gap: 12px; padding: 9px 12px; } body.q-mode .choice .gl { width: 38px; height: 38px; }
+    body.q-mode .choice b { font-size: 17px; } body.q-mode .choice small { font-size: 13px; margin-top: 1px; } body.q-mode #choices { gap: 8px; } }
   /* the list and the little map go together: the chosen row, and rows that can be tapped */
   .near li[data-key] { cursor: pointer; padding-left: 8px; margin-left: -11px; border-left: 3px solid transparent; }
   .near li.sel { background: var(--band); border-left-color: var(--ink); }
@@ -550,6 +553,6 @@
 </footer>
 
 <script src="../assets/common.js?v=20261120a"></script>
-<script type="module" src="form.js?v=20261120o"></script>
+<script type="module" src="form.js?v=20261120p"></script>
 </body>
 </html>

@@ -40,18 +40,20 @@ $('topics').innerHTML = Object.entries(SETS).flatMap(([k, set]) => [...set.core,
 </section>`)).join('');
 $('blist').innerHTML = BLOCKED_BY.map(([v, l]) => `<button type="button" class="answer check" role="checkbox" aria-checked="false" data-v="${v}"><span>${esc(l)}</span><i class="tick"></i></button>`).join('');
 
-// ── the four things to tell us about ──
+// ── the five things to tell us about (street lights on their own since 20 Nov 2026, Teja) ──
 const GLYPH = {
   stop: '<svg viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="3" width="14" height="13" rx="2"/><path d="M5 10h14M8 19v2M16 19v2M7 16v3h10v-3"/></svg>',
   walk: '<svg viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="1.8" stroke-linecap="round"><path d="M4 20 9 4M20 20 15 4M12 6v2M12 11v2M12 16v2"/></svg>',
+  light: '<svg viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21V7a4 4 0 0 1 4-4h3"/><path d="M5 21h6"/><path d="M14 3h5l-1 3h-3z"/><path d="M15 9.5v1.5M18.5 8.5l1 1.2M11.8 8.5l-1 1.2"/></svg>',
   problem: '<svg viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 3 20h18L12 4z"/><path d="M12 10v4M12 17v.5"/></svg>',
   improve: '<svg viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="1.8" stroke-linecap="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.8.8 1.2 1.5 1.3 2.5h5.4c.1-1 .5-1.7 1.3-2.5A6 6 0 0 0 12 3z"/></svg>',
 };
 const CHOICES = {
-  stop: { name: 'A bus stop', again: 'Another bus stop', blurb: 'Shelter, seating, how buses stop, lighting' },
-  walk: { name: 'A footpath or crossing', again: 'Another footpath or crossing', blurb: 'Is there a footpath? Is it broken or blocked? Can people cross?' },
-  problem: { name: 'Report a problem', again: 'Report another problem', blurb: 'Garbage, an open drain, waterlogging, a dark spot, a broken footpath' },
-  improve: { name: 'Suggest an improvement', again: 'Suggest another improvement', blurb: 'A crossing, a footpath, a bus stop, street lights' },
+  stop: { name: 'A bus stop', again: 'Another bus stop', blurb: 'Shelter, seats, how buses stop' },
+  walk: { name: 'A footpath or crossing', again: 'Another footpath or crossing', blurb: 'Broken, blocked, hard to cross' },
+  light: { name: 'Street lights', again: 'More about street lights', blurb: "Not working, or none where it's dark" },
+  problem: { name: 'Report a problem', again: 'Report another problem', blurb: 'Garbage, an open drain, waterlogging' },
+  improve: { name: 'Suggest an improvement', again: 'Suggest another improvement', blurb: 'A crossing, a footpath, a bus stop' },
 };
 const KIND_NAME = { stop: 'Bus stop', foot: 'Footpath', cross: 'Crossing', problem: 'Problem', request: 'Suggestion' };
 
@@ -196,12 +198,13 @@ $('to-look').onclick = (e) => {
   const thing = (k, name) => `<h3>${name}</h3><h4>First</h4><ol>${qs(SETS[k].core)}</ol><h4>After sending, if you have a minute</h4><ol>${qs(SETS[k].more)}</ol>`;
   $('lookbox').className = 'look';
   $('lookbox').innerHTML = `<h4>How it goes</h4><ol><li>Where you are<small>Your phone's location, or a place you pick on a map ("from memory")</small></li>
-      <li>What you want to tell us about<small>A bus stop · a footpath or crossing · a problem · an improvement</small></li>
+      <li>What you want to tell us about<small>A bus stop · a footpath or crossing · street lights · a problem · an improvement</small></li>
       <li>What's already nearby<small>Check something others described, or describe something new</small></li>
       <li>A few questions, then a photo if you like, and Send</li><li>After sending<small>More questions about the same place if you have a minute, or something else here</small></li></ol>`
     + thing('stop', 'A bus stop') + thing('foot', 'A footpath') + '<p style="margin-top:8px">On a main road we first ask which side you are on: face the road, and say yes or no to the side we show.</p>' + thing('cross', 'A crossing')
-    + `<h3>Report a problem</h3><ul>${PROBLEMS.map(p => `<li>${esc(p[0] === 'other' ? 'Something else, in your own words' : p[1])}</li>`).join('')}<li>Flooding<small>Opens the separate flood report</small></li></ul>`
-    + `<h3>Suggest an improvement</h3><ul>${NEEDS.map(p => `<li>${esc(p[0] === 'other' ? 'Something else, in your own words' : p[1])}</li>`).join('')}</ul>`;
+    + `<h3>Street lights</h3><ul><li>A street light isn't working</li><li>It's dark here, no street lights</li><li>Ask for street lights here</li></ul>`
+    + `<h3>Report a problem</h3><ul>${PROBLEMS.filter(p => !LIGHT_PROBLEMS.includes(p[0])).map(p => `<li>${esc(p[0] === 'other' ? 'Something else, in your own words' : p[1])}</li>`).join('')}<li>Flooding<small>Opens the separate flood report</small></li></ul>`
+    + `<h3>Suggest an improvement</h3><ul>${NEEDS.filter(p => p[0] !== 'lights').map(p => `<li>${esc(p[0] === 'other' ? 'Something else, in your own words' : p[1])}</li>`).join('')}</ul>`;
   show('look');
 };
 document.querySelectorAll('[data-fakeplace]').forEach(a => a.onclick = (e) => { e.preventDefault(); const [lat, lng] = a.dataset.fakeplace.split(',').map(Number); begin({ lat, lng, acc: 8, memory: false }); });
@@ -231,6 +234,9 @@ async function loadPlace() {
   if (cur === 'near') drawNear();
 }
 const rowsOf = (item) => N().rows.filter(r => r.item === item);
+const LIGHT_PROBLEMS = ['light', 'dark'];
+const aboutLight = (r) => (r.item === 'problem' && LIGHT_PROBLEMS.includes(r.problem)) || (r.item === 'request' && r.need === 'lights');
+const lightRows = () => N().rows.filter(aboutLight);
 const junctions = () => N().junctions.filter(j => j.d <= NEAR_JUNCTION_M);
 function drawChoose() {
   const n = N(), mem = S.place && S.place.memory;
@@ -241,9 +247,10 @@ function drawChoose() {
   const stops = n.stops.filter(x => x.d <= 300).length, js = junctions().length;
   const hint = !S.near ? {} : {
     stop: stops ? `${stops} stop${stops === 1 ? '' : 's'} near here` : '',
-    walk: [n.stretches.length ? 'Your side or the opposite side' : '', js ? `${js} crossing${js === 1 ? '' : 's'}` : ''].filter(Boolean).join(' · '),
-    problem: rowsOf('problem').length ? `${rowsOf('problem').length} already reported near here` : '',
-    improve: rowsOf('request').length ? `${rowsOf('request').length} asked for near here` : '' };
+    walk: js ? `${js} crossing${js === 1 ? '' : 's'} near here` : '',
+    light: lightRows().length ? `${lightRows().length} already reported near here` : '',
+    problem: rowsOf('problem').filter(r => !aboutLight(r)).length ? `${rowsOf('problem').filter(r => !aboutLight(r)).length} already reported near here` : '',
+    improve: rowsOf('request').filter(r => !aboutLight(r)).length ? `${rowsOf('request').filter(r => !aboutLight(r)).length} asked for near here` : '' };
   $('choices').innerHTML = Object.entries(CHOICES).map(([k, c]) =>
     `<button type="button" class="choice" data-choice="${k}"><span class="gl">${GLYPH[k]}</span><span><b>${c.name}</b><small>${c.blurb}</small>${hint[k] ? `<small class="n">${esc(hint[k])}</small>` : ''}</span></button>`).join('');
 }
@@ -470,23 +477,34 @@ function drawNear() {
     $('near-hint').innerHTML = S.side ? `On ${esc(S.side.mine.name)}. <a href="#" id="chg-side" style="color:var(--ink)">Not the right side? Change it</a>` : '';
     L.push(`<p class="what-h" style="margin-top:0">Footpath</p><ul class="near">${listSides()}</ul><p class="what-h">Crossing</p><ul class="near">${listCrossings()}</ul>
       <div class="grid2" style="margin-top:10px"><button type="button" class="btn btn-secondary" data-new="cross">Add a crossing here</button></div>`);
+  } else if (c === 'light') {
+    $('h-near').textContent = 'What about the street lights here?';
+    $('near-hint').textContent = 'Pick one. If someone has already reported it here, tell us whether it is still so.';
+    const lr = lightRows();
+    if (lr.length) L.push(`<p class="what-h" style="margin-top:0">Already reported near here</p><ul class="near">${lr.map(r => r.item === 'request'
+      ? row({ key: 'r:' + r.id, col: REQUEST_COLOR, shape: 'r', t: 'Street lights asked for', done: checked(r.id), sub: [`${r.d} m away · ${people(1 + r.metoo)} asked`],
+        btns: [['Me too', () => quickCheck(r, 'metoo', 'Me too: street lights')]] })
+      : row({ key: 'r:' + r.id, col: '#EF8A62', shape: 'r', t: problemName(r.problem), done: checked(r.id),
+        sub: [[`${r.d} m away`, `seen ${day(r.seen)}`, r.still && `${r.still} said still there`].filter(Boolean).join(' · ')],
+        btns: [['Still there', () => quickCheck(r, 'confirm', `Still there: ${problemName(r.problem)}`)], ['Gone', () => quickCheck(r, 'gone', `Gone: ${problemName(r.problem)}`)]] })).join('')}</ul><p class="what-h">Report a new one</p>`);
+    L.push(`<div class="answers" style="gap:8px">${answerBtn('data-type="problem:light"', "A street light isn't working", '', ' go')}${answerBtn('data-type="problem:dark"', "It's dark here, no street lights", '', ' go')}${answerBtn('data-type="request:lights"', 'Ask for street lights here<small>Others can say they need them too</small>', '', ' go')}</div>`);
   } else if (c === 'problem') {
     $('h-near').textContent = "What's the problem?";
     $('near-hint').textContent = 'Pick one. If someone has already reported it here, tell us whether it is still there.';
-    const pr = rowsOf('problem');
+    const pr = rowsOf('problem').filter(r => !aboutLight(r));
     if (pr.length) L.push(`<p class="what-h" style="margin-top:0">Already reported near here</p><ul class="near">${pr.map(r => row({ key: 'r:' + r.id, col: (PROBLEMS.find(p => p[0] === r.problem) || [, , '#6B7280'])[2], shape: 'r', t: problemName(r.problem), done: checked(r.id),
       sub: [[`${r.d} m away`, `seen ${day(r.seen)}`, r.still && `${r.still} said still there`].filter(Boolean).join(' · ')],
       btns: [['Still there', () => quickCheck(r, 'confirm', `Still there: ${problemName(r.problem)}`)], ['Gone', () => quickCheck(r, 'gone', `Gone: ${problemName(r.problem)}`)]] })).join('')}</ul><p class="what-h">Report a new one</p>`);
     // flooding has its own report (depth, flow, photo): the option hands over to it
     const flood = `<a class="answer go" href="../flood/" id="to-flood" style="text-decoration:none"><span>Flooding<small>Deep or moving water: opens the flood report</small></span></a>`;
-    L.push(`<div class="answers" style="gap:8px">${typeBtns('problem', PROBLEMS.filter(p => p[0] !== 'other'))}${flood}${typeBtns('problem', PROBLEMS.filter(p => p[0] === 'other'))}</div>`);
+    L.push(`<div class="answers" style="gap:8px">${typeBtns('problem', PROBLEMS.filter(p => p[0] !== 'other' && !LIGHT_PROBLEMS.includes(p[0])))}${flood}${typeBtns('problem', PROBLEMS.filter(p => p[0] === 'other'))}</div>`);
   } else {
     $('h-near').textContent = 'What would make this place better?';
     $('near-hint').textContent = 'Pick one. If someone has already asked for it here, add your voice.';
-    const rq = rowsOf('request');
+    const rq = rowsOf('request').filter(r => !aboutLight(r));
     if (rq.length) L.push(`<p class="what-h" style="margin-top:0">Others have asked for, near here</p><ul class="near">${rq.map(r => row({ key: 'r:' + r.id, col: REQUEST_COLOR, shape: 'r', t: needName(r.need), done: checked(r.id),
       sub: [`${r.d} m away · ${people(1 + r.metoo)} asked`], btns: [['Me too', () => quickCheck(r, 'metoo', `Me too: ${needName(r.need).toLowerCase()}`)]] })).join('')}</ul><p class="what-h">Suggest something</p>`);
-    L.push(`<div class="answers" style="gap:8px">${typeBtns('request', NEEDS)}</div>`);
+    L.push(`<div class="answers" style="gap:8px">${typeBtns('request', NEEDS.filter(p => p[0] !== 'lights'))}</div>`);
   }
   $('nearlists').innerHTML = L.join('');
   SEL = null; LISTKEYS = new Set([...document.querySelectorAll('#nearlists li[data-key]')].map(x => x.dataset.key));
@@ -778,9 +796,9 @@ function drawHub() {
     const lightsOff = (t.k === 'foot' && t.a.lights === 'broken') || (t.k === 'cross' && t.a.x_lit === 'poor') || (t.k === 'stop' && t.a.light_state === 'poor');
     const noLights = (t.k === 'foot' && t.a.lights === 'none') || (t.k === 'cross' && t.a.x_lit === 'no') || (t.k === 'stop' && t.a.light === 'no') || (t.k === 'problem' && t.problem === 'dark');
     if (lightsOff && !S.sent.some(i => i.k === 'problem' && i.problem === 'light'))
-      L.push(lead("Report the street light that isn't working", 'Others can then say if it is still not working', () => { S.choice = 'problem'; pickProblem('light'); }));
+      L.push(lead("Report the street light that isn't working", 'Others can then say if it is still not working', () => { S.choice = 'light'; pickProblem('light'); }));
     if (noLights && !S.sent.some(i => i.k === 'request' && i.need === 'lights'))
-      L.push(lead('Ask for street lights here', 'Others can say they need them too', () => { S.choice = 'improve'; pickNeed('lights'); }));
+      L.push(lead('Ask for street lights here', 'Others can say they need them too', () => { S.choice = 'light'; pickNeed('lights'); }));
   }
   if (t && t.k === 'stop') {
     const sp = t.missing ? { lat: t.lat, lng: t.lng } : { lat: t.slat, lng: t.slng }, j = junctions().find(x => !checked((N().profiles[x.id] || {}).latest) && !S.sent.some(i => i.junction === x.id));
