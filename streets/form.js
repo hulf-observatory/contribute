@@ -60,7 +60,7 @@ var DONE = false;                                  // sent: Back can't offer Sen
 const isQ = (s) => s.startsWith('q-');
 const qParts = (s) => { const [, k, id] = s.split('-'); const part = SETS[k].core.some(q => q.id === id) ? 'core' : 'more'; return { k, id, part }; };
 const qList = (k, part, a) => SETS[k][part].filter(q => shown(q, a));
-const TAP_ON = ['start', 'look', 'choose', 'near', 'face', 'check', 'more', 'player', 'thanks'];
+const TAP_ON = ['start', 'look', 'choose', 'near', 'face', 'check', 'player', 'thanks'];   // 'more' keeps the bottom button: it is Send
 const BAR = { look: 0, mark: 8, choose: 15, near: 30, face: 30, check: 55, stopname: 40, pin: 60, blockedby: 60, other: 60, photo: 85, more: 100 };
 
 function show(s, push = true) {
@@ -100,6 +100,7 @@ function ready() {
   if (cur === 'pin') return !!S.pinOk;
   if (cur === 'other') return $('ot-text').value.trim().length >= 3;
   if (cur === 'photo') return !few();
+  if (cur === 'more') return !sending && S.items.length + S.checks.length > 0;
   return true;
 }
 const few = () => !!S.cur && !!MIN[S.cur.k] && nAnswered(S.cur.k, Object.fromEntries(Object.entries(S.cur.a).filter(([k]) => S.cur.seen.has(k)))) < MIN[S.cur.k];
@@ -107,6 +108,7 @@ function updateNext() {
   const b = $('next');
   b.hidden = TAP_ON.includes(cur) || (isQ(cur) && !allQs(qParts(cur).k).find(q => q.id === qParts(cur).id).multi);
   b.disabled = !ready();
+  if (cur === 'more') { if (!sending) { const n = S.items.length + S.checks.length; b.textContent = n > 1 ? `Send all ${n}` : 'Send'; } return; }
   const optional = { photo: !(S.cur && (S.cur.photo || S.cur.note)), blockedby: !(S.cur && S.cur.blocked_by && S.cur.blocked_by.length) };
   b.textContent = cur === 'mark' ? 'Use this place' : cur === 'pin' ? 'Here' : cur === 'photo' && optional.photo ? 'Skip photo' : optional[cur] ? 'Skip' : 'Next';
   if (cur === 'photo') {
@@ -127,6 +129,7 @@ function next() {
   if (cur === 'blockedby') return show('photo');
   if (cur === 'other') { S.cur.said = $('ot-text').value.trim(); S.cur.title = S.cur.said; return show('photo'); }
   if (cur === 'photo') return finishThing();
+  if (cur === 'more') return send();
 }
 $('next').onclick = next;
 $('back').onclick = () => {
@@ -668,7 +671,9 @@ function drawMore() {
   $('anon').hidden = !!(p && !S.noNick) || !n;
   $('accuracy').textContent = S.place && S.place.memory ? 'By sending, you confirm this is what you know of this place, to the best of your knowledge.'
     : 'By sending, you confirm this is what you saw, to the best of your knowledge.';
-  if (!sending) { $('send').disabled = !n; $('send').textContent = n > 1 ? `Send all ${n}` : n ? 'Send it' : 'Send'; $('send-msg').hidden = true; }
+  $('notsent').innerHTML = n ? `Not sent yet. <span>${n === 1 ? '1 thing is' : n + ' things are'} waiting: add more below, or press Send.</span>` : 'Nothing added yet. <span>Add something below.</span>';
+  if (!sending) $('send-msg').hidden = true;
+  updateNext();
 }
 function footHere(extra) {                          // the footpath where the person is: their side if known, else a single point
   if (S.side) return startThing('foot', { ...sideCtx(S.side.mine, 'mine', sideWords()[0]), ...extra });
@@ -787,19 +792,19 @@ async function send() {
   if (sending || !(S.items.length + S.checks.length)) return;
   const body = payload(), saved = { body, at: Date.now(), n: body._sum.n };
   const kept = store.set(saved) || store.set({ ...saved, body: { ...body, items: body.items.map(i => ({ ...i, photo: null })) }, photoDropped: true });
-  sending = true; $('send-msg').hidden = true; $('send').disabled = true; $('send').textContent = 'Sending…';
+  sending = true; $('send-msg').hidden = true; $('next').disabled = true; $('next').textContent = 'Sending…';
   try { const r = await postIt(body); store.drop(kept); sending = false; thanks(body, r); }
   catch (err) {
-    sending = false; $('send').disabled = false; $('send').textContent = 'Try again';
+    sending = false; $('next').disabled = false; $('next').textContent = 'Try again';
     if (err.server && err.status === 400 && /^nick/.test(err.message)) S.noNick = true;
     const why = err.server && err.status === 400 ? (/^nick/.test(err.message) ? 'The nickname or PIN was not accepted. Press Try again to send it without a nickname, or log in again on the first screen.' : `The server could not accept this (${err.message}).`)
       : err.server && err.status === 403 ? 'The spam check did not finish. Please press Try again.'
       : err.server && err.status === 429 ? 'Too many sends from this connection just now. Please wait a minute.'
       : "We couldn't send this; the signal may be weak.";
-    $('send-msg').textContent = `${why} ${kept ? 'Your answers are saved on this phone, so nothing is lost.' : ''}`; $('send-msg').hidden = false;
+    $('send-msg').textContent = `Not sent. ${why} ${kept ? 'Your answers are saved on this phone, so nothing is lost.' : ''}`; $('send-msg').hidden = false;
+    document.querySelector('.step[data-step="more"]').scrollTop = 0; window.scrollTo({ top: 0 });   // the message and the spam check sit at the top
   }
 }
-$('send').onclick = send;
 // entries that didn't go through: offer the oldest on the start screen, with its own spam check
 let draftSpam = null;
 function showDraft() {

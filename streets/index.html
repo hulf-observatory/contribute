@@ -290,6 +290,12 @@
   #to-mark { margin-top: 10px; }
   #to-mark[hidden] { display: none; }
   .step[data-step="start"] #gps-msg { margin: 12px 0 0; }
+  /* "Anything else here?": nothing has been sent yet (Teja, 20 Nov 2026) */
+  .notsent { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; padding: 10px 12px; border: 1px solid var(--ink); border-radius: var(--r-card); font: 700 15px/1.35 var(--font-ui); color: var(--ink); background: var(--band); }
+  .notsent::before { content: ''; flex: none; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--ink); }
+  .notsent span { font-weight: 400; color: var(--text-2); }
+  .step[data-step="more"] .sum { margin-bottom: 14px; }
+  .step[data-step="more"] #send-msg { margin: 0 0 14px; }
 </style>
 </head>
 <body>
@@ -458,18 +464,18 @@
       <p class="msg" id="photo-few" hidden></p>
     </section>
 
-    <!-- anything else here? and send, on one screen -->
+    <!-- anything else here? and send, on one screen. Nothing is sent until Send: said at the top, and Send stays at the bottom -->
     <section class="step" data-step="more">
+      <p class="notsent" id="notsent"></p>
       <h2 class="qt">Anything else here?</h2>
       <ul class="sum" id="sum"></ul>
+      <div class="ts" id="ts-review"></div>
+      <input type="text" name="website" id="trap" tabindex="-1" autocomplete="off" aria-hidden="true" class="trap">
+      <p class="msg" id="send-msg" hidden></p>
       <p class="lead-h" id="lead-h" hidden>Goes with what you just added</p>
       <div class="answers" id="leadlist"></div>
       <p class="lead-h" id="more-h">Add something else here</p>
       <div class="answers" id="morelist"></div>
-      <div class="ts" id="ts-review"></div>
-      <input type="text" name="website" id="trap" tabindex="-1" autocomplete="off" aria-hidden="true" class="trap">
-      <button type="button" class="btn btn-primary btn-lg send-btn" id="send">Send</button>
-      <p class="msg" id="send-msg" hidden></p>
       <p class="anon" id="anon" hidden>Sending anonymously. <a href="#" id="anon-create">Create a profile</a> or <a href="#" id="anon-login">log in</a> to get points for this.</p>
       <p class="small" id="review-fine">Shared as open data (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>), with photos. No names, no email, no IP addresses. We keep the places you describe, not your route.</p>
       <p class="accuracy" id="accuracy">By sending, you confirm this is what you saw, to the best of your knowledge.</p>
@@ -521,6 +527,6 @@
 </footer>
 
 <script src="../assets/common.js?v=20261120a"></script>
-<script type="module" src="form.js?v=20261120e"></script>
+<script type="module" src="form.js?v=20261120f"></script>
 </body>
 </html>
