@@ -295,7 +295,15 @@
   #sendbox { max-width: var(--measure); margin: 14px auto 0; }
   #sendbox .small, #sendbox .anon { margin: 8px 0 0; }
   #sendbox #send-msg { margin: 0 0 8px; }
-  #hub[hidden], #more-q[hidden] { display: none; }
+  #hub[hidden], #thanks-join-line[hidden] { display: none; }
+  /* the list and the little map go together: the chosen row, and rows that can be tapped */
+  .near li[data-key] { cursor: pointer; padding-left: 8px; margin-left: -11px; border-left: 3px solid transparent; }
+  .near li.sel { background: var(--band); border-left-color: var(--ink); }
+  .mini { height: 180px; }
+  /* the photo screen fits a phone without scrolling */
+  .step[data-step="photo"] textarea.inp { min-height: 64px; }
+  @media (max-width: 767px) { body.q-mode .step[data-step="photo"] .hint { margin-bottom: 10px; } body.q-mode #photo-prev { max-height: 104px; margin-bottom: 8px; }
+    body.q-mode .step[data-step="photo"] .fine { margin-top: 6px; } body.q-mode .step[data-step="photo"] #note-box { margin-top: 10px; } body.q-mode #sendbox .anon { font-size: 13px; margin-top: 4px; } }
   @media (max-width: 767px) { body.q-mode #sendbox { flex: none; margin: 0; padding: 4px 0 6px; border-top: 1px solid var(--border); } body.q-mode #sendbox .small { font-size: 12.5px; } }
 </style>
 </head>
@@ -462,23 +470,22 @@
 
     <section class="step" data-step="photo">
       <h2 class="qt" id="photo-h">Add a photo? <span style="font-weight:400;color:var(--muted);font-size:.65em">Optional</span></h2>
-      <p class="hint" id="photo-hint">It helps others see it. Step away from traffic first. Keep faces and number plates out of it.</p>
+      <p class="hint" id="photo-hint">Step away from traffic first. Keep faces and number plates out of it.</p>
       <img id="photo-prev" alt="Your photo">
       <label class="btn btn-secondary btn-lg wide" for="photo-in" id="photo-btn">Take or choose a photo</label>
       <input type="file" accept="image/*" id="photo-in" class="photo-in">
-      <p class="fine" id="photo-info">The phone makes it smaller and removes the location stored in it.</p>
+      <p class="fine" id="photo-info">The location stored in the photo is removed.</p>
       <div id="note-box">
         <label class="field-label" for="note" id="note-l">Anything to add? (optional)</label>
-        <textarea class="inp" id="note" maxlength="300" placeholder="For example: cars parked on the footpath every evening"></textarea>
+        <textarea class="inp" id="note" rows="2" maxlength="300" placeholder="For example: cars parked on the footpath every evening"></textarea>
       </div>
-      <button type="button" class="btn btn-secondary btn-lg wide" id="more-q" style="margin-top:14px" hidden>A few more questions (optional)</button>
       <p class="movedot" id="movedot" hidden>Not exactly where you're standing? <a href="#" id="movedot-go">Move the dot to the spot</a></p>
       <p class="msg" id="photo-few" hidden></p>
     </section>
 
     <!-- a check of something already there ("Still there", "Gone", "Me too", "Still the same"): one screen, then Send -->
     <section class="step" data-step="more">
-      <h2 class="qt">Send this?</h2>
+      <h2 class="qt" id="more-h">Send this?</h2>
       <ul class="sum" id="sum"></ul>
     </section>
 
@@ -502,11 +509,11 @@
 
     <section class="step" data-step="thanks">
       <p class="eyebrow">Sent</p>
-      <h2 class="qt">Thank you</h2>
+      <h2 class="qt" id="thanks-h">Thank you</h2>
       <p class="hint" id="thanks-text">Your answers are now public.</p>
       <p class="small" id="thanks-prof" style="margin:-12px 0 16px" hidden><a href="../profile/" id="thanks-prof-a">See your profile</a></p>
       <div id="hub">
-        <p class="lead-h" id="lead-h" hidden>Goes with what you just sent</p>
+        <p class="lead-h" id="lead-h" hidden>Tell us more</p>
         <div class="answers" id="leadlist"></div>
         <p class="lead-h" id="more-h">Anything else here?</p>
         <div class="answers" id="morelist"></div>
@@ -523,8 +530,8 @@
       <div class="ts" id="ts-review"></div>
       <input type="text" name="website" id="trap" tabindex="-1" autocomplete="off" aria-hidden="true" class="trap">
       <p class="msg" id="send-msg" hidden></p>
-      <p class="anon" id="anon" hidden>Sending anonymously. <a href="#" id="anon-create">Create a profile</a> or <a href="#" id="anon-login">log in</a> to get points for this.</p>
-      <p class="small" id="review-fine">Shared as open data (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>), with photos. No names, email or IP addresses. <span id="accuracy">By sending, you confirm this is what you saw, to the best of your knowledge.</span></p>
+      <p class="anon" id="anon" hidden>Sending anonymously. <a href="#" id="anon-create">Create a profile</a> or <a href="#" id="anon-login">log in</a> for points.</p>
+      <p class="small" id="review-fine">Open data (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>), no names. <span id="accuracy">You confirm this is what you saw.</span></p>
     </div>
 
     <div class="nav" id="nav" hidden>
@@ -543,6 +550,6 @@
 </footer>
 
 <script src="../assets/common.js?v=20261120a"></script>
-<script type="module" src="form.js?v=20261120k"></script>
+<script type="module" src="form.js?v=20261120o"></script>
 </body>
 </html>

@@ -3,7 +3,9 @@
 // walking forms; the questions, the data and the server calls are the walking survey's (bus stops go into the bus stop
 // data). Start asks for the phone's location (or a place on a map: "from memory") → what to tell us about: a bus stop,
 // a footpath or crossing, a problem, an improvement → what's nearby for that → questions → optional photo → Send.
-// Each thing is sent on its own; only then "Anything else here?" is asked (Teja, 20 Nov 2026), so it is clear what has gone. The side of the road is asked only for a footpath, with
+// Each thing is sent on its own; only then "Anything else here?" is asked (Teja, 20 Nov 2026), so it is clear what has gone.
+// The extra questions about a bus stop, footpath or crossing come after sending too ("Tell us more"): their answers join
+// the entry already sent. The side of the road is asked only for a footpath, with
 // no north or south: face the road, we work out the side (compass, else the nearest side) and say it with a landmark;
 // the person says yes or no. One thing leads to the next (a broken-footpath report → the footpath's questions, filled
 // in). A laptop sees the code for a phone and can add a place it knows on the map.
@@ -54,12 +56,17 @@ const CHOICES = {
 const KIND_NAME = { stop: 'Bus stop', foot: 'Footpath', cross: 'Crossing', problem: 'Problem', request: 'Suggestion' };
 
 // ── state: the place, what's around it, the side of the road, the things added in this entry and the checks ──
-const S = { place: null, near: null, side: null, sideSkipped: false, afterFace: null, choice: null, items: [], checks: [], cur: null, last: null, sent: [], doneIds: new Set() };   // items / checks: what the next Send carries; sent / doneIds: what has gone
+const S = { place: null, near: null, side: null, sideSkipped: false, afterFace: null, choice: null, items: [], checks: [], cur: null, last: null, sent: [], doneIds: new Set(), adds: null };   // items / checks: what the next Send carries; sent / doneIds: what has gone
 let cur = 'start', stack = [], moving = false, sending = false;
 var DONE = false;                                  // sent: Back can't offer Send again
 const isQ = (s) => s.startsWith('q-');
 const qParts = (s) => { const [, k, id] = s.split('-'); const part = SETS[k].core.some(q => q.id === id) ? 'core' : 'more'; return { k, id, part }; };
 const qList = (k, part, a) => SETS[k][part].filter(q => shown(q, a));
+const curQ = () => allQs(qParts(cur).k).find(q => q.id === qParts(cur).id);
+// "Tell us more", after sending: S.adds is the thing already sent; only the extra questions seen in this round go
+const adding = () => !!S.adds && S.adds === S.cur;
+const moreNew = (t) => Object.fromEntries(qList(t.k, 'more', t.a).filter(q => t.addSeen.has(q.id) && t.a[q.id] != null).map(q => [q.id, t.a[q.id]]));
+const nMore = () => S.adds ? Object.keys(moreNew(S.adds)).length : 0;
 const TAP_ON = ['start', 'look', 'choose', 'near', 'face', 'check', 'player', 'thanks'];   // 'more' keeps the bottom button: it is Send
 const BAR = { look: 0, sidepick: 30, mark: 8, choose: 15, near: 30, face: 30, check: 55, stopname: 40, pin: 60, blockedby: 60, other: 60, photo: 85, more: 100 };
 
@@ -81,7 +88,7 @@ function show(s, push = true) {
     $('bar').style.width = `${50 + (SETS[k][part].findIndex(q => q.id === id) + 1) / SETS[k][part].length * 30}%`;
     $('count').textContent = S.cur.title || '';
     if (k === 'foot' && id === 'footpath') $('h-foot-footpath').textContent = S.cur.stretch ? 'Is there a footpath on this side?' : 'Is there a footpath here?';
-    S.cur.seen.add(id);
+    S.cur.seen.add(id); if (adding()) S.cur.addSeen.add(id);
     drawAnswers();
   } else {
     $('bar').style.width = `${BAR[s] ?? 8}%`;
@@ -89,7 +96,7 @@ function show(s, push = true) {
   }
   ({ start: drawPlay, mark: () => marker.open(), choose: drawChoose, near: drawNear, face: () => { $('face-ask').hidden = false; $('face-confirm').hidden = true; },
     pin: openPin, photo: drawPhoto, more: drawMore, blockedby: drawBlocked, sidepick: drawSidePick,
-    thanks: () => { const p = S.noNick ? null : player.get(); $('thanks-prof').hidden = !p; if (p) $('thanks-prof-a').href = profileUrl(p.nick); drawHub(); },
+    thanks: () => { const p = S.noNick ? null : player.get(); $('thanks-prof').hidden = !p; if (p) $('thanks-prof-a').href = profileUrl(p.nick); const j = $('thanks-join-line'); if (j) j.hidden = !!p; drawHub(); },
     player: () => { S.noNick = false; const p = player.get(); $('p-nick').value = p ? p.nick : $('p-nick').value; $('p-pin').value = ''; $('p-msg').hidden = true; playerReady(); } }[s] || (() => {}))();
   updateNext();
   window.scrollTo({ top: 0 });
@@ -103,16 +110,18 @@ function ready() {
   if (cur === 'sidepick') return SP.pick != null;
   if (cur === 'other') return $('ot-text').value.trim().length >= 3;
   if (cur === 'photo') return !few() && !sending;
-  if (cur === 'more') return !sending && S.items.length + S.checks.length > 0;
+  if (cur === 'more') return !sending && (S.items.length + S.checks.length > 0 || nMore() > 0);
   return true;
 }
 const few = () => !!S.cur && !!MIN[S.cur.k] && nAnswered(S.cur.k, Object.fromEntries(Object.entries(S.cur.a).filter(([k]) => S.cur.seen.has(k)))) < MIN[S.cur.k];
 function updateNext() {
   const b = $('next');
-  b.hidden = TAP_ON.includes(cur) || (isQ(cur) && !allQs(qParts(cur).k).find(q => q.id === qParts(cur).id).multi);
+  const stop = isQ(cur) && adding() && !curQ().multi;      // the extra questions: a way to stop and send what's answered
+  b.hidden = TAP_ON.includes(cur) || (isQ(cur) && !curQ().multi && !stop);
   b.disabled = !ready();
   if (sending) return;                           // the button says "Sending…"
   if (cur === 'more') { b.textContent = 'Send'; return; }
+  if (stop) { b.textContent = nMore() ? 'Stop and send' : 'Not now'; return; }
   const optional = { photo: !(S.cur && (S.cur.photo || S.cur.note)), blockedby: !(S.cur && S.cur.blocked_by && S.cur.blocked_by.length) };
   b.textContent = cur === 'mark' ? 'Use this place' : cur === 'pin' ? 'Here' : cur === 'sidepick' ? 'This side' : cur === 'photo' ? (optional.photo ? 'Send without a photo' : 'Send') : optional[cur] ? 'Skip' : 'Next';
   if (cur === 'photo') {
@@ -124,7 +133,7 @@ function next() {
   if (isQ(cur)) {
     const { k, id, part } = qParts(cur), list = qList(k, part, S.cur.a), i = list.findIndex(q => q.id === id);
     if (list[i + 1]) return show(`q-${k}-${list[i + 1].id}`);
-    if (part === 'more') { S.cur.more = true; return show('photo'); }   // the extra questions were asked from the photo screen: back to it, then Send
+    if (part === 'more' && adding()) return endMore();
     return show('photo');
   }
   if (cur === 'mark') { S.place = { lat: S.mark.lat, lng: S.mark.lng, acc: null, memory: true }; return loadPlace(); }
@@ -136,21 +145,26 @@ function next() {
   if (cur === 'photo') return finishThing();
   if (cur === 'more') return send();
 }
-$('next').onclick = next;
+$('next').onclick = () => { if (moving) return; if (isQ(cur) && adding() && !curQ().multi) return endMore(); next(); };
+// the end of the extra questions, or "Stop and send": Send if anything was answered, else back to "Anything else here?"
+function endMore() {
+  if (nMore()) return show('more');
+  S.adds = null; S.cur = null; DONE = true; stack = []; show('thanks', false);
+}
 $('back').onclick = () => {
   let p; do p = stack.pop(); while (p && isQ(p) && !(S.cur && qList(qParts(p).k, qParts(p).part, S.cur.a).some(q => 'q-' + qParts(p).k + '-' + q.id === p)));
   if (p) show(p, false); else leave();
 };
 // ✕: back to the first screen; anything added and not sent is lost, so ask first
 function leave() {
-  if ((S.items.length || S.checks.length) && !DONE && !confirm("Leave? What you added here hasn't been sent.")) return;
-  Object.assign(S, { items: [], checks: [], cur: null, last: null }); stack = []; show('start', false);
+  if ((S.items.length || S.checks.length || nMore()) && !DONE && !confirm("Leave? What you added here hasn't been sent.")) return;
+  Object.assign(S, { items: [], checks: [], cur: null, last: null, adds: null }); stack = []; show('start', false);
 }
 $('exit').onclick = leave;
 
 // ── the first screen: Start asks for the phone's location; "not there" and laptops use the map ──
 function begin(place) {
-  Object.assign(S, { place, near: null, side: null, sideSkipped: false, afterFace: null, choice: null, items: [], checks: [], cur: null, last: null, sent: [], doneIds: new Set() });
+  Object.assign(S, { place, near: null, side: null, sideSkipped: false, afterFace: null, choice: null, items: [], checks: [], cur: null, last: null, sent: [], doneIds: new Set(), adds: null });
   DONE = false; stack = ['start']; cur = 'start';
   loadPlace();
 }
@@ -179,12 +193,12 @@ $('to-mark').onclick = (e) => { e.preventDefault(); S.mark = null; show('mark');
 $('to-look').onclick = (e) => {
   e.preventDefault();
   const qs = (list) => list.map(q => `<li>${esc(q.q)}<small>${q.opts.filter(o => o[0] !== 'dk').map(o => esc(o[1])).join(' · ')}${q.multi ? ' (tick all that fit)' : ''}</small></li>`).join('');
-  const thing = (k, name) => `<h3>${name}</h3><h4>First</h4><ol>${qs(SETS[k].core)}</ol><h4>More, if you have a minute</h4><ol>${qs(SETS[k].more)}</ol>`;
+  const thing = (k, name) => `<h3>${name}</h3><h4>First</h4><ol>${qs(SETS[k].core)}</ol><h4>After sending, if you have a minute</h4><ol>${qs(SETS[k].more)}</ol>`;
   $('lookbox').className = 'look';
   $('lookbox').innerHTML = `<h4>How it goes</h4><ol><li>Where you are<small>Your phone's location, or a place you pick on a map ("from memory")</small></li>
       <li>What you want to tell us about<small>A bus stop · a footpath or crossing · a problem · an improvement</small></li>
       <li>What's already nearby<small>Check something others described, or describe something new</small></li>
-      <li>A few questions, then a photo if you like</li><li>Anything else here? Then send everything at once</li></ol>`
+      <li>A few questions, then a photo if you like, and Send</li><li>After sending<small>More questions about the same place if you have a minute, or something else here</small></li></ol>`
     + thing('stop', 'A bus stop') + thing('foot', 'A footpath') + '<p style="margin-top:8px">On a main road we first ask which side you are on: face the road, and say yes or no to the side we show.</p>' + thing('cross', 'A crossing')
     + `<h3>Report a problem</h3><ul>${PROBLEMS.map(p => `<li>${esc(p[0] === 'other' ? 'Something else, in your own words' : p[1])}</li>`).join('')}<li>Flooding<small>Opens the separate flood report</small></li></ul>`
     + `<h3>Suggest an improvement</h3><ul>${NEEDS.map(p => `<li>${esc(p[0] === 'other' ? 'Something else, in your own words' : p[1])}</li>`).join('')}</ul>`;
@@ -395,9 +409,9 @@ function drawConfirm() {
 // ── what's nearby, for the choice ──
 const checked = (id) => S.doneIds.has(id);          // already checked and sent in this visit
 let ACTS = [];
-function row({ col, shape = '', t, tag = '', sub = [], btns, done = false }) {
+function row({ col, shape = '', t, tag = '', sub = [], btns, done = false, key = '' }) {
   const b = done ? '<button type="button" disabled>Added</button>' : btns.map(([label, fn]) => { ACTS.push(fn); return `<button type="button" data-act="${ACTS.length - 1}">${esc(label)}</button>`; }).join('');
-  return `<li><i class="ic ${shape}" style="background:${col}"></i><span class="t">${esc(t)}${tag ? `<em>${tag}</em>` : ''}<small>${sub.filter(Boolean).map(esc).join('<br>')}</small></span><span class="btns">${b}</span></li>`;
+  return `<li${key ? ` data-key="${esc(key)}"` : ''}><i class="ic ${shape}" style="background:${col}"></i><span class="t">${esc(t)}${tag ? `<em>${tag}</em>` : ''}<small>${sub.filter(Boolean).map(esc).join('<br>')}</small></span><span class="btns">${b}</span></li>`;
 }
 const stopTitle = (st) => st.name + (st.towards ? `, towards ${st.towards}` : '');
 const stopCtx = (st) => ({ stop_id: st.id, name: st.name, towards: st.towards, slat: st.lat, slng: st.lng, d: st.d, title: stopTitle(st) });
@@ -412,7 +426,7 @@ function sideCtx(c, which, word) {
 function listStops() {
   const n = N(), stops = n.stops.filter(x => x.d <= 300).slice(0, 6).map(st => ({ st, side: stopSide(st) }));
   stops.sort((a, b) => (a.side === 'On your side' ? 0 : 1) - (b.side === 'On your side' ? 0 : 1) || a.st.d - b.st.d);
-  return stops.map(({ st, side }) => { const p = n.stop_profiles[st.id]; return row({ col: p ? '#2166AC' : GREY, shape: 'r', t: st.name, tag: side, done: !!p && checked(p.latest),
+  return stops.map(({ st, side }) => { const p = n.stop_profiles[st.id]; return row({ key: 's:' + st.id, col: p ? '#2166AC' : GREY, shape: 'r', t: st.name, tag: side, done: !!p && checked(p.latest),
     sub: [`${st.d} m away${st.towards ? ' · buses towards ' + st.towards : ''}`, p ? `${people(p.n)} · ${day(p.seen)}` : 'No details yet'], btns: [[p ? 'Check' : 'Describe', () => startStop(st)]] }); }).join('')
     || '<li class="none">No bus stop on our map within 300 m.</li>';
 }
@@ -423,21 +437,21 @@ function listSides() {
     for (const [c, word, which] of [[S.side.mine, w1, 'mine'], [S.side.other, w2, 'other']]) {
       if (!c) continue;
       const p = n.profiles[`${c.stretch}:${c.side}`], v = p ? footColor(currentOf(p)) : null, lm = landmark(c), ctx = sideCtx(c, which, word);
-      out.push(row({ col: p ? (v ? VIEW_COLORS[v] : '#8C8C8C') : GREY, shape: 'ln', t: word, done: !!p && checked(p.latest), sub: [`${c.name}${lm ? ` · the ${lm.name} bus stop side` : ''}`, p ? `${people(p.n)} · ${day(p.seen)}` : 'No details yet'],
+      out.push(row({ key: `l:${c.stretch}:${c.side}`, col: p ? (v ? VIEW_COLORS[v] : '#8C8C8C') : GREY, shape: 'ln', t: word, done: !!p && checked(p.latest), sub: [`${c.name}${lm ? ` · the ${lm.name} bus stop side` : ''}`, p ? `${people(p.n)} · ${day(p.seen)}` : 'No details yet'],
         btns: [[p ? 'Check' : 'Describe', () => p ? showCheck({ kind: 'side', p, ctx, title: ctx.title }) : startThing('foot', ctx)]] }));
     }
   } else out.push(row({ col: GREY, shape: 'ln', t: 'The footpath here', sub: [n.stretches.length ? 'Side of the road not chosen' : 'A smaller street: saved as a single spot'],
     btns: [...(n.stretches.length ? [['Choose side', () => openSidePick(() => show('near'))]] : []), ['Describe', () => startThing('foot', { title: 'The footpath here' })]] }));
-  for (const r of rowsOf('spot')) out.push(row({ col: VIEW_COLORS[footColor(r.answers)] || GREY, shape: 'ln', t: 'A footpath spot someone described', sub: [`${r.d} m away · seen ${day(r.seen)}`], done: checked(r.id),
+  for (const r of rowsOf('spot')) out.push(row({ key: 'r:' + r.id, col: VIEW_COLORS[footColor(r.answers)] || GREY, shape: 'ln', t: 'A footpath spot someone described', sub: [`${r.d} m away · seen ${day(r.seen)}`], done: checked(r.id),
     btns: [['Check', () => showCheck({ kind: 'spot', row: r, title: 'The footpath here' })]] }));
   return out.join('');
 }
 function listCrossings() {
   const n = N(), out = [];
   for (const j of junctions()) { const p = n.profiles[j.id], v = p ? crossColor(currentOf(p)) : null;
-    out.push(row({ col: p ? (v ? VIEW_COLORS[v] : '#111827') : GREY, t: j.name, done: !!p && checked(p.latest), sub: [`${j.d} m away`, p ? `${people(p.n)} · ${day(p.seen)}` : 'No details yet'],
+    out.push(row({ key: 'j:' + j.id, col: p ? (v ? VIEW_COLORS[v] : '#111827') : GREY, t: j.name, done: !!p && checked(p.latest), sub: [`${j.d} m away`, p ? `${people(p.n)} · ${day(p.seen)}` : 'No details yet'],
       btns: [[p ? 'Check' : 'Describe', () => p ? showCheck({ kind: 'junction', j, p, title: j.name }) : startThing('cross', { junction: j.id, title: j.name })]] })); }
-  for (const r of rowsOf('crossing')) out.push(row({ col: '#111827', t: 'A crossing between junctions', sub: [`${r.d} m away · seen ${day(r.seen)}`], done: checked(r.id),
+  for (const r of rowsOf('crossing')) out.push(row({ key: 'r:' + r.id, col: '#111827', t: 'A crossing between junctions', sub: [`${r.d} m away · seen ${day(r.seen)}`], done: checked(r.id),
     btns: [['Check', () => showCheck({ kind: 'crossing', row: r, title: 'A crossing between junctions' })]] }));
   return out.join('') || '<li class="none">No junction of main roads within 150 m. A crossing here can still be added, below.</li>';
 }
@@ -460,7 +474,7 @@ function drawNear() {
     $('h-near').textContent = "What's the problem?";
     $('near-hint').textContent = 'Pick one. If someone has already reported it here, tell us whether it is still there.';
     const pr = rowsOf('problem');
-    if (pr.length) L.push(`<p class="what-h" style="margin-top:0">Already reported near here</p><ul class="near">${pr.map(r => row({ col: (PROBLEMS.find(p => p[0] === r.problem) || [, , '#6B7280'])[2], shape: 'r', t: problemName(r.problem), done: checked(r.id),
+    if (pr.length) L.push(`<p class="what-h" style="margin-top:0">Already reported near here</p><ul class="near">${pr.map(r => row({ key: 'r:' + r.id, col: (PROBLEMS.find(p => p[0] === r.problem) || [, , '#6B7280'])[2], shape: 'r', t: problemName(r.problem), done: checked(r.id),
       sub: [[`${r.d} m away`, `seen ${day(r.seen)}`, r.still && `${r.still} said still there`].filter(Boolean).join(' · ')],
       btns: [['Still there', () => quickCheck(r, 'confirm', `Still there: ${problemName(r.problem)}`)], ['Gone', () => quickCheck(r, 'gone', `Gone: ${problemName(r.problem)}`)]] })).join('')}</ul><p class="what-h">Report a new one</p>`);
     // flooding has its own report (depth, flow, photo): the option hands over to it
@@ -470,11 +484,29 @@ function drawNear() {
     $('h-near').textContent = 'What would make this place better?';
     $('near-hint').textContent = 'Pick one. If someone has already asked for it here, add your voice.';
     const rq = rowsOf('request');
-    if (rq.length) L.push(`<p class="what-h" style="margin-top:0">Others have asked for, near here</p><ul class="near">${rq.map(r => row({ col: REQUEST_COLOR, shape: 'r', t: needName(r.need), done: checked(r.id),
+    if (rq.length) L.push(`<p class="what-h" style="margin-top:0">Others have asked for, near here</p><ul class="near">${rq.map(r => row({ key: 'r:' + r.id, col: REQUEST_COLOR, shape: 'r', t: needName(r.need), done: checked(r.id),
       sub: [`${r.d} m away · ${people(1 + r.metoo)} asked`], btns: [['Me too', () => quickCheck(r, 'metoo', `Me too: ${needName(r.need).toLowerCase()}`)]] })).join('')}</ul><p class="what-h">Suggest something</p>`);
     L.push(`<div class="answers" style="gap:8px">${typeBtns('request', NEEDS)}</div>`);
   }
   $('nearlists').innerHTML = L.join('');
+  SEL = null; LISTKEYS = new Set([...document.querySelectorAll('#nearlists li[data-key]')].map(x => x.dataset.key));
+}
+// the list and the little map go together (Teja, 20 Nov 2026): tap a row or its dot or line, and the other one shows
+// it. Nothing starts from a tap on the map; the row's own button does that.
+let SEL = null, LISTKEYS = new Set(), KEYPOS = {};
+function select(key, from) {
+  SEL = key;
+  let li = null;
+  document.querySelectorAll('#nearlists li[data-key]').forEach(x => { const on = x.dataset.key === key; x.classList.toggle('sel', on); if (on) li = x; });
+  paintSel();
+  if (from === 'map' && li) li.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  if (from === 'list' && mini && !$('minibox').hidden && KEYPOS[key]) mini.easeTo({ center: KEYPOS[key], duration: 300 });
+}
+function paintSel() {
+  if (!mini || !mini.getLayer('m-sel-p')) return;
+  const is = ['==', ['get', 'key'], SEL || '-'];
+  mini.setFilter('m-sel-p', ['all', ['==', ['geometry-type'], 'Point'], is]);
+  for (const s of ['l', 'r']) mini.setFilter('m-sel-' + s, ['all', ['==', ['geometry-type'], 'LineString'], ['==', ['get', 'side'], s], is]);
 }
 function quickCheck(r, kind, title) { S.items = []; S.checks = [{ survey: SURVEY, id: r.id, kind, title }]; S.last = null; show('more'); }
 $('near-hint').addEventListener('click', (e) => { if (e.target.closest('#chg-side')) { e.preventDefault(); openSidePick(() => show('near')); } });
@@ -487,6 +519,7 @@ $('nearlists').addEventListener('click', (e) => {
   if (t) { const [kind, v] = t.dataset.type.split(':'); return kind === 'problem' ? pickProblem(v) : pickNeed(v); }
   const fl = e.target.closest('#to-flood');
   if (fl && (S.items.length || S.checks.length)) { e.preventDefault(); $('flood-msg').textContent = 'Send what you have added first (Back, then Send). Then report the flooding.'; $('flood-msg').hidden = false; }
+  const li = e.target.closest('li[data-key]'); if (li) select(li.dataset.key, 'list');
 });
 function pickProblem(v, extra = {}) {
   S.cur = newThing('problem', { problem: v, title: problemName(v), ...extra });
@@ -514,13 +547,23 @@ function miniGeo() {
   const n = N(), f = [];
   for (const s of n.stretches) for (const side of s.sides) {
     const p = n.profiles[`${s.id}:${side}`], v = p ? footColor(currentOf(p)) : null;
-    f.push({ type: 'Feature', properties: { side, col: p ? (v ? VIEW_COLORS[v] : '#8C8C8C') : GREY }, geometry: { type: 'LineString', coordinates: s.c } });
+    f.push({ type: 'Feature', properties: { side, key: `l:${s.id}:${side}`, col: p ? (v ? VIEW_COLORS[v] : '#8C8C8C') : GREY }, geometry: { type: 'LineString', coordinates: s.c } });
   }
-  const pt = (lng, lat, col) => f.push({ type: 'Feature', properties: { col }, geometry: { type: 'Point', coordinates: [lng, lat] } });
-  for (const st of n.stops) pt(st.lng, st.lat, n.stop_profiles[st.id] ? '#2166AC' : GREY);
-  for (const j of n.junctions) pt(j.c[0], j.c[1], n.profiles[j.id] ? '#111827' : '#fff');
-  for (const r of n.rows) pt(r.lng, r.lat, r.item === 'problem' ? '#EF8A62' : r.item === 'request' ? REQUEST_COLOR : '#111827');
+  KEYPOS = {};
+  // what this screen's list holds is drawn full; the rest stays, paler, for bearings
+  const pt = (key, lng, lat, col) => { KEYPOS[key] = [lng, lat]; f.push({ type: 'Feature', properties: { key, col, on: LISTKEYS.has(key) ? 1 : 0 }, geometry: { type: 'Point', coordinates: [lng, lat] } }); };
+  for (const st of n.stops) pt('s:' + st.id, st.lng, st.lat, n.stop_profiles[st.id] ? '#2166AC' : GREY);
+  for (const j of n.junctions) pt('j:' + j.id, j.c[0], j.c[1], n.profiles[j.id] ? '#111827' : '#fff');
+  for (const r of n.rows) pt('r:' + r.id, r.lng, r.lat, r.item === 'problem' ? '#EF8A62' : r.item === 'request' ? REQUEST_COLOR : '#111827');
   return { type: 'FeatureCollection', features: f };
+}
+// the map opens on the place and everything in the list (a stop can be 300 m away)
+function miniFit() {
+  const pts = [...LISTKEYS].map(k => KEYPOS[k]).filter(Boolean);
+  if (!pts.length) return;
+  const b = new maplibregl.LngLatBounds([S.place.lng, S.place.lat], [S.place.lng, S.place.lat]);
+  for (const c of pts) b.extend(c);
+  mini.fitBounds(b, { padding: 28, maxZoom: 17, duration: 0 });
 }
 $('minimap-toggle').onclick = () => {
   const open = $('minibox').hidden;
@@ -533,12 +576,28 @@ $('minimap-toggle').onclick = () => {
     mini.on('load', () => {
       mini.addSource('m', { type: 'geojson', data: miniGeo() });
       const off = (s) => ['interpolate', ['exponential', 2], ['zoom'], 12, s * 0.6, 19, s * 9];
+      for (const s of ['l', 'r']) mini.addLayer({ id: 'm-sel-' + s, type: 'line', source: 'm', filter: ['==', ['get', 'key'], '-'], layout: { 'line-cap': 'round' },
+        paint: { 'line-color': '#111827', 'line-width': 9, 'line-offset': off(s === 'l' ? -1 : 1) } });
       for (const s of ['l', 'r']) mini.addLayer({ id: 'm-' + s, type: 'line', source: 'm', filter: ['all', ['==', ['geometry-type'], 'LineString'], ['==', ['get', 'side'], s]],
         paint: { 'line-color': ['get', 'col'], 'line-width': 3.5, 'line-offset': off(s === 'l' ? -1 : 1) } });
+      const full = ['case', ['==', ['get', 'on'], 1], 1, .35];
       mini.addLayer({ id: 'm-p', type: 'circle', source: 'm', filter: ['==', ['geometry-type'], 'Point'],
-        paint: { 'circle-radius': 5.5, 'circle-color': ['get', 'col'], 'circle-stroke-color': '#111827', 'circle-stroke-width': 1 } });
+        paint: { 'circle-radius': ['case', ['==', ['get', 'on'], 1], 6.5, 4.5], 'circle-color': ['get', 'col'], 'circle-opacity': full, 'circle-stroke-color': '#111827', 'circle-stroke-width': 1, 'circle-stroke-opacity': full } });
+      mini.addLayer({ id: 'm-sel-p', type: 'circle', source: 'm', filter: ['==', ['get', 'key'], '-'],
+        paint: { 'circle-radius': 10, 'circle-color': ['get', 'col'], 'circle-stroke-color': '#111827', 'circle-stroke-width': 3.5 } });
+      paintSel(); miniFit();
+      // a tap: the nearest dot that is in the list (a generous area, for fingers); else the road side under the finger
+      mini.on('click', (e) => {
+        const p = e.point, far = (k) => { const q = mini.project(KEYPOS[k]); return Math.hypot(q.x - p.x, q.y - p.y); };
+        const dots = mini.queryRenderedFeatures([[p.x - 18, p.y - 18], [p.x + 18, p.y + 18]], { layers: ['m-p'] }).map(x => x.properties.key).filter(k => LISTKEYS.has(k) && KEYPOS[k]);
+        if (dots.length) return select(dots.sort((a, b) => far(a) - far(b))[0], 'map');
+        const at = { lng: e.lngLat.lng, lat: e.lngLat.lat };
+        // the nearest road line that has a row; a divided road has one listed side per carriageway, so that one
+        const road = N().stretches.map(s => ({ s, ...nearestOn(s.c, at), ks: s.sides.map(x => `l:${s.id}:${x}`).filter(k => LISTKEYS.has(k)) })).filter(x => x.ks.length).sort((a, b) => a.d - b.d)[0];
+        if (road && road.d < 40) select(road.ks.length > 1 ? `l:${road.s.id}:${road.side}` : road.ks[0], 'map');
+      });
     });
-  } else { mini.resize(); mini.jumpTo({ center: at, zoom: 16.3 }); mini.getSource('m')?.setData(miniGeo()); }
+  } else { mini.resize(); mini.jumpTo({ center: at, zoom: 16.3 }); mini.getSource('m')?.setData(miniGeo()); paintSel(); miniFit(); }
   if (S.place.memory) { if (miniMe) { miniMe.remove(); miniMe = null; } }
   else if (!miniMe) miniMe = new maplibregl.Marker({ element: mkEl('me') }).setLngLat(at).addTo(mini); else miniMe.setLngLat(at);
 };
@@ -658,7 +717,8 @@ function drawPhoto() {
   const t = S.cur, pin = t.k === 'problem' || t.k === 'request';
   $('photo-prev').style.display = t.photo ? 'block' : 'none'; if (t.photo) $('photo-prev').src = t.photo;
   $('photo-btn').textContent = t.photo ? 'Use a different photo' : 'Take or choose a photo';
-  $('photo-info').textContent = t.photo ? 'Photo added.' : 'The phone makes it smaller and removes the location stored in it.';
+  $('photo-hint').hidden = !!t.photo;              // the advice is for taking it; with a photo in, the room goes to the picture
+  $('photo-info').textContent = t.photo ? 'Photo added.' : 'The location stored in the photo is removed.';
   $('note-box').hidden = !!t.said;                 // "something else" was already said in the person's own words
   $('note').value = t.said ? '' : t.note || '';
   $('note').placeholder = t.k === 'request' ? 'For example: children cross here to the school' : t.k === 'problem' ? 'For example: there every morning' : 'For example: cars parked on the footpath every evening';
@@ -666,11 +726,7 @@ function drawPhoto() {
   $('movedot').hidden = !pin;
   if (pin) $('movedot').firstChild.textContent = t.lat != null ? 'The dot is on the spot. ' : S.place.memory ? 'Placed where you put the dot. ' : "Placed where you're standing. Not exactly there? ";
   $('movedot-go').textContent = t.lat != null ? 'Move it again' : 'Move the dot to the spot';
-  // a bus stop, footpath or crossing has a few more questions: offered here, before sending
-  const mq = !!SETS[t.k] && !t.more && qList(t.k, 'more', t.a).length > 0;
-  $('more-q').hidden = !mq; if (mq) $('more-q').textContent = `A few more questions about this ${SETS[t.k].name.toLowerCase()} (optional)`;
 }
-$('more-q').onclick = () => { const t = S.cur; t.note = $('note').value.trim(); show(`q-${t.k}-${qList(t.k, 'more', t.a)[0].id}`); };
 $('movedot-go').onclick = (e) => { e.preventDefault(); S.cur.note = $('note').value.trim(); pinThen(() => { stack.pop(); stack.pop(); show('photo'); }); };
 $('note').addEventListener('input', () => { if (S.cur) S.cur.note = $('note').value.trim(); updateNext(); });
 $('photo-in').addEventListener('change', async (e) => {
@@ -687,14 +743,15 @@ const PRE = { broken: { footpath: 'yes', broken: 'places' }, blocked: { footpath
 const WORN = ['places', 'mostly'];
 let LEADS = [];
 function drawMore() {
-  $('sum').innerHTML = S.checks.map(c => `<li><span>Check</span><b>${esc(c.title)}</b></li>`).join('') || '<li><span>Nothing to send</span></li>';
+  const t = S.adds, n = nMore();
+  $('more-h').textContent = t ? 'Send these answers?' : 'Send this?';
+  $('sum').innerHTML = t ? `<li><span>${esc(SETS[t.k].name)}</span><b>${esc(t.title || '')}<small>${n} more answer${n === 1 ? '' : 's'}, added to what you sent</small></b></li>` : S.checks.map(c => `<li><span>Check</span><b>${esc(c.title)}</b></li>`).join('') || '<li><span>Nothing to send</span></li>';
   updateNext();
 }
 function drawSendbox() {
   const p = player.get();
-  $('anon').hidden = !!(p && !S.noNick);
-  $('accuracy').textContent = S.place && S.place.memory ? 'By sending, you confirm this is what you know of this place, to the best of your knowledge.'
-    : 'By sending, you confirm this is what you saw, to the best of your knowledge.';
+  $('anon').hidden = !!(p && !S.noNick) || !!S.adds;
+  $('accuracy').textContent = S.place && S.place.memory ? 'You confirm this is what you know of this place.' : 'You confirm this is what you saw.';
   if (!sending) $('send-msg').hidden = true;
 }
 function drawHub() {
@@ -704,12 +761,15 @@ function drawHub() {
   LEADS = [];
   const lead = (label, s, fn) => { LEADS.push(fn); return answerBtn(`data-lead="${LEADS.length - 1}"`, `${esc(label)}${s ? `<small>${esc(s)}</small>` : ''}`, '', ' go'); };
   const L = [];
+  // the extra questions about the thing just sent: their answers are added to it
+  if (t && S.sent.includes(t) && SETS[t.k] && t.rkey && !t.more && qList(t.k, 'more', t.a).length)
+    L.push(lead(`About this ${SETS[t.k].name.toLowerCase()}`, SETS[t.k].moreSays, () => tellMore(t)));
   if (t && S.sent.includes(t)) {
     if (t.k === 'problem' && PRE[t.problem] && !has('foot'))
-      L.push(lead('Tell us more about this footpath', 'Your report is filled in already; a few quick questions', () => { S.choice = 'walk'; askSide(() => footHere({ mine: PRE[t.problem], lead: 'problem' })); }));
+      L.push(lead('About the footpath here', 'A few quick questions; your report is filled in already', () => { S.choice = 'walk'; askSide(() => footHere({ mine: PRE[t.problem], lead: 'problem' })); }));
     if (t.k === 'foot' && (WORN.includes(t.a.broken) || WORN.includes(t.a.blocked)) && !S.sent.some(i => i.k === 'problem' && ['broken', 'blocked'].includes(i.problem))) {
       const blocked = WORN.includes(t.a.blocked);
-      L.push(lead(`Mark the exact spot where it's ${blocked ? 'blocked' : 'broken'}`, 'Adds it as a problem others can confirm', () => {
+      L.push(lead(`Show where exactly it's ${blocked ? 'blocked' : 'broken'}`, 'Others can then say if it is still like that', () => {
         S.choice = 'problem'; S.cur = newThing('problem', { problem: blocked ? 'blocked' : 'broken', title: problemName(blocked ? 'blocked' : 'broken'), lead: 'footpath', blocked_by: blocked ? t.a.blocked_by || [] : null });
         pinThen(() => show('photo')); }));
     }
@@ -718,21 +778,23 @@ function drawHub() {
     const lightsOff = (t.k === 'foot' && t.a.lights === 'broken') || (t.k === 'cross' && t.a.x_lit === 'poor') || (t.k === 'stop' && t.a.light_state === 'poor');
     const noLights = (t.k === 'foot' && t.a.lights === 'none') || (t.k === 'cross' && t.a.x_lit === 'no') || (t.k === 'stop' && t.a.light === 'no') || (t.k === 'problem' && t.problem === 'dark');
     if (lightsOff && !S.sent.some(i => i.k === 'problem' && i.problem === 'light'))
-      L.push(lead("Report the street light that isn't working", 'Adds it as a problem others can confirm', () => { S.choice = 'problem'; pickProblem('light'); }));
+      L.push(lead("Report the street light that isn't working", 'Others can then say if it is still not working', () => { S.choice = 'problem'; pickProblem('light'); }));
     if (noLights && !S.sent.some(i => i.k === 'request' && i.need === 'lights'))
-      L.push(lead('Ask for street lights here', 'Others nearby can say they need them too', () => { S.choice = 'improve'; pickNeed('lights'); }));
+      L.push(lead('Ask for street lights here', 'Others can say they need them too', () => { S.choice = 'improve'; pickNeed('lights'); }));
   }
   if (t && t.k === 'stop') {
     const sp = t.missing ? { lat: t.lat, lng: t.lng } : { lat: t.slat, lng: t.slng }, j = junctions().find(x => !checked((N().profiles[x.id] || {}).latest) && !S.sent.some(i => i.junction === x.id));
     if (!has('foot') && sp.lat != null && (S.place.memory || metres(S.place, sp) <= MAX_MOVE))
-      L.push(lead('The footpath at this stop', 'Is there one, its height, broken or blocked', () => { S.choice = 'walk'; startThing('foot', { lat: sp.lat, lng: sp.lng, side_how: 'stop', lead: 'stop', title: `At the stop: ${t.name}` }); }));
-    if (j && !has('cross')) L.push(lead('The crossing near this stop', `${j.name} · ${j.d} m away`, () => { S.choice = 'walk'; const p = N().profiles[j.id]; p ? showCheck({ kind: 'junction', j, p, title: j.name }) : startThing('cross', { junction: j.id, title: j.name }); }));
+      L.push(lead('About the footpath at this stop', 'Is there one? Is it broken or blocked?', () => { S.choice = 'walk'; startThing('foot', { lat: sp.lat, lng: sp.lng, side_how: 'stop', lead: 'stop', title: `At the stop: ${t.name}` }); }));
+    if (j && !has('cross')) L.push(lead('About the crossing near this stop', `${j.name} · ${j.d} m away`, () => { S.choice = 'walk'; const p = N().profiles[j.id]; p ? showCheck({ kind: 'junction', j, p, title: j.name }) : startThing('cross', { junction: j.id, title: j.name }); }));
   }
   $('lead-h').hidden = !L.length; $('leadlist').innerHTML = L.join('');
   $('morelist').innerHTML = Object.entries(CHOICES).map(([k, c]) => answerBtn(`data-add="${k}"`, k === S.choice ? c.again : c.name, '', ' go')).join('');
 }
 // from "Anything else here?": the next thing starts with nothing waiting, and Back comes back here
-const onward = (fn) => { DONE = false; S.items = []; S.checks = []; S.cur = null; fn(); };
+const onward = (fn) => { DONE = false; S.items = []; S.checks = []; S.cur = null; S.adds = null; fn(); };
+function tellMore(t) { S.cur = t; S.adds = t; t.addSeen = new Set(); show(`q-${t.k}-${qList(t.k, 'more', t.a)[0].id}`); }
+$('thanks-text').addEventListener('click', (e) => { if (e.target.closest('#thanks-join')) { e.preventDefault(); onward(() => { setPMode('create'); show('player'); }); } });
 function footHere(extra) {                          // the footpath where the person is: their side if known, else a single point
   if (S.side) return startThing('foot', { ...sideCtx(S.side.mine, 'mine', sideWords()[0]), ...extra });
   startThing('foot', { title: 'The footpath here', ...extra });
@@ -820,6 +882,7 @@ function itemBody(i) {
   return w;
 }
 function payload() {
+  if (S.adds) { const t = S.adds; return { mode: 'more', device: Contribute.device(), adds: { survey: t.rsv, id: t.rid, key: t.rkey }, answers: moreNew(t), _sum: { n: 1, points: 0, more: true } }; }
   const p = player.get(), nk = p && !S.noNick;
   return { mode: 'visit', nick: nk ? p.nick : null, nick_pin: nk ? p.pin : null, device: Contribute.device(),
     items: S.items.map(itemBody), checks: S.checks.map(({ survey, id, kind }) => ({ survey, id, kind })),
@@ -834,12 +897,17 @@ async function postIt(body, sc = spam) {
   finally { sc.reset(); }
 }
 function thanks(body, r) {
-  const pts = body._sum ? body._sum.points : 0, got = (r.checks || []).filter(x => x === false).length;
-  $('thanks-text').textContent = 'Sent. Your answers are now public.' + (body.nick ? ` ${pts} points to ${body.nick} on the leaderboard.` : '')
+  const more = !!(body._sum && body._sum.more), pts = body._sum ? body._sum.points : 0, got = (r.checks || []).filter(x => x === false).length;
+  // the thing just sent: its id and the key that lets "Tell us more" add answers to it
+  if (!more && S.items.length === 1) { const t = S.items[0], rid = ((t.k === 'stop' ? r.stops : r.ids) || [])[0]; if (rid && r.keys && r.keys[rid]) Object.assign(t, { rid, rkey: r.keys[rid], rsv: t.k === 'stop' ? 'bus-stops' : SURVEY }); }
+  if (more && S.adds) S.adds.more = true;
+  $('thanks-h').textContent = more ? 'Added. Thank you' : body.nick && pts ? `+${pts} points` : 'Thank you';
+  $('thanks-text').innerHTML = (more ? 'Your answers are added to what you sent.' : body.nick ? `For ${esc(body.nick)}. Your answers are now public.`
+      : 'Your answers are now public. <span id="thanks-join-line"><a href="#" id="thanks-join" style="color:var(--ink)">Create a profile</a> to get points next time.</span>')
     + (got ? ` ${got === 1 ? 'One check was' : got + ' checks were'} already sent from this phone, so not counted again.` : '');
   $('to-map').href = r.ids && r.ids[0] ? '../walking/map/?from=streets&r=' + encodeURIComponent(r.ids[0]) : '../walking/map/?from=streets';
   S.sent.push(...S.items); for (const c of S.checks) S.doneIds.add(c.id);
-  S.items = []; S.checks = []; S.cur = null;
+  S.items = []; S.checks = []; S.cur = null; S.adds = null;
   DONE = true; stack = []; show('thanks', false);
   refreshNear();
 }
@@ -852,9 +920,9 @@ async function refreshNear() {
   } catch { /* the old list stays */ }
 }
 async function send() {
-  if (sending || !(S.items.length + S.checks.length)) return;
+  if (sending || !(S.items.length + S.checks.length || nMore())) return;
   const body = payload(), saved = { body, at: Date.now(), n: body._sum.n };
-  const kept = store.set(saved) || store.set({ ...saved, body: { ...body, items: body.items.map(i => ({ ...i, photo: null })) }, photoDropped: true });
+  const kept = store.set(saved) || store.set({ ...saved, body: { ...body, items: (body.items || []).map(i => ({ ...i, photo: null })) }, photoDropped: true });
   sending = true; $('send-msg').hidden = true; $('next').disabled = true; $('next').textContent = 'Sending…';
   try { const r = await postIt(body); store.drop(kept); sending = false; thanks(body, r); }
   catch (err) {
@@ -892,7 +960,7 @@ function showDraft() {
 showDraft();
 // Done: back to the first screen, a fresh start
 $('again').onclick = () => {
-  DONE = false; Object.assign(S, { place: null, near: null, side: null, items: [], checks: [], cur: null, last: null, choice: null, sent: [], doneIds: new Set() }); stack = [];
+  DONE = false; Object.assign(S, { place: null, near: null, side: null, items: [], checks: [], cur: null, last: null, choice: null, sent: [], doneIds: new Set(), adds: null }); stack = [];
   show('start', false);
 };
 
