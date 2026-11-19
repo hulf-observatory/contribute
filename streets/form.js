@@ -102,7 +102,7 @@ function show(s, push = true) {
     drawAnswers();
   } else {
     $('bar').style.width = `${BAR[s] ?? 8}%`;
-    $('count').textContent = n ? `${n} sent` : '';
+    $('count').textContent = s === 'where' && S.want ? CHOICES[S.want].name : n ? `${n} sent` : '';   // "Where is it?": what was chosen, in the top bar
   }
   ({ start: drawPlay, where: drawWhere, mark: openMark, choose: drawChoose, near: drawNear, face: () => { $('face-ask').hidden = false; $('face-confirm').hidden = true; },
     pin: openPin, photo: drawPhoto, more: drawMore, blockedby: drawBlocked, sidepick: openPick, pick: openPick,
@@ -187,8 +187,7 @@ function locBusy(t) {                               // after a failure the other
   $('where-or').hidden = !PHONE || fail;
 }
 function drawWhere() {
-  $('where-for').textContent = S.want ? CHOICES[S.want].name : '';
-  if (S.want) { $('where-map').textContent = `See ${MAP_OF[S.want][1]} on the map`; $('where-map').href = mapUrl(S.want); }
+  if (S.want) { $('where-map-t').textContent = `See ${MAP_OF[S.want][1]} on the map`; $('where-map').href = mapUrl(S.want); }
   $('loc-go').hidden = !PHONE;                      // a laptop: the two ways that need no phone
   $('gps-msg').hidden = !S.gpsFailed; locBusy('');
 }
