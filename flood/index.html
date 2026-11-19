@@ -182,6 +182,20 @@
   }
   .see-data { display: flex; width: 100%; max-width: 420px; margin-top: 10px; }
   .res-h .meta { margin-left: 0; }
+  /* a flood seen in the last 7 days, from memory (Teja, 20 Nov 2026): a laptop's QR box, the day and time chips */
+  .desk { margin: 16px 0 0; padding: 16px; border: 1px solid var(--border); border-radius: var(--r-card); display: grid; grid-template-columns: 132px 1fr; gap: 16px; align-items: center; }
+  .desk[hidden], .msg[hidden] { display: none; }
+  .desk .qr svg { display: block; width: 132px; height: 132px; }
+  .desk p { margin: 0 0 6px; font-size: 15px; line-height: 1.5; color: var(--text-2); }
+  .desk p b { color: var(--ink); }
+  .desk .gate-url { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+  @media (max-width: 480px) { .desk { grid-template-columns: 1fr; } }
+  .subq { font: 700 16px/1.35 var(--font-ui); margin: 16px 0 8px; }
+  .wopts { display: flex; flex-wrap: wrap; gap: 8px; }
+  .wopt { min-height: 44px; padding: 10px 16px; border: 1px solid var(--border-2); border-radius: var(--r-ctl); background: #fff; cursor: pointer; font: 400 15px/1.2 var(--font-ui); color: var(--ink); }
+  .wopt:hover { background: var(--band); }
+  .wopt[aria-checked="true"] { background: var(--ink); border-color: var(--ink); color: #fff; font-weight: 700; }
+  .wopt:disabled { color: var(--disabled); cursor: not-allowed; background: #fff; }
 </style>
 </head>
 <body>
@@ -210,6 +224,10 @@
         <div class="row-btns"><button type="button" class="btn btn-primary btn-lg" id="draft-send">Send it now</button><button type="button" class="btn btn-secondary btn-lg" id="draft-drop">Discard it</button></div>
         <p class="msg" id="draft-msg" hidden></p>
       </div>
+      <div class="desk" id="desk" hidden>
+        <div class="qr" id="desk-qr" aria-hidden="true"></div>
+        <div><p><b>Best on your phone, at the flooded place.</b> Scan the code with your phone's camera.</p><p>Or report, here, a flood you saw yourself in the last 7 days.</p><p class="gate-url" id="desk-url"></p></div>
+      </div>
       <button type="button" class="btn btn-primary btn-lg start-btn" id="start-go">Start</button>
       <p class="res-h"><span class="meta" id="reports-meta"></span></p>
       <a class="btn btn-secondary btn-lg see-data" href="reports/" id="see-map">See data <svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
@@ -223,11 +241,14 @@
       </div>
     </section>
 
-    <!-- not at the place: reports come from people who can see the water -->
+    <!-- not at the place: a flood the person saw in the last 7 days, marked on a map, "from memory" (Teja, 20 Nov 2026) -->
     <section class="step" data-step="nothere">
-      <h2 class="qt">Come back when you're there</h2>
-      <p class="hint">Reports come from people who can see the water, so the map shows flooding as it happens.</p>
-      <a class="btn btn-secondary btn-lg see-data" href="reports/">See data <svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+      <h2 class="qt">Did you see it in the last 7 days?</h2>
+      <p class="hint">You can still report a flood you saw yourself: mark the place on a map and tell us when it was. It is shown as "from memory".</p>
+      <div class="stack">
+        <button type="button" class="btn btn-primary btn-lg" id="mem-go">Report a flood I saw</button>
+        <a class="btn btn-secondary btn-lg" href="reports/">See data <svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+      </div>
     </section>
 
     <!-- locate: explain before the phone asks -->
@@ -245,6 +266,16 @@
     <section class="step" data-step="mark">
       <h2 class="qt">Put the pin on the water</h2>
       <div id="markbox"></div>
+    </section>
+
+    <!-- from memory: when was it? the last 7 days, and the part of the day -->
+    <section class="step" data-step="when">
+      <h2 class="qt">When was it?</h2>
+      <p class="hint">A flood you saw yourself, in the last 7 days.</p>
+      <p class="subq" id="when-day-l">Day</p>
+      <div class="wopts" role="radiogroup" aria-labelledby="when-day-l" id="when-day"></div>
+      <p class="subq" id="when-part-l">Time of day</p>
+      <div class="wopts" role="radiogroup" aria-labelledby="when-part-l" id="when-part"></div>
     </section>
 
     <!-- spot: the phone's location; the dot moves up to 100 m (standing somewhere safe nearby) -->
@@ -366,12 +397,23 @@
   </div>
 </footer>
 
-<script src="../assets/common.js?v=20261119a"></script>
+<script src="../assets/common.js?v=20261120b"></script>
 <script type="module">
-import { mapMark } from '../assets/map-mark.js?v=20261119a';
-// Report flooding, at the place (Teja, 16 Nov 2026): phones only, the phone's location (the dot moves up to 100 m), time = now.
+import { mapMark } from '../assets/map-mark.js?v=20261120b';
+// Report flooding, at the place (Teja, 16 Nov 2026): the phone's location (the dot moves up to 100 m), time = now.
+// Since 20 Nov 2026 also from memory: a flood the person saw in the last 7 days, marked on a map with the day and the
+// part of the day, from a laptop (which also shows the code for a phone) or a phone that isn't at the place.
 const $ = (id) => document.getElementById(id);
-Contribute.phoneOnly({ what: 'Flooding', mapHref: 'reports/', mapLabel: 'See the reports so far' });
+const PHONE = matchMedia('(hover: none) and (pointer: coarse)').matches
+  || (/^(localhost|127\.0\.0\.1)$/.test(location.hostname) && new URLSearchParams(location.search).has('desk'));
+if (!PHONE) {
+  const url = location.origin + location.pathname;
+  $('desk').hidden = false; $('desk-url').textContent = url.replace(/^https?:\/\//, ''); $('start-go').textContent = 'Report a flood I saw';
+  const qr = document.createElement('script');
+  qr.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js';
+  qr.onload = () => { try { const q = window.qrcode(0, 'M'); q.addData(url); q.make(); $('desk-qr').innerHTML = q.createSvgTag({ cellSize: 5, margin: 2, scalable: true }); } catch { /* the address is shown too */ } };
+  document.head.append(qr);
+}
 
 // ── depth pictures: a house door, a person and a car to one scale (1 px = 3 cm, ground at y = 82);
 //    the water is the reservoir pages' two drifting wave layers (stills under reduced motion) ──
@@ -455,8 +497,14 @@ const wardText = (w) => w ? `${w.name} ward${w.zone ? ', ' + w.zone + ' zone' : 
 const S = { here: null, mode: null, loc: null, acc: null, ward: null, pick: null, depth: null, flow: null, quality: null, photo: null };
 let cur = 'start', watchId = null, gotFirst = false;
 function steps() {
+  if (S.here === 'known') {                       // from memory: the place on a map, when it was, then the same questions
+    const m = PHONE ? ['start', 'here', 'nothere'] : ['start'];
+    m.push('mark', 'when', 'depth'); if (S.exact) m.push('exact');
+    m.push('flow', 'quality', 'photo', 'note', 'review', 'thanks');
+    return m;
+  }
   const l = ['start', 'here'];
-  if (S.here === 'no') l.push('nothere');         // not at the place: nothing to report now
+  if (S.here === 'no') l.push('nothere');         // not at the place: a flood seen in the last 7 days can still be reported
   if (S.here !== 'yes') return l;
   l.push('locate', S.mode === 'map' ? 'mark' : 'spot', 'depth'); if (S.exact) l.push('exact');
   l.push('flow', 'quality', 'photo', 'note');
@@ -467,7 +515,7 @@ function steps() {
 const OPTIONAL = new Set(['photo', 'note']);
 const filled = (id) => $(id).value.trim().length >= 2;
 function ready(s) {
-  const need = { spot: S.loc, mark: S.loc && S.markOk, depth: S.depth || S.exact, exact: S.touched, flow: S.flow, quality: S.quality,
+  const need = { spot: S.loc, mark: S.loc && S.markOk, when: whenAt(), depth: S.depth || S.exact, exact: S.touched, flow: S.flow, quality: S.quality,
     gpsspot: filled('g-street') && filled('g-landmark'), review: !sending };
   return s in need ? !!need[s] : true;
 }
@@ -487,6 +535,7 @@ function show(s, push = true) {
   updateNext();
   if (s === 'spot') openMap();
   if (s === 'mark') marker.open();
+  if (s === 'when') drawWhen();
   if (s === 'review') { S.fromReview = false; drawReview(); }
   if (s === 'exact') hint();
   if (push) history.pushState({ s }, '', '#' + s);
@@ -517,7 +566,25 @@ function next() {
   if (S.fromReview && cur !== 'review' && !(cur === 'depth' && S.exact)) { S.fromReview = false; return show('review'); }
   go(1);
 }
-$('start-go').onclick = () => show('here');
+$('start-go').onclick = () => PHONE ? show('here') : startMemory();
+// from memory: the place on the map picker (search, a pasted link or coordinates), then when it was
+function startMemory() {
+  stopGps(); Object.assign(S, { here: 'known', mode: 'map', fix: null, acc: null, moved: false, loc: null, markOk: false, day: null, part: null });
+  show('mark');
+}
+$('mem-go').onclick = startMemory;
+const PARTS = [['morning', 'Morning', 9], ['afternoon', 'Afternoon', 14], ['evening', 'Evening', 18.5], ['night', 'Night', 22]];
+const dayStart = (ago) => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ago); return d; };
+const dayLabel = (ago) => ago === 0 ? 'Today' : ago === 1 ? 'Yesterday' : dayStart(ago).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+function partAt(ago, part) { const d = dayStart(ago), h = PARTS.find(p => p[0] === part)[2]; d.setHours(Math.floor(h), h % 1 ? 30 : 0); return d; }
+// the moment the report is about: the chosen day and part of the day; nothing later than now
+function whenAt() { if (S.day == null || !S.part) return null; const t = partAt(S.day, S.part); return t <= new Date() ? t : null; }
+function drawWhen() {
+  $('when-day').innerHTML = [0, 1, 2, 3, 4, 5, 6].map(a => `<button type="button" class="wopt" role="radio" aria-checked="${S.day === a}" data-day="${a}">${dayLabel(a)}</button>`).join('');
+  $('when-part').innerHTML = PARTS.map(([v, l]) => `<button type="button" class="wopt" role="radio" aria-checked="${S.part === v}" data-part="${v}"${S.day != null && partAt(S.day, v) > new Date() ? ' disabled' : ''}>${l}</button>`).join('');
+}
+$('when-day').addEventListener('click', (e) => { const b = e.target.closest('[data-day]'); if (!b) return; S.day = +b.dataset.day; if (S.part && partAt(S.day, S.part) > new Date()) S.part = null; drawWhen(); updateNext(); });
+$('when-part').addEventListener('click', (e) => { const b = e.target.closest('[data-part]'); if (!b || b.disabled) return; S.part = b.dataset.part; drawWhen(); updateNext(); });
 $('exit').onclick = () => { stopGps(); show('start'); };   // leaving the survey stops the location too
 $('back').onclick = () => history.back();
 window.addEventListener('popstate', (e) => show(e.state?.s || 'start', false));
@@ -720,20 +787,21 @@ function drawReview() {
     const g = rough() ? [$('g-street').value.trim(), 'Near ' + $('g-landmark').value.trim(), $('g-spot').value.trim()].filter(x => x && x !== 'Near ') : [];
     const mv = S.moved && S.fix ? `, dot moved ${Math.round(metres(S.fix, S.loc))} m` : '';
     where = `${esc(wardText(S.ward))}${g.length ? `<small>${esc(g.join(', ').replace(', Near ', ', near '))}</small>` : ''}<small>Your location, within about ${acc} m${watchId != null && acc > 30 && !S.moved ? ' (still sharpening)' : ''}${mv}</small>`;
-  } else if (S.mode === 'map' && S.loc) where = `${esc(wardText(S.ward))}<small>Marked on the map</small>`;
+  } else if (S.mode === 'map' && S.loc) where = `${esc(wardText(S.ward))}<small>Marked on the map${S.here === 'known' ? ', from memory' : ''}</small>`;
   else where = 'Not set';
   const rows = [
     ['Where', where, rough() ? 'gpsspot' : S.mode === 'map' ? 'mark' : 'spot', true],
     ['Depth', d ? d.label : '', S.exact ? 'exact' : 'depth'],
     ['Moving', lab('flow'), 'flow'],
     ['Looks', looks, 'quality'],
-    ['When', 'Now', null],
+    S.here === 'known' ? ['When', `${dayLabel(S.day)}, ${S.part}`, 'when'] : ['When', 'Now', null],
     ['Photo', S.photo ? 'Added' : 'None', 'photo'],
     ['Note', $('note').value.trim() || 'None', 'note'],
   ];
   lastRows = rows.map(([k, v, , html]) => [k, html ? v.replace(/<small>/g, ' · ').replace(/<[^>]+>/g, '') : v]);   // kept with an unsent report
   // on screen: a short summary, without "When: now" or an empty note (Teja, 17 Nov 2026)
-  const short = rows.filter(([k]) => k !== 'When' && !(k === 'Note' && !$('note').value.trim()));
+  const short = rows.filter(([k]) => !(k === 'When' && S.here !== 'known') && !(k === 'Note' && !$('note').value.trim()));
+  $('accuracy').textContent = S.here === 'known' ? 'By sending, you confirm this is what you saw, as best you remember it.' : 'By sending, you confirm this is what you saw, to the best of your knowledge.';
   $('review').innerHTML = short.map(([k, v, s, html]) =>
     `<div><dt>${k}</dt><dd${k === 'Note' ? ' class="note"' : ''}>${html ? v : esc(v)}</dd>${s ? `<button type="button" data-go="${s}">Change</button>` : '<span></span>'}</div>`).join('');
   $('review').querySelectorAll('[data-go]').forEach(b => b.onclick = () => { S.fromReview = true; show(b.dataset.go); });
@@ -745,10 +813,11 @@ let sending = false, lastRows = [];
 const store = Contribute.drafts(DRAFT);          // several can wait; each is sent or discarded on its own
 function payload() {
   const g = (id) => rough() ? $(id).value.trim() || null : null;   // road and landmark only when the location is rough
-  return { survey: 'flood', version: 3, here: 'yes', place_type: S.mode === 'map' ? 'map' : 'gps',
+  const known = S.here === 'known';
+  return { survey: 'flood', version: 4, here: known ? 'known' : 'yes', place_type: S.mode === 'map' ? 'map' : 'gps',
     lat: S.loc?.lat, lng: S.loc?.lng, accuracy_m: S.acc != null ? Math.round(S.acc) : null, moved_m: S.mode === 'map' ? null : S.fix && S.loc ? Math.round(metres(S.fix, S.loc)) : 0,
     ward: S.ward?.name || null, place: null, street: g('g-street'), landmark: g('g-landmark'), address_more: g('g-spot'),
-    depth_cm: S.depth, depth_exact: !!S.exact, flow: S.flow, quality: S.quality, observed_at: (S.at || new Date()).toISOString(),
+    depth_cm: S.depth, depth_exact: !!S.exact, flow: S.flow, quality: S.quality, observed_at: ((known ? whenAt() : S.at) || new Date()).toISOString(),
     note: $('note').value.trim() || null, photo: S.photo || null };
 }
 const spam = Contribute.spamCheck($('ts-review'));
@@ -805,7 +874,7 @@ fetch(`${window.CONTRIBUTE.API}/flood/reports.json`, { cache: 'no-cache' }).then
   const last = f.map(x => x.properties.observed_at).sort().pop();
   if (f.length) $('reports-meta').textContent = `So far: ${f.length} report${f.length > 1 ? 's' : ''}${last ? ', latest ' + new Date(last).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' }) : ''}`;
 }).catch(() => {});
-if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__test = { S, show, onFix, wardAt, setExact, store, placePin };   // local checks only
+if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__test = { S, show, onFix, wardAt, setExact, store, placePin, whenAt, startMemory };   // local checks only
 </script>
 </body>
 </html>

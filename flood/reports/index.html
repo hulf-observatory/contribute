@@ -324,7 +324,7 @@ const HOW = { gps: (p) => `Phone location${p.accuracy_m != null ? `, within abou
 // "don't know" (flow dk, look cant_say) isn't an answer: left out of the summary
 const waterOf = (p) => { const f = p.flow === 'dk' ? '' : FLOW[p.flow] || esc(p.flow || ''), q = [].concat(p.quality || []).filter(x => x && x !== 'cant_say').map(x => QUAL[x] || esc(x)).join(', ');
   return [f, q].filter(Boolean).join(', '); };
-const extraOf = (p) => [p.located === 'social' ? 'From social media' : '', p.photo ? 'Photo' : '', p.note ? 'Note' : '', p.confirmed ? `✓ ${p.confirmed}` : ''].filter(Boolean).join(' · ');
+const extraOf = (p) => [p.located === 'social' ? 'From social media' : p.located === 'memory' ? 'From memory' : '', p.photo ? 'Photo' : '', p.note ? 'Note' : '', p.confirmed ? `✓ ${p.confirmed}` : ''].filter(Boolean).join(' · ');
 // a row: depth colour, the area, when and where, depth and water; tap to open its details (photo, note, feedback)
 function drawList() {
   if (!shown.length) { $('rows').innerHTML = '<li class="empty">No reports in this period. Choose a longer period.</li>'; $('more-btn').hidden = true; return; }
@@ -369,7 +369,7 @@ function pick(id) {
   const p = f.properties, [d, t] = whenOf(p), [a, z] = areaOf(p);
   map.setFilter('r-on', ['==', ['get', 'id'], id]);
   map.easeTo({ center: f.geometry.coordinates, zoom: Math.max(map.getZoom(), 13.5), duration: 1600 });
-  $('float-body').innerHTML = `<b>${esc(depthOf(p))}</b>${d}, ${t}<br>${esc(a)}${z ? ' · ' + esc(z) : ''}${waterOf(p) ? '<br>' + waterOf(p) : ''}${p.located === 'social' ? '<br>From social media' : ''}<div class="more" style="margin-top:10px;grid-template-columns:1fr">${moreHtml(f).replace(/<span class="onmap">[^]*?<\/span>/, '')}</div>`;
+  $('float-body').innerHTML = `<b>${esc(depthOf(p))}</b>${d}, ${t}<br>${esc(a)}${z ? ' · ' + esc(z) : ''}${waterOf(p) ? '<br>' + waterOf(p) : ''}${p.located === 'social' ? '<br>From social media' : p.located === 'memory' ? '<br>From memory: seen within the week before it was sent' : ''}<div class="more" style="margin-top:10px;grid-template-columns:1fr">${moreHtml(f).replace(/<span class="onmap">[^]*?<\/span>/, '')}</div>`;
   $('float').hidden = false; loadPhoto($('float'), id); wireFb();
 }
 $('float-x').onclick = () => { $('float').hidden = true; map.setFilter('r-on', ['==', ['get', 'id'], -1]); };
