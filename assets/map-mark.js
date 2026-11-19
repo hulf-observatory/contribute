@@ -1,7 +1,7 @@
 // Mark a place on a map with a fixed pin in the centre: move the map until the pin sits on the place. Offered when
 // the phone's location fails (Teja, 16 Nov 2026). A search box moves the map to an area or road first; a pasted
 // Google Maps link or coordinates jump straight to the place (Teja, 20 Nov 2026).
-import { createPlaceSearch } from './place-search.js?v=20261123a';
+import { createPlaceSearch } from './place-search.js?v=20261124a';
 
 const C = window.CONTRIBUTE;
 const STYLE = 'https://tiles.openfreemap.org/styles/positron';
@@ -39,8 +39,10 @@ function loadMapLib() {
 // areas: false leaves the wards and zones out of the search (Teja, 19 Nov 2026: people don't know ward names, and a ward
 // showed beside the village or locality of the same name); places then come from OpenStreetMap only, and the wards in
 // their second lines ("Ward 98 Ameerpet, Ameerpet mandal") go too.
-// onPick({ lat, lng }): optional; a place was chosen from the search, or pasted (the map has gone there).
-export function mapMark(host, { onChange, onPick = null, label = 'Search an area, or paste a Google Maps link or coordinates', points = null, mark = 'pin', areas = true } = {}) {   // mark: what the centre mark is called in the hints
+// found: true shows "Found: Ameerpet" under the search box after a place is chosen (the page must have room for the line).
+// onPick({ lat, lng, name }): optional; a place was chosen from the search (then with its name), or pasted (the map has
+// gone there, or goes there once it has loaded).
+export function mapMark(host, { onChange, onPick = null, label = 'Search an area, or paste a Google Maps link or coordinates', points = null, mark = 'pin', areas = true, found = false } = {}) {   // mark: what the centre mark is called in the hints
   const n = Math.random().toString(36).slice(2, 7);
   host.innerHTML = `<div class="field mm-field"><label class="field-label" for="mm-q-${n}">${label}</label>
       <div class="search"><input class="inp" type="search" id="mm-q-${n}" placeholder="Ameerpet, or a link, or 17.4178, 78.4487"><div class="ps-results" id="mm-r-${n}" hidden></div></div>
@@ -52,7 +54,10 @@ export function mapMark(host, { onChange, onPick = null, label = 'Search an area
       </div></div>
     <p class="picked mm-hint" id="mm-hint-${n}"></p>`;
   const $ = (id) => document.getElementById(`${id}-${n}`);
-  let map = null, list = [];
+  let map = null, list = [], pending = null;
+  // a place chosen before the map has loaded (a slow connection) waits for it (Teja, 19 Nov 2026: "sometimes clicking on
+  // the name is not taking it")
+  const moveTo = (center, zoom) => { if (map) map.jumpTo({ center, zoom }); else pending = { center, zoom }; };
   if (areas) fetch(C.AREAS_URL).then(r => r.json()).then(a => {
     const zones = a.zones || [];
     list = zones.map(z => ({ name: z.name, kind: 'Zone', bbox: z.bounds }))
@@ -64,10 +69,9 @@ export function mapMark(host, { onChange, onPick = null, label = 'Search an area
   let asked = 0;
   function goTo({ lat, lng }) {
     if (!inside(lng, lat)) return say('That place is outside the Hyderabad area (HMDA).');
-    if (!map) return;
-    map.jumpTo({ center: [lng, lat], zoom: MARK_ZOOM + 2 });
-    $('mm-q').value = ''; $('mm-r').hidden = true;
-    say(`Found it: ${lat.toFixed(5)}, ${lng.toFixed(5)}. Move the map if the ${mark} isn't quite on the place.`);
+    moveTo([lng, lat], MARK_ZOOM + 2);
+    $('mm-q').value = ''; $('mm-r').hidden = true; $('mm-q').blur();
+    say(`Found: ${lat.toFixed(5)}, ${lng.toFixed(5)}`);   // one line; the hint under the map says the rest
     if (onPick) onPick({ lat, lng });
   }
   $('mm-q').addEventListener('input', async (e) => {
@@ -86,10 +90,17 @@ export function mapMark(host, { onChange, onPick = null, label = 'Search an area
         : r.status === 429 ? 'Too many links just now. Try again in a minute, or paste the coordinates.' : "That doesn't look like a Google Maps link. Paste the coordinates instead.");
     } catch { if (mine === asked) say("We couldn't check the link just now. Paste the coordinates, or find the place on the map."); }
   });
+  const short = (s) => s.length > 30 ? s.slice(0, 29).trim() + '…' : s;   // one line under the search box
   const isWard = (s) => /^ward\s*(no\.?\s*)?\d+/i.test(s.trim());
   const noWards = (p) => isWard(p.name) ? null : { ...p, context: p.context.split(',').filter(x => !isWard(x)).map(x => x.trim()).join(', ') };
   createPlaceSearch({ input: $('mm-q'), results: $('mm-r'), local: () => list, getMap: () => map, marker: { set() {}, clear() {} }, tidy: areas ? null : noWards,
-    onSelect: (p) => { if (map) map.jumpTo({ center: p.center, zoom: MARK_ZOOM + 1 }); if (onPick && p.center) onPick({ lng: p.center[0], lat: p.center[1] }); } });   // street level at once: only a nudge left
+    onSelect: (p) => {                            // street level at once: only a nudge left
+      if (!p.center) return;
+      moveTo(p.center, MARK_ZOOM + 1);
+      $('mm-q').blur();                           // the phone's keyboard closes: it hid the map, so the tap seemed to do nothing
+      if (found) say(`Found: ${short(p.name)}`);
+      if (onPick) onPick({ lng: p.center[0], lat: p.center[1], name: short(p.name) });
+    } });
   function report() {
     const c = map.getCenter(), z = map.getZoom(), inArea = inside(c.lng, c.lat), ok = z >= MARK_ZOOM - .01 && inArea;
     $('mm-hint').textContent = !inArea ? `The ${mark} is outside the Hyderabad area (HMDA).` : ok ? `The place is under the ${mark}. Move the map to adjust.`
@@ -109,6 +120,7 @@ export function mapMark(host, { onChange, onPick = null, label = 'Search an area
         maxBounds: [77.6, 16.6, 79.5, 18.3], attributionControl: { compact: true } });
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
       map.on('moveend', report); map.on('load', report);
+      if (pending) { map.jumpTo(pending); pending = null; }   // its moveend reports the place at once, before the tiles have come
       $('mm-zoom-b').onclick = () => map.easeTo({ zoom: MARK_ZOOM + 1, duration: 500 });   // street level, where the map is centred
       if (points) map.on('load', () => {
         map.addSource('mm-pts', { type: 'geojson', data: points() });
@@ -123,6 +135,7 @@ export function mapMark(host, { onChange, onPick = null, label = 'Search an area
       });
     },
     jump(lng, lat, zoom = 17) { if (map) map.jumpTo({ center: [lng, lat], zoom }); },
+    say,                                           // a line under the search box; '' clears it
     focus() { $('mm-q').focus(); },                // the search box: "Search for the area" starts by typing
   };
   if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__mapMark = api;   // local checks only

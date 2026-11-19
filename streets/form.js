@@ -11,7 +11,7 @@
 // no north or south: face the road, we work out the side (compass, else the nearest side) and say it with a landmark;
 // the person says yes or no. One thing leads to the next (a broken-footpath report → the footpath's questions, filled
 // in). A laptop sees the code for a phone and can add a place it knows on the map.
-import { mapMark } from '../assets/map-mark.js?v=20261123a';
+import { mapMark } from '../assets/map-mark.js?v=20261124a';
 import { SURVEY, SETS, ITEM, MIN, allQs, shown, real, nAnswered, optLabel, PROBLEMS, BLOCKED_BY, NEEDS, problemName, needName, REQUEST_COLOR,
   POINTS, VIEW_COLORS, footColor, crossColor, metres, angle, outward, bearingNear, inHmda, esc, player, checkPlayer,
   PLAYER_SAYS, currentOf, profileLines } from '../walking/questions.js?v=20261120a';
@@ -217,13 +217,15 @@ async function openMark() {
   $('mark-h').textContent = search ? 'Search for the area' : 'Pick the place';
   $('mark-hint').textContent = search ? (S.want === 'stop' ? "The map of the area's bus stops opens next." : walk ? 'Then put the dot on the side of the road you mean.' : 'Then move the map so the dot is on the place.')
     : walk ? 'Put the dot on the side of the road you mean.' : 'Move the map so the dot is on the place.';
+  marker.say('');                                   // back on this screen: nothing is being looked up
   await marker.open();
   if (search && cur === 'mark') marker.focus();
 }
 // a bus stop is then chosen on the next map, so an area found by searching goes straight on to it (area: the map opens on
 // the neighbourhood, not on one spot). Everything else needs the dot put on the exact place first.
-function markPicked({ lat, lng }) {
+function markPicked({ lat, lng, name }) {
   if (cur !== 'mark' || S.markMode !== 'search' || S.loading || S.want !== 'stop' || !inHmda(lng, lat)) return;
+  marker.say(name ? `Looking at what is around ${name}…` : 'Looking at what is around…');   // under the search box: the button that says so can be behind the keyboard
   S.place = { lat, lng, acc: null, memory: true, area: true }; loadPlace();
 }
 // just looking: every question the form asks, in one list; nothing to answer, nothing sent (Teja, 19 Nov 2026)
@@ -242,7 +244,7 @@ function openLook() {
   show('look');
 }
 document.querySelectorAll('[data-fakeplace]').forEach(a => a.onclick = (e) => { e.preventDefault(); const [lat, lng] = a.dataset.fakeplace.split(',').map(Number); begin({ lat, lng, acc: 8, memory: false }); });
-const marker = mapMark($('markbox'), { mark: 'dot', areas: false, label: 'Search, or paste a Google Maps link', onPick: (pl) => markPicked(pl), onChange: ({ lat, lng, ok }) => { S.mark = { lat, lng, ok }; updateNext(); } });
+const marker = mapMark($('markbox'), { mark: 'dot', areas: false, found: true, label: 'Search, or paste a Google Maps link', onPick: (pl) => markPicked(pl), onChange: ({ lat, lng, ok }) => { S.mark = { lat, lng, ok }; updateNext(); } });
 // a laptop: the code that opens this page on a phone, and "add a place you know" on the map
 if (!PHONE) {
   const url = location.origin + location.pathname;

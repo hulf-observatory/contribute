@@ -396,6 +396,7 @@
     body.q-mode .steps .choice.plain { padding: 8px 14px; }
     body.q-mode .step[data-step="mark"] .hint { margin-bottom: 10px; }
     body.q-mode .step[data-step="mark"] .mm-box { height: 32vh; min-height: 150px; }
+    body.q-mode .step[data-step="mark"] .mm-field:has(.mm-paste:not([hidden])) + .mm-box { height: calc(32vh - 30px); min-height: 124px; }   /* room for the line under the search box ("Found: Ameerpet") */
     body.q-mode .step[data-step="mark"] .mm-hint { margin-top: 8px; font-size: 13px; line-height: 1.4; }
     body.q-mode #choices .choice.plain { min-height: 44px; padding: 6px 14px; }
     body.q-mode #leadlist .answer { min-height: 48px; padding: 7px 14px; font-size: 16px; }
@@ -665,6 +666,6 @@
 </footer>
 
 <script src="../assets/common.js?v=20261120a"></script>
-<script type="module" src="form.js?v=20261123a"></script>
+<script type="module" src="form.js?v=20261124a"></script>
 </body>
 </html>

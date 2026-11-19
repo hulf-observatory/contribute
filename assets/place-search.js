@@ -6,8 +6,9 @@
 //   spatial data repository/js/place-search.js        (maps viewer)
 //   city timeline/place-search.js                      (City Timeline)
 //   accessibility atlas/frontend/js/place-search.js    (Accessibility Atlas)
-// The Contribute forms (contribute/assets/place-search.js) hold a fourth copy with one addition, the `tidy`
-// option (19 Nov 2026); the check script doesn't cover it.
+// The Contribute forms (contribute/assets/place-search.js) hold a fourth copy with two changes (19 Nov 2026): the
+// `tidy` option, and a row under the pointer is marked without scrolling the list (on a phone a tap on a half-hidden
+// row scrolled it under the finger). The check script doesn't cover it.
 //
 // What it does, the same in every app:
 //   - local matches first, from a list the host app already has
@@ -253,13 +254,13 @@ export function createPlaceSearch(opts) {
     try { if (opts.onToggle) opts.onToggle(v); else results.hidden = !v; } catch { /* ignore */ }
   }
 
-  function setActive(i) {
+  function setActive(i, scroll = true) {
     active = items.length ? Math.max(-1, Math.min(items.length - 1, i)) : -1;
     [...list.children].forEach((li, j) => {
       const on = j === active;
       li.classList.toggle('ps-active', on);
       li.setAttribute('aria-selected', String(on));
-      if (on) li.scrollIntoView({ block: 'nearest' });
+      if (on && scroll) li.scrollIntoView({ block: 'nearest' });
     });
     if (active >= 0) input.setAttribute('aria-activedescendant', id + '-o' + active);
     else input.removeAttribute('aria-activedescendant');
@@ -292,7 +293,7 @@ export function createPlaceSearch(opts) {
     }
     // keep focus in the input while clicking (so the list does not close first)
     li.addEventListener('mousedown', (e) => e.preventDefault());
-    li.addEventListener('mousemove', () => { if (active !== i) setActive(i); });
+    li.addEventListener('mousemove', () => { if (active !== i) setActive(i, false); });   // a touch sends this too: the list must not move under the finger
     li.addEventListener('click', () => select(i));
     return li;
   }
