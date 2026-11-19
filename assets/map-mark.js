@@ -41,7 +41,11 @@ export function mapMark(host, { onChange, label = 'Search an area, or paste a Go
   host.innerHTML = `<div class="field mm-field"><label class="field-label" for="mm-q-${n}">${label}</label>
       <div class="search"><input class="inp" type="search" id="mm-q-${n}" placeholder="Ameerpet, or a link, or 17.4178, 78.4487"><div class="ps-results" id="mm-r-${n}" hidden></div></div>
       <p class="picked mm-paste" id="mm-paste-${n}" style="margin:6px 0 0" hidden></p></div>
-    <div class="map-box mm-box"><div class="mm-map" id="mm-map-${n}"></div><span class="centre-pin" aria-hidden="true"></span></div>
+    <div class="map-box mm-box"><div class="mm-map" id="mm-map-${n}"></div><span class="centre-pin" aria-hidden="true"></span>
+      <div id="mm-zoom-${n}" hidden style="position:absolute;left:10px;right:54px;top:10px;z-index:4;display:none;align-items:center;gap:10px;padding:9px 12px;background:rgba(255,255,255,.96);border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.06),0 8px 24px rgba(0,0,0,.08);font:700 14px/1.3 Lato,sans-serif;color:#111827">
+        <span id="mm-zoom-t-${n}" style="flex:1"></span>
+        <button type="button" id="mm-zoom-b-${n}" style="flex:none;min-height:36px;padding:0 12px;border:1px solid #111827;border-radius:4px;background:#111827;color:#fff;font:700 13px Lato,sans-serif;cursor:pointer">Zoom in</button>
+      </div></div>
     <p class="picked mm-hint" id="mm-hint-${n}"></p>`;
   const $ = (id) => document.getElementById(`${id}-${n}`);
   let map = null, list = [];
@@ -83,6 +87,11 @@ export function mapMark(host, { onChange, label = 'Search an area, or paste a Go
     const c = map.getCenter(), z = map.getZoom(), inArea = inside(c.lng, c.lat), ok = z >= MARK_ZOOM - .01 && inArea;
     $('mm-hint').textContent = !inArea ? `The ${mark} is outside the Hyderabad area (HMDA).` : ok ? `The place is under the ${mark}. Move the map to adjust.`
       : `Search for the area, or zoom in until you can see the street, then move the map until the ${mark} sits on the place.`;
+    // on the map itself (Teja, 20 Nov 2026): why the place can't be used yet, and a button that zooms in
+    const z0 = $('mm-zoom'), show = !ok;
+    z0.hidden = !show; z0.style.display = show ? 'flex' : 'none';
+    $('mm-zoom-t').textContent = !inArea ? 'This is outside the Hyderabad area.' : 'Zoom in more to use this place.';
+    $('mm-zoom-b').hidden = !inArea; $('mm-zoom-b').style.display = inArea ? '' : 'none';
     onChange && onChange({ lat: c.lat, lng: c.lng, ok });
   }
   const api = {
@@ -93,6 +102,7 @@ export function mapMark(host, { onChange, label = 'Search an area, or paste a Go
         maxBounds: [77.6, 16.6, 79.5, 18.3], attributionControl: { compact: true } });
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
       map.on('moveend', report); map.on('load', report);
+      $('mm-zoom-b').onclick = () => map.easeTo({ zoom: MARK_ZOOM + 1, duration: 500 });   // street level, where the map is centred
       if (points) map.on('load', () => {
         map.addSource('mm-pts', { type: 'geojson', data: points() });
         map.addLayer({ id: 'mm-pts', type: 'circle', source: 'mm-pts', paint: {
