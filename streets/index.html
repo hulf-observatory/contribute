@@ -296,6 +296,32 @@
   #sendbox .small, #sendbox .anon { margin: 8px 0 0; }
   #sendbox #send-msg { margin: 0 0 8px; }
   #hub[hidden], #thanks-join-line[hidden] { display: none; }
+  /* choose on the map: the map fills the screen, a card names the thing picked (20 Nov 2026) */
+  .pk-wrap { position: relative; height: 64vh; min-height: 420px; border: 1px solid var(--border); border-radius: var(--r-card); overflow: hidden; }
+  #pkmap { position: absolute; inset: 0; }
+  .pk-float { position: absolute; z-index: 3; left: 10px; top: 10px; min-height: 36px; padding: 0 12px; border: 0; border-radius: 12px; background: rgba(255,255,255,.96);
+    box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.08); font: 700 13px var(--font-ui); color: var(--ink); cursor: pointer; }
+  .pk-float[hidden] { display: none; }
+  .pk-cards { position: absolute; z-index: 2; left: 0; right: 0; bottom: 0; display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 10px 8% 12px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .pk-cards::-webkit-scrollbar { display: none; }
+  .pk-card { flex: 0 0 min(100%, 380px); scroll-snap-align: center; display: flex; flex-direction: column; min-height: 150px; padding: 12px 14px 14px; background: #fff; border: 2px solid transparent; border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.08); cursor: pointer; }
+  .pk-card.on { border-color: var(--ink); }
+  .pk-card.add { border: 1px dashed var(--border-2); }
+  .pk-card .k { display: flex; justify-content: space-between; gap: 10px; margin: 0 0 2px; font: 900 11px/1.3 var(--font-ui); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .pk-card h3 { margin: 0; font: 700 18px/1.25 var(--font-ui); }
+  .pk-card .s { margin: 2px 0 0; font-size: 14px; line-height: 1.4; color: var(--text-2); }
+  .pk-card .s.m { color: var(--muted); }
+  .pk-card .sp { flex: 1; min-height: 10px; }
+  .pk-btns { display: flex; gap: 8px; }
+  .pk-go { flex: 1; min-height: 44px; padding: 0 10px; border: 1px solid var(--ink); border-radius: var(--r-ctl); background: var(--ink); color: #fff; font: 700 16px var(--font-ui); cursor: pointer; }
+  .pk-go.sec { background: #fff; color: var(--ink); border-color: var(--border-2); }
+  .pk-go[disabled] { background: var(--surface-2); border-color: var(--surface-2); color: var(--muted); cursor: default; }
+  @media (max-width: 767px) {
+    body.q-mode .step[data-step="pick"].on { display: flex; flex-direction: column; overflow: visible; padding-top: 12px; }
+    body.q-mode .step[data-step="pick"] .hint { margin-bottom: 10px; font-size: 14px; }
+    body.q-mode .pk-wrap { flex: 1; min-height: 0; height: auto; margin: 0 -16px; border: 0; border-top: 1px solid var(--border); border-radius: 0; }
+  }
   /* five choices on one phone screen */
   @media (max-width: 767px) { body.q-mode .choice { grid-template-columns: 38px 1fr auto; gap: 12px; padding: 9px 12px; } body.q-mode .choice .gl { width: 38px; height: 38px; }
     body.q-mode .choice b { font-size: 17px; } body.q-mode .choice small { font-size: 13px; margin-top: 1px; } body.q-mode #choices { gap: 8px; } }
@@ -425,13 +451,15 @@
     </section>
 
     <!-- choose the side yourself: from memory, when the compass step can't be done, or to change it (Teja, 20 Nov 2026) -->
-    <section class="step" data-step="sidepick">
-      <h2 class="qt">Which side of the road?</h2>
-      <p class="hint" id="sp-hint">Tap the side you mean, here or on the map.</p>
-      <div id="sp-roads" hidden><p class="qtopic" style="margin:2px 0 6px">Which road?</p><div class="chips" id="sp-roadchips" style="margin-bottom:10px"></div></div>
-      <div class="answers" id="sp-opts" style="gap:8px"></div>
-      <div class="side-map" style="margin-top:12px"><div id="pickmap"></div></div>
-      <p class="small"><a href="#" id="sp-skip">I'm not sure which side</a></p>
+    <!-- choose on the map: a bus stop, a footpath or crossing, or the side of the road (as "sidepick") -->
+    <section class="step" data-step="pick">
+      <h2 class="qt" id="pk-h"></h2>
+      <p class="hint" id="pk-hint"></p>
+      <div class="pk-wrap">
+        <div id="pkmap"></div>
+        <button type="button" class="pk-float" id="pk-home" hidden>Back to where I am</button>
+        <div class="pk-cards" id="pk-cards"></div>
+      </div>
     </section>
 
     <!-- checking something already described -->
@@ -558,6 +586,6 @@
 </footer>
 
 <script src="../assets/common.js?v=20261120a"></script>
-<script type="module" src="form.js?v=20261120q"></script>
+<script type="module" src="form.js?v=20261120v"></script>
 </body>
 </html>

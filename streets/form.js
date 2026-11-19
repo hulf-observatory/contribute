@@ -3,6 +3,8 @@
 // walking forms; the questions, the data and the server calls are the walking survey's (bus stops go into the bus stop
 // data). Start asks for the phone's location (or a place on a map: "from memory") → what to tell us about: a bus stop,
 // a footpath or crossing, a problem, an improvement → what's nearby for that → questions → optional photo → Send.
+// A bus stop, a footpath or crossing and the side of the road are chosen on one screen: the map, with a card for the thing
+// picked (Teja, 20 Nov 2026); the map loads more as it is moved, and what is picked far away is saved as from memory.
 // Each thing is sent on its own; only then "Anything else here?" is asked (Teja, 20 Nov 2026), so it is clear what has gone.
 // The extra questions about a bus stop, footpath or crossing come after sending too ("Tell us more"): their answers join
 // the entry already sent. The side of the road is asked only for a footpath, with
@@ -58,7 +60,7 @@ const CHOICES = {
 const KIND_NAME = { stop: 'Bus stop', foot: 'Footpath', cross: 'Crossing', problem: 'Problem', request: 'Suggestion' };
 
 // ── state: the place, what's around it, the side of the road, the things added in this entry and the checks ──
-const S = { place: null, near: null, side: null, sideSkipped: false, afterFace: null, choice: null, items: [], checks: [], cur: null, last: null, sent: [], doneIds: new Set(), adds: null, picked: { s: [], j: [] } };   // items / checks: what the next Send carries; sent / doneIds: what has gone
+const S = { place: null, near: null, side: null, sideSkipped: false, afterFace: null, choice: null, items: [], checks: [], cur: null, last: null, sent: [], doneIds: new Set(), adds: null, picked: { s: [], j: [], l: [] } };   // items / checks: what the next Send carries; sent / doneIds: what has gone
 let cur = 'start', stack = [], moving = false, sending = false;
 var DONE = false;                                  // sent: Back can't offer Send again
 const isQ = (s) => s.startsWith('q-');
@@ -69,14 +71,16 @@ const curQ = () => allQs(qParts(cur).k).find(q => q.id === qParts(cur).id);
 const adding = () => !!S.adds && S.adds === S.cur;
 const moreNew = (t) => Object.fromEntries(qList(t.k, 'more', t.a).filter(q => t.addSeen.has(q.id) && t.a[q.id] != null).map(q => [q.id, t.a[q.id]]));
 const nMore = () => S.adds ? Object.keys(moreNew(S.adds)).length : 0;
-const TAP_ON = ['start', 'look', 'choose', 'near', 'face', 'check', 'player', 'thanks'];   // 'more' keeps the bottom button: it is Send
-const BAR = { look: 0, sidepick: 30, mark: 8, choose: 15, near: 30, face: 30, check: 55, stopname: 40, pin: 60, blockedby: 60, other: 60, photo: 85, more: 100 };
+const TAP_ON = ['start', 'look', 'choose', 'near', 'pick', 'sidepick', 'face', 'check', 'player', 'thanks'];   // 'more' keeps the bottom button: it is Send
+const BAR = { look: 0, sidepick: 30, pick: 30, mark: 8, choose: 15, near: 30, face: 30, check: 55, stopname: 40, pin: 60, blockedby: 60, other: 60, photo: 85, more: 100 };
 
+const secOf = (s) => s === 'sidepick' ? 'pick' : s;      // "Which side of the road?" is the same screen as the other map choices
 function show(s, push = true) {
   if (DONE && s !== 'thanks') s = 'thanks';
+  if (s === 'near' && (S.choice === 'stop' || S.choice === 'walk')) s = 'pick';   // a bus stop, footpath or crossing is chosen on the map
   if (push && cur !== s) stack.push(cur);
   cur = s;
-  document.querySelectorAll('.step').forEach(x => x.classList.toggle('on', x.dataset.step === s));
+  document.querySelectorAll('.step').forEach(x => x.classList.toggle('on', x.dataset.step === secOf(s)));
   const inQ = !['start', 'thanks', 'player'].includes(s);
   document.body.classList.toggle('q-mode', inQ);
   $('progress').hidden = !inQ; $('nav').hidden = !inQ;
@@ -97,19 +101,18 @@ function show(s, push = true) {
     $('count').textContent = n ? `${n} sent` : '';
   }
   ({ start: drawPlay, mark: () => marker.open(), choose: drawChoose, near: drawNear, face: () => { $('face-ask').hidden = false; $('face-confirm').hidden = true; },
-    pin: openPin, photo: drawPhoto, more: drawMore, blockedby: drawBlocked, sidepick: drawSidePick,
+    pin: openPin, photo: drawPhoto, more: drawMore, blockedby: drawBlocked, sidepick: openPick, pick: openPick,
     thanks: () => { const p = S.noNick ? null : player.get(); $('thanks-prof').hidden = !p; if (p) $('thanks-prof-a').href = profileUrl(p.nick); const j = $('thanks-join-line'); if (j) j.hidden = !!p; drawHub(); },
     player: () => { S.noNick = false; const p = player.get(); $('p-nick').value = p ? p.nick : $('p-nick').value; $('p-pin').value = ''; $('p-msg').hidden = true; playerReady(); } }[s] || (() => {}))();
   updateNext();
   window.scrollTo({ top: 0 });
-  const st = document.querySelector(`.step[data-step="${s}"]`); st.scrollTop = 0;
+  const st = document.querySelector(`.step[data-step="${secOf(s)}"]`); st.scrollTop = 0;
   const h = st.querySelector('.qt, h1'); if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }); }
 }
 function ready() {
   if (cur === 'mark') return !!(S.mark && S.mark.ok);
   if (cur === 'stopname') return $('stop-name').value.trim().length >= 2;
   if (cur === 'pin') return !!S.pinOk;
-  if (cur === 'sidepick') return SP.pick != null;
   if (cur === 'other') return $('ot-text').value.trim().length >= 3;
   if (cur === 'photo') return !few() && !sending;
   if (cur === 'more') return !sending && (S.items.length + S.checks.length > 0 || nMore() > 0);
@@ -125,7 +128,7 @@ function updateNext() {
   if (cur === 'more') { b.textContent = 'Send'; return; }
   if (stop) { b.textContent = nMore() ? 'Stop and send' : 'Not now'; return; }
   const optional = { photo: !(S.cur && (S.cur.photo || S.cur.note)), blockedby: !(S.cur && S.cur.blocked_by && S.cur.blocked_by.length) };
-  b.textContent = cur === 'mark' ? 'Use this place' : cur === 'pin' ? 'Here' : cur === 'sidepick' ? 'This side' : cur === 'photo' ? (optional.photo ? 'Send without a photo' : 'Send') : optional[cur] ? 'Skip' : 'Next';
+  b.textContent = cur === 'mark' ? 'Use this place' : cur === 'pin' ? 'Here' : cur === 'photo' ? (optional.photo ? 'Send without a photo' : 'Send') : optional[cur] ? 'Skip' : 'Next';
   if (cur === 'photo') {
     const f = few(); $('photo-few').hidden = !f;
     if (f) $('photo-few').textContent = `Answer at least ${MIN[S.cur.k]} question${MIN[S.cur.k] > 1 ? 's' : ''} about the ${SETS[S.cur.k].name.toLowerCase()} ("Don't know" doesn't count). Press Back to change an answer.`;
@@ -141,7 +144,6 @@ function next() {
   if (cur === 'mark') { S.place = { lat: S.mark.lat, lng: S.mark.lng, acc: null, memory: true }; return loadPlace(); }
   if (cur === 'stopname') { Object.assign(S.cur, { name: $('stop-name').value.trim(), towards: $('stop-towards').value.trim() }); S.cur.title = S.cur.name + (S.cur.towards ? `, towards ${S.cur.towards}` : ''); return pinThen(() => firstQ()); }
   if (cur === 'pin') { const c = pinMap.getCenter(); Object.assign(S.cur, { lat: c.lat, lng: c.lng }); return S.pinNext(); }
-  if (cur === 'sidepick') { setSide(SP.cs[SP.pick], 'map'); return doneFace(); }
   if (cur === 'blockedby') return show('photo');
   if (cur === 'other') { S.cur.said = $('ot-text').value.trim(); S.cur.title = S.cur.said; return show('photo'); }
   if (cur === 'photo') return finishThing();
@@ -166,7 +168,7 @@ $('exit').onclick = leave;
 
 // ── the first screen: Start asks for the phone's location; "not there" and laptops use the map ──
 function begin(place) {
-  Object.assign(S, { place, near: null, side: null, sideSkipped: false, afterFace: null, choice: null, items: [], checks: [], cur: null, last: null, sent: [], doneIds: new Set(), adds: null, picked: { s: [], j: [] } });
+  Object.assign(S, { place, near: null, side: null, sideSkipped: false, afterFace: null, choice: null, items: [], checks: [], cur: null, last: null, sent: [], doneIds: new Set(), adds: null, picked: { s: [], j: [], l: [] } });
   DONE = false; stack = ['start']; cur = 'start';
   loadPlace();
 }
@@ -233,14 +235,16 @@ async function loadPlace() {
   if (S.afterLoad) { const f = S.afterLoad; S.afterLoad = null; return f(); }   // a choice was tapped before this arrived
   if (cur === 'choose') drawChoose();
   if (cur === 'near') drawNear();
+  if (secOf(cur) === 'pick') openPick();
 }
 // ── beyond the short nearby list (Teja, 20 Nov 2026): the little map loads every bus stop and junction around its middle
 // as it is moved, and any of them can be picked. One picked far away (a stop over 500 m, a junction over 150 m) is saved
 // as "from memory": the person isn't standing there.
-const X = { stops: new Map(), juncs: new Map(), sprof: {}, prof: {}, at: [] };
+const X = { stops: new Map(), juncs: new Map(), roads: new Map(), sprof: {}, prof: {}, at: [] };
 const FAR_STOP = 500;
 function seedX() {
-  X.stops.clear(); X.juncs.clear(); X.sprof = {}; X.prof = {}; X.at = [];
+  X.stops.clear(); X.juncs.clear(); X.roads.clear(); X.sprof = {}; X.prof = {}; X.at = [];
+  for (const s of N().stretches) X.roads.set(s.id, s);
   for (const s of N().stops) X.stops.set(s.id, s);
   for (const j of N().junctions) X.juncs.set(j.id, j);
 }
@@ -255,6 +259,7 @@ async function loadViewAt(lng, lat) {
     const v = await r.json(), P = S.place;
     for (const s of v.stops) if (!X.stops.has(s.id)) X.stops.set(s.id, { ...s, d: Math.round(metres(P, s)) });
     for (const j of v.junctions) if (!X.juncs.has(j.id)) X.juncs.set(j.id, { ...j, d: Math.round(metres(P, { lng: j.c[0], lat: j.c[1] })) });
+    for (const s of v.stretches || []) if (!X.roads.has(s.id)) X.roads.set(s.id, { ...s, d: Math.round(nearestOn(s.c, P).d) });
     Object.assign(X.sprof, v.stop_profiles); Object.assign(X.prof, v.profiles);
     return true;
   } catch { X.at.pop(); return false; }
@@ -294,23 +299,25 @@ function nearestOn(c, p) {                          // distance (m), and which s
     const ax = c[i][0] * cos * M, ay = c[i][1] * 110540, bx = c[i + 1][0] * cos * M, by = c[i + 1][1] * 110540, px = p.lng * cos * M, py = p.lat * 110540;
     const dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy || 1e-9, t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / L2));
     const d = Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
-    if (!best || d < best.d) best = { d, side: dx * (py - ay) - dy * (px - ax) > 0 ? 'l' : 'r' };
+    if (!best || d < best.d) best = { d, side: dx * (py - ay) - dy * (px - ax) > 0 ? 'l' : 'r', pt: [(ax + t * dx) / (cos * M), (ay + t * dy) / 110540] };
   }
-  return best || { d: 1e9, side: 'l' };
+  return best || { d: 1e9, side: 'l', pt: c[0] };
 }
-function cands() {
-  return N().stretches.flatMap(s => s.sides.map(side => {
-    const brg = bearingNear(s.c, S.place);
-    return { stretch: s.id, side, brg, n: outward(brg, side), d: s.d, c: s.c, name: s.name || 'Main road', at: s.at };
-  })).sort((a, b) => a.d - b.d);
+const candOf = (s, side) => { const brg = bearingNear(s.c, S.place); return { stretch: s.id, side, brg, n: outward(brg, side), d: s.d, c: s.c, name: s.name || 'Main road', at: s.at }; };
+const cands = () => N().stretches.flatMap(s => s.sides.map(side => candOf(s, side))).sort((a, b) => a.d - b.d);   // the roads at the place
+// the other side of the same road, across from `m`: among every road the map has loaded, so a road picked far away has one too
+function opposite(m) {
+  const k = m.c[m.c.length >> 1], mid = { lng: k[0], lat: k[1] };
+  return [...X.roads.values()].flatMap(s => s.sides.map(side => candOf(s, side)))
+    .filter(c => c.name === m.name && !(c.stretch === m.stretch && c.side === m.side) && angle(c.n, m.n) > 120)
+    .map(c => ({ c, d: nearestOn(c.c, mid).d })).filter(x => x.d < 80).sort((a, b) => a.d - b.d).map(x => x.c)[0] || null;
 }
-const opposite = (m) => cands().filter(c => c.name === m.name && !(c.stretch === m.stretch && c.side === m.side) && angle(c.n, m.n) > 120)[0] || null;
 const guessSide = (road) => { const cs = cands().filter(c => !road || c.name === road); return cs.find(c => c.side === (c.at || nearestOn(c.c, S.place).side)) || cs[0] || null; };
 // facing the road: the phone points across it, away from the side you stand on
 const byHeading = (h) => cands().sort((a, b) => angle(a.n, (h + 180) % 360) - angle(b.n, (h + 180) % 360) || a.d - b.d)[0] || null;
 // something people recognise on a side: the nearest bus stop that stands on it
 function landmark(c) {
-  return N().stops.map(st => ({ st, n: nearestOn(c.c, st) })).filter(v => v.n.side === c.side && v.n.d < SIDE_M).sort((a, b) => a.st.d - b.st.d).map(v => v.st)[0] || null;
+  return [...X.stops.values()].map(st => ({ st, n: nearestOn(c.c, st) })).filter(v => v.n.side === c.side && v.n.d < SIDE_M).sort((a, b) => a.st.d - b.st.d).map(v => v.st)[0] || null;
 }
 function stopSide(st) {
   if (!S.side) return '';
@@ -318,7 +325,7 @@ function stopSide(st) {
   return n.d > SIDE_M ? '' : n.side === S.side.mine.side ? 'On your side' : 'Opposite side';
 }
 const SIDE_HOW = { compass: 'compass', guess: 'guess', switched: 'switched', map: 'map' };   // as the server names them
-const sideWords = () => S.place.memory ? ['The side you marked', 'The opposite side'] : ['Your side', 'The opposite side'];
+const sideWords = () => S.place.memory || (S.side && S.side.far) ? ['The side you marked', 'The opposite side'] : ['Your side', 'The opposite side'];
 
 // ── which side of the road: asked only when a footpath needs it, once ──
 // Asked once, before a footpath: at the place by facing the road; from memory (or when that can't be done) by choosing
@@ -344,7 +351,8 @@ async function readCompass() {                      // the phone's compass for a
   const x = got.reduce((a, d) => a + Math.cos(d * K), 0), y = got.reduce((a, d) => a + Math.sin(d * K), 0);
   return (Math.atan2(y, x) / K + 360) % 360;
 }
-function setSide(mine, how, deg = null) { S.side = mine ? { mine, other: opposite(mine), how, deg } : null; }
+// far: a road picked on the map away from the place (over 150 m); `at` is the point on it, and the footpath is saved there, from memory
+function setSide(mine, how, deg = null, at = null) { S.side = mine ? { mine, other: opposite(mine), how, deg, far: mine.d > NEAR_JUNCTION_M, at: at || nearestOn(mine.c, S.place).pt } : null; }
 $('facing').onclick = async () => {
   $('facing').disabled = true; $('facing').textContent = 'Reading…';
   const h = await readCompass();
@@ -359,48 +367,170 @@ document.querySelectorAll('[data-sim]').forEach(a => a.onclick = (e) => {
   drawConfirm();
 });
 $('face-skip').onclick = (e) => { e.preventDefault(); const f = S.afterFace; cur = stack.pop() || 'choose'; openSidePick(f); };
-// ── choose the side yourself: two plain choices (named by a bus stop on that side where there is one) and a map to tap ──
-const SP = { road: null, cs: [], pick: null };
-function openSidePick(then) { S.sideSkipped = false; S.afterFace = then; SP.road = S.side ? S.side.mine.name : null; SP.pick = null; show('sidepick'); }
+// ── choose on the map (Teja, 20 Nov 2026): one screen instead of a list and a map apart. The map fills the screen and a
+// card names the thing picked; swipe the cards or tap a dot or a road line; move the map and more loads. The step is
+// `pick` for "Which bus stop?" and "Which footpath or crossing?"; under the name `sidepick` it asks the side of the road. ──
+function openSidePick(then) { S.sideSkipped = false; S.afterFace = then; show('sidepick'); }
 const onSide = (c) => nearestOn(c.c, S.place).side === c.side;         // the dot (you, or the place you picked) is on this side
-function drawSidePick() {
-  const names = [...new Set(cands().map(c => c.name))];
-  if (!SP.road || !names.includes(SP.road)) SP.road = names[0];
-  const a = guessSide(SP.road), b = a && opposite(a);
-  SP.cs = [a, b].filter(Boolean);
-  if (SP.pick == null && S.side) { const i = SP.cs.findIndex(c => c.stretch === S.side.mine.stretch && c.side === S.side.mine.side); if (i >= 0) SP.pick = i; }
-  if (SP.pick == null && S.place.memory) { const i = SP.cs.findIndex(c => c.d < 45 && onSide(c)); if (i >= 0) SP.pick = i; }   // the dot was put on a side
-  $('sp-roads').hidden = names.length < 2;
-  $('sp-roadchips').innerHTML = names.map(nm => `<button type="button" aria-pressed="${nm === SP.road}" data-road="${esc(nm)}">${esc(nm)}</button>`).join('');
-  $('sp-hint').textContent = `On ${SP.road}. Tap the side you mean, here or on the map.`;
-  const mem = S.place.memory;
-  let labels = SP.cs.map(c => { const lm = landmark(c); return lm ? [`The side with the ${lm.name} bus stop`, lm.towards ? `Buses towards ${lm.towards}` : ''] : [onSide(c) ? (mem ? 'The side where you put the dot' : 'The side the blue dot is on') : 'The opposite side', '']; });
-  if (labels.length === 2 && labels[0][0] === labels[1][0]) labels = [[`The side nearer the ${mem ? '' : 'blue '}dot`, ''], ['The side farther from it', '']];
-  $('sp-opts').innerHTML = SP.cs.map((c, i) => `<button type="button" class="answer" role="radio" aria-checked="${SP.pick === i}" data-sp="${i}"><span>${esc(labels[i][0])}${labels[i][1] ? `<small>${esc(labels[i][1])}</small>` : ''}</span><i class="tick"></i></button>`).join('');
-  drawPickMap(); updateNext();
+const PK = { map: null, me: null, items: [], sel: null, home: null, acts: [], tap: {}, was: '' };
+const pkMode = () => cur === 'sidepick' ? 'side' : S.choice;           // side | stop | walk
+const sideKey = (c) => `l:${c.stretch}:${c.side}`;
+const profLine = (p) => p ? `${people(p.n)} · ${day(p.seen)}` : 'No details yet';
+function stopItem(st) {
+  const p = sprofOf(st.id);
+  return { key: 's:' + st.id, k: 'Bus stop', tag: stopSide(st), t: st.name, pos: [st.lng, st.lat], done: !!p && checked(p.latest),
+    lines: [`${away(st.d)}${st.towards ? ' · buses towards ' + st.towards : ''}`, st.d > FAR_STOP && !S.place.memory ? FAR_SAYS : ''], meta: profLine(p),
+    btns: [[p ? 'Check' : 'Describe', () => startStop(st)]] };
 }
-$('sp-opts').addEventListener('click', (e) => { const b = e.target.closest('[data-sp]'); if (!b) return; SP.pick = +b.dataset.sp; drawSidePick(); });
-$('sp-roadchips').addEventListener('click', (e) => { const b = e.target.closest('[data-road]'); if (!b) return; SP.road = b.dataset.road; SP.pick = null; drawSidePick(); });
-$('sp-skip').onclick = (e) => { e.preventDefault(); S.side = null; S.sideSkipped = true; doneFace(); };
-let pmap = null, pMe = null;
-const pickGeo = () => ({ type: 'FeatureCollection', features: SP.cs.map((c, i) => ({ type: 'Feature', properties: { i, side: c.side, on: i === SP.pick ? 1 : 0 }, geometry: { type: 'LineString', coordinates: c.c } })) });
-function drawPickMap() {
+function junctionItem(j) {
+  const p = jprofOf(j.id);
+  return { key: 'j:' + j.id, k: 'Crossing', t: j.name, pos: j.c, done: !!p && checked(p.latest), lines: [away(j.d), j.d > NEAR_JUNCTION_M && !S.place.memory ? FAR_SAYS : ''], meta: profLine(p),
+    btns: [[p ? 'Check' : 'Describe', () => p ? showCheck({ kind: 'junction', j, p, title: j.name }) : startThing('cross', crossCtx(j))]] };
+}
+function footItem(c, word, which) {                 // a side of the road chosen before: its footpath
+  const p = jprofOf(`${c.stretch}:${c.side}`), v = p ? footColor(currentOf(p)) : null, lm = landmark(c), ctx = sideCtx(c, which, word);
+  return { key: sideKey(c), k: 'Footpath', t: word, line: c, col: p ? (v ? VIEW_COLORS[v] : '#8C8C8C') : '#6B7280', done: !!p && checked(p.latest),
+    pos: nearestOn(c.c, { lng: S.side.at[0], lat: S.side.at[1] }).pt, lines: [`${c.name}${lm ? ` · the ${lm.name} bus stop side` : ''}`, S.side.far && !S.place.memory ? FAR_SAYS : ''], meta: profLine(p),
+    btns: [[p ? 'Check' : 'Describe', () => p ? showCheck({ kind: 'side', p, ctx, title: ctx.title }) : startThing('foot', ctx)]] };
+}
+function sideItem(c) {                              // "Which side of the road?": one side of one main road
+  const lm = landmark(c), mem = S.place.memory, here = c.d <= 80, key = sideKey(c);
+  const label = lm ? `The side with the ${lm.name} bus stop` : !here ? 'The side shown dark on the map' : onSide(c) ? (mem ? 'The side where you put the dot' : 'The side the blue dot is on') : 'The opposite side';
+  const pos = PK.tap[key] || nearestOn(c.c, S.place).pt;
+  return { key, k: 'Side of the road', t: c.name, line: c, col: '#6B7280', pos, lines: [label, lm && lm.towards ? `Buses towards ${lm.towards}` : '', c.d > NEAR_JUNCTION_M && !mem ? FAR_SAYS : ''],
+    btns: [['This side', () => { setSide(c, 'map', null, pos); doneFace(); }]] };
+}
+function pkItems() {
+  const mode = pkMode(), n = N(), out = [], add = (k, t, line, label, fn) => out.push({ key: 'add', add: true, k, t, lines: [line], btns: [[label, fn, true]] });
+  if (mode === 'stop') {
+    const near = n.stops.filter(x => x.d <= 300).slice(0, 6), ids = new Set(near.map(s => s.id));
+    const all = [...near, ...S.picked.s.map(id => X.stops.get(id)).filter(s => s && !ids.has(s.id))].map(stopItem);   // and those picked on the map
+    out.push(...all.sort((a, b) => (a.tag === 'On your side' ? 0 : 1) - (b.tag === 'On your side' ? 0 : 1)));
+    add('Not here?', "My stop isn't on the map", 'Put it on the map and describe it', 'Add a stop', () => { $('stop-name').value = ''; $('stop-towards').value = ''; S.cur = newThing('stop', { missing: true }); show('stopname'); });
+  } else if (mode === 'walk') {
+    if (S.side) { const [w1, w2] = sideWords(); for (const [c, word, which] of [[S.side.mine, w1, 'mine'], [S.side.other, w2, 'other']]) if (c) out.push(footItem(c, word, which)); }
+    else out.push({ key: 'here', k: 'Footpath', t: 'The footpath here', pos: [S.place.lng, S.place.lat], lines: [n.stretches.length ? 'Side of the road not chosen' : 'A smaller street: saved as a single spot'],
+      btns: [['Describe', () => startThing('foot', { title: 'The footpath here' })], ...(n.stretches.length ? [['Choose side', () => openSidePick(() => show('near')), true]] : [])] });
+    for (const r of rowsOf('spot')) out.push({ key: 'r:' + r.id, k: 'Footpath', t: 'A footpath spot someone described', pos: [r.lng, r.lat], done: checked(r.id), lines: [`${r.d} m away · seen ${day(r.seen)}`],
+      btns: [['Check', () => showCheck({ kind: 'spot', row: r, title: 'The footpath here' })]] });
+    const near = junctions(), ids = new Set(near.map(j => j.id));
+    for (const j of [...near, ...S.picked.j.map(id => X.juncs.get(id)).filter(j => j && !ids.has(j.id))]) out.push(junctionItem(j));
+    for (const r of rowsOf('crossing')) out.push({ key: 'r:' + r.id, k: 'Crossing', t: 'A crossing between junctions', pos: [r.lng, r.lat], done: checked(r.id), lines: [`${r.d} m away · seen ${day(r.seen)}`],
+      btns: [['Check', () => showCheck({ kind: 'crossing', row: r, title: 'A crossing between junctions' })]] });
+    add('Not here?', 'A crossing between junctions', 'Where people cross, away from a junction', 'Add a crossing here', () => { S.cur = newThing('cross', { between: true, title: 'A crossing between junctions' }); pinThen(() => firstQ()); });
+  } else {
+    const first = S.side ? S.side.mine : guessSide(), cs = cands().slice(0, 6), keys = new Set();
+    const order = [first, first && opposite(first), ...cs, ...S.picked.l.map(k => { const [id, side] = k.split(':'), r = X.roads.get(id); return r ? candOf(r, side) : null; })];
+    for (const c of order) if (c && !keys.has(sideKey(c))) { keys.add(sideKey(c)); out.push(sideItem(c)); }
+    add('Not sure?', "I'm not sure which side", 'The footpath is then saved as a single spot, with no side', 'Go on without a side', () => { S.side = null; S.sideSkipped = true; doneFace(); });
+  }
+  return out;
+}
+function pkDraw(keep) {
+  PK.items = pkItems(); PK.acts = [];
+  if (!keep || !PK.items.some(i => i.key === PK.sel)) PK.sel = (PK.items.find(i => !i.add) || {}).key || null;
+  const n = PK.items.filter(i => !i.add).length; let i = 0;
+  $('pk-cards').innerHTML = PK.items.map(it => {
+    const b = it.done ? '<button type="button" class="pk-go" disabled>Added</button>' : it.btns.map(([label, fn, sec]) => { PK.acts.push(fn); return `<button type="button" class="pk-go${sec ? ' sec' : ''}" data-pk="${PK.acts.length - 1}">${esc(label)}</button>`; }).join('');
+    return `<article class="pk-card${it.add ? ' add' : ''}${it.key === PK.sel ? ' on' : ''}" data-key="${esc(it.key)}"><p class="k"><span>${esc(it.k)}${it.tag ? ' · ' + esc(it.tag) : ''}</span>${it.add ? '' : `<span>${++i} of ${n}</span>`}</p>
+      <h3>${esc(it.t)}</h3>${it.lines.filter(Boolean).map(l => `<p class="s">${esc(l)}</p>`).join('')}${it.meta ? `<p class="s m">${esc(it.meta)}</p>` : ''}<span class="sp"></span><div class="pk-btns">${b}</div></article>`;
+  }).join('');
+}
+function pkGeo() {
+  const mode = pkMode(), f = [], has = new Set(PK.items.map(i => i.key));
+  const line = (key, side, c, col) => f.push({ type: 'Feature', properties: { key, side, col, sel: key === PK.sel ? 1 : 0 }, geometry: { type: 'LineString', coordinates: c } });
+  if (mode === 'side') for (const s of X.roads.values()) for (const side of s.sides) { const key = `l:${s.id}:${side}`; line(key, side, s.c, key === PK.sel ? '#111827' : has.has(key) ? '#6B7280' : GREY); }   // every main road loaded
+  if (mode === 'walk') for (const it of PK.items) if (it.line) line(it.key, it.line.side, it.line.c, it.col);
+  const pt = (key, c, col, on) => f.push({ type: 'Feature', properties: { key, col, on: on ? 1 : 0, sel: key === PK.sel ? 1 : 0 }, geometry: { type: 'Point', coordinates: c } });
+  for (const st of X.stops.values()) pt('s:' + st.id, [st.lng, st.lat], sprofOf(st.id) ? '#2166AC' : GREY, mode === 'stop');
+  for (const j of X.juncs.values()) pt('j:' + j.id, j.c, jprofOf(j.id) ? '#111827' : '#fff', mode === 'walk');
+  if (mode === 'walk') for (const r of N().rows) if (has.has('r:' + r.id)) pt('r:' + r.id, [r.lng, r.lat], '#111827', true);
+  return { type: 'FeatureCollection', features: f };
+}
+const pkPaint = () => PK.map && PK.map.getSource('k') && PK.map.getSource('k').setData(pkGeo());
+function pkToCard(key, now = false) {
+  const box = $('pk-cards'), el = [...box.children].find(x => x.dataset.key === key);
+  if (el) box.scrollTo({ left: el.offsetLeft - (box.clientWidth - el.offsetWidth) / 2, behavior: now ? 'instant' : 'smooth' });
+}
+function pkSelect(key, from) {
+  if (!PK.items.some(i => i.key === key)) { S.picked[key[0]].push(key.slice(2)); PK.sel = key; pkDraw(true); }   // picked on the map: a new card
+  PK.sel = key;
+  [...$('pk-cards').children].forEach(c => c.classList.toggle('on', c.dataset.key === key));
+  pkPaint();
+  if (from !== 'card') pkToCard(key);
+  const it = PK.items.find(i => i.key === key);
+  if (from !== 'map' && it && PK.map) { const q = PK.map.project(it.pos), box = PK.map.getContainer();   // bring it into the part of the map the cards don't cover
+    if (q.x < 30 || q.x > box.clientWidth - 30 || q.y < 40 || q.y > box.clientHeight - $('pk-cards').offsetHeight - 20) PK.map.easeTo({ center: it.pos, duration: 400 }); }
+}
+let pkTimer = 0;
+$('pk-cards').addEventListener('scroll', () => { clearTimeout(pkTimer); pkTimer = setTimeout(() => {        // swiping: the card in the middle is the one picked
+  const box = $('pk-cards').getBoundingClientRect(), mid = box.left + box.width / 2; let best = null;
+  for (const c of $('pk-cards').children) { const r = c.getBoundingClientRect(), d = Math.abs(r.left + r.width / 2 - mid); if (!best || d < best.d) best = { d, key: c.dataset.key }; }
+  if (best && best.key !== 'add' && best.key !== PK.sel) pkSelect(best.key, 'card');
+}, 140); });
+$('pk-cards').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-pk]'); if (b && !b.disabled) return PK.acts[+b.dataset.pk]();
+  const c = e.target.closest('.pk-card'); if (c && c.dataset.key !== 'add') pkSelect(c.dataset.key, 'card');
+});
+$('pk-hint').addEventListener('click', (e) => { if (e.target.closest('#chg-side')) { e.preventDefault(); openSidePick(() => show('near')); } });
+function pkFit() {
+  const b = new maplibregl.LngLatBounds([S.place.lng, S.place.lat], [S.place.lng, S.place.lat]);
+  for (const it of PK.items) if (!it.add) b.extend(it.pos);
+  PK.map.fitBounds(b, { padding: { top: 36, left: 40, right: 40, bottom: $('pk-cards').offsetHeight + 28 }, maxZoom: 17.2, duration: 0 });
+  PK.home = { center: PK.map.getCenter(), zoom: PK.map.getZoom() }; $('pk-home').hidden = true;
+}
+$('pk-home').onclick = () => { if (PK.map && PK.home) PK.map.easeTo({ ...PK.home, duration: 400 }); };
+async function pkMoved() {                          // the map was moved: offer the way back, and load what is around its new middle
+  if (!PK.home || secOf(cur) !== 'pick') return;
+  const c = PK.map.getCenter();
+  $('pk-home').hidden = metres({ lat: PK.home.center.lat, lng: PK.home.center.lng }, { lat: c.lat, lng: c.lng }) < 80 && Math.abs(PK.map.getZoom() - PK.home.zoom) < 1;
+  if (PK.map.getZoom() < 13.5 || !inHmda(c.lng, c.lat)) return;
+  if (await loadViewAt(c.lng, c.lat)) pkPaint();
+}
+function openPick() {
+  const mode = pkMode();
+  $('pk-h').textContent = !S.near ? 'Looking…' : mode === 'stop' ? 'Which bus stop?' : mode === 'walk' ? 'Which footpath or crossing?' : 'Which side of the road?';
+  $('pk-hint').innerHTML = !S.near ? '' : mode === 'stop' ? 'Swipe the card, or tap a dot. Move the map to see more.'
+    : mode === 'side' ? 'Tap the side you mean on the map, or swipe the card.'
+    : S.side ? `On ${esc(S.side.mine.name)}. <a href="#" id="chg-side" style="color:var(--ink)">Not the right side? Change it</a>` : 'Swipe the card, or tap a dot. Move the map to see more.';
+  $('pk-home').textContent = S.place.memory ? 'Back to the place' : 'Back to where I am';
+  if (!S.near) { $('pk-cards').innerHTML = ''; return; }
+  const was = `${mode}|${S.place.lat}|${S.place.lng}`;
+  pkDraw(PK.was === was); PK.was = was;               // coming back to the same screen: the same card stays picked
+  pkToCard(PK.sel, true);
   const at = [S.place.lng, S.place.lat];
-  if (!pmap) {
-    pmap = new maplibregl.Map({ container: 'pickmap', style: STYLE, center: at, zoom: 17.4, minZoom: 15, maxZoom: 19.5, attributionControl: { compact: true } });
-    compact(pmap);
-    pmap.on('load', () => {
-      pmap.addSource('p', { type: 'geojson', data: pickGeo() });
-      for (const s of ['l', 'r']) pmap.addLayer({ id: 'p-' + s, type: 'line', source: 'p', filter: ['==', ['get', 'side'], s], layout: { 'line-cap': 'round' },
-        paint: { 'line-color': ['case', ['==', ['get', 'on'], 1], '#111827', '#9CA3AF'], 'line-width': ['case', ['==', ['get', 'on'], 1], 9, 6],
-          'line-offset': ['interpolate', ['exponential', 2], ['zoom'], 15, s === 'l' ? -3 : 3, 19, s === 'l' ? -22 : 22] } });
-      pmap.on('click', (e) => {
-        const f = pmap.queryRenderedFeatures([[e.point.x - 16, e.point.y - 16], [e.point.x + 16, e.point.y + 16]], { layers: ['p-l', 'p-r'] })[0];
-        if (f) { SP.pick = f.properties.i; drawSidePick(); }
+  if (!PK.map) {
+    PK.map = new maplibregl.Map({ container: 'pkmap', style: STYLE, center: at, zoom: 16.3, attributionControl: false });
+    PK.map.addControl(new maplibregl.AttributionControl({ compact: true }), 'top-right'); compact(PK.map);
+    PK.map.on('load', () => {
+      PK.map.addSource('k', { type: 'geojson', data: pkGeo() });
+      const off = (s) => ['interpolate', ['exponential', 2], ['zoom'], 12, s * 0.8, 19, s * 14], isSel = ['==', ['get', 'sel'], 1], on = ['==', ['get', 'on'], 1];
+      for (const s of ['l', 'r']) PK.map.addLayer({ id: 'k-c' + s, type: 'line', source: 'k', filter: ['all', ['==', ['geometry-type'], 'LineString'], ['==', ['get', 'side'], s], isSel], layout: { 'line-cap': 'round' },
+        paint: { 'line-color': '#111827', 'line-width': 11, 'line-offset': off(s === 'l' ? -1 : 1) } });
+      for (const s of ['l', 'r']) PK.map.addLayer({ id: 'k-' + s, type: 'line', source: 'k', filter: ['all', ['==', ['geometry-type'], 'LineString'], ['==', ['get', 'side'], s]], layout: { 'line-cap': 'round' },
+        paint: { 'line-color': ['get', 'col'], 'line-width': 5, 'line-offset': off(s === 'l' ? -1 : 1) } });
+      PK.map.addLayer({ id: 'k-p', type: 'circle', source: 'k', filter: ['==', ['geometry-type'], 'Point'], paint: { 'circle-radius': ['case', isSel, 11, on, 7.5, 4], 'circle-color': ['get', 'col'],
+        'circle-opacity': ['case', on, 1, .35], 'circle-stroke-color': '#111827', 'circle-stroke-width': ['case', isSel, 3.5, 1.2], 'circle-stroke-opacity': ['case', on, 1, .35] } });
+      PK.map.on('moveend', pkMoved);
+      // a tap: the nearest dot that can be picked on this screen (a generous area, for fingers); else the road line under the finger
+      PK.map.on('click', (e) => {
+        const p = e.point, far = (c) => { const q = PK.map.project(c); return Math.hypot(q.x - p.x, q.y - p.y); };
+        const dots = PK.map.queryRenderedFeatures([[p.x - 18, p.y - 18], [p.x + 18, p.y + 18]], { layers: ['k-p'] }).filter(x => x.properties.on === 1);
+        if (dots.length) return pkSelect(dots.sort((a, b) => far(a.geometry.coordinates) - far(b.geometry.coordinates))[0].properties.key, 'map');
+        const m = pkMode(); if (m === 'stop') return;
+        const tap = { lng: e.lngLat.lng, lat: e.lngLat.lat }, has = new Set(PK.items.map(i => i.key));
+        // a divided road has one side per carriageway: then that one
+        const road = [...X.roads.values()].map(s => ({ s, ...nearestOn(s.c, tap), ks: s.sides.map(x => `l:${s.id}:${x}`).filter(k => m === 'side' || has.has(k)) })).filter(x => x.ks.length).sort((a, b) => a.d - b.d)[0];
+        if (!road || road.d > 45) return;
+        const key = road.ks.includes(`l:${road.s.id}:${road.side}`) ? `l:${road.s.id}:${road.side}` : road.ks[0];
+        if (m === 'side') PK.tap[key] = road.pt;
+        pkSelect(key, 'map');
       });
+      pkFit();
     });
-  } else { pmap.resize(); pmap.jumpTo({ center: at, zoom: 17.4 }); pmap.getSource('p')?.setData(pickGeo()); }
-  if (!pMe) pMe = new maplibregl.Marker({ element: mkEl('me') }).setLngLat(at).addTo(pmap); else pMe.setLngLat(at);
+  } else { PK.map.resize(); pkPaint(); pkFit(); }
+  if (S.place.memory) { if (PK.me) { PK.me.remove(); PK.me = null; } }
+  else if (!PK.me) PK.me = new maplibregl.Marker({ element: mkEl('me') }).setLngLat(at).addTo(PK.map); else PK.me.setLngLat(at);
 }
 $('cf-yes').onclick = () => doneFace();
 $('cf-no').onclick = () => { setSide(S.side.other, 'switched', S.side.deg); doneFace(); };
@@ -450,50 +580,16 @@ function row({ col, shape = '', t, tag = '', sub = [], btns, done = false, key =
 }
 const stopTitle = (st) => st.name + (st.towards ? `, towards ${st.towards}` : '');
 const stopCtx = (st) => ({ stop_id: st.id, name: st.name, towards: st.towards, slat: st.lat, slng: st.lng, d: st.d, title: stopTitle(st), far: st.d > FAR_STOP });
+// a junction picked far away on the map: saved where the junction is, from memory
+const crossCtx = (j) => ({ junction: j.id, title: j.name, ...(j.d > NEAR_JUNCTION_M ? { far: true, lat: j.c[1], lng: j.c[0] } : {}) });
 function startStop(st) {
   const p = sprofOf(st.id);
   if (p) return showCheck({ kind: 'stop', stop: st, p, title: stopTitle(st) });
   startThing('stop', stopCtx(st));
 }
 function sideCtx(c, which, word) {
-  return { stretch: c.stretch, side: c.side, side_how: SIDE_HOW[S.side.how] || 'map', road_deg: S.side.deg, which, title: `${c.name}, ${word.toLowerCase()}` };
-}
-function listStops() {
-  const n = N(), near = n.stops.filter(x => x.d <= 300).slice(0, 6), ids = new Set(near.map(s => s.id));
-  const stops = [...near, ...S.picked.s.map(id => X.stops.get(id)).filter(s => s && !ids.has(s.id))].map(st => ({ st, side: stopSide(st) }));   // and those picked on the map
-  stops.sort((a, b) => (a.side === 'On your side' ? 0 : 1) - (b.side === 'On your side' ? 0 : 1) || a.st.d - b.st.d);
-  return stops.map(({ st, side }) => { const p = sprofOf(st.id); return row({ key: 's:' + st.id, col: p ? '#2166AC' : GREY, shape: 'r', t: st.name, tag: side, done: !!p && checked(p.latest),
-    sub: [`${away(st.d)}${st.towards ? ' · buses towards ' + st.towards : ''}`, st.d > FAR_STOP && !S.place.memory ? FAR_SAYS : '', p ? `${people(p.n)} · ${day(p.seen)}` : 'No details yet'], btns: [[p ? 'Check' : 'Describe', () => startStop(st)]] }); }).join('')
-    || '<li class="none">No bus stop on our map within 300 m.</li>';
-}
-function listSides() {
-  const n = N(), out = [];
-  if (S.side) {
-    const [w1, w2] = sideWords();
-    for (const [c, word, which] of [[S.side.mine, w1, 'mine'], [S.side.other, w2, 'other']]) {
-      if (!c) continue;
-      const p = n.profiles[`${c.stretch}:${c.side}`], v = p ? footColor(currentOf(p)) : null, lm = landmark(c), ctx = sideCtx(c, which, word);
-      out.push(row({ key: `l:${c.stretch}:${c.side}`, col: p ? (v ? VIEW_COLORS[v] : '#8C8C8C') : GREY, shape: 'ln', t: word, done: !!p && checked(p.latest), sub: [`${c.name}${lm ? ` · the ${lm.name} bus stop side` : ''}`, p ? `${people(p.n)} · ${day(p.seen)}` : 'No details yet'],
-        btns: [[p ? 'Check' : 'Describe', () => p ? showCheck({ kind: 'side', p, ctx, title: ctx.title }) : startThing('foot', ctx)]] }));
-    }
-  } else out.push(row({ col: GREY, shape: 'ln', t: 'The footpath here', sub: [n.stretches.length ? 'Side of the road not chosen' : 'A smaller street: saved as a single spot'],
-    btns: [...(n.stretches.length ? [['Choose side', () => openSidePick(() => show('near'))]] : []), ['Describe', () => startThing('foot', { title: 'The footpath here' })]] }));
-  for (const r of rowsOf('spot')) out.push(row({ key: 'r:' + r.id, col: VIEW_COLORS[footColor(r.answers)] || GREY, shape: 'ln', t: 'A footpath spot someone described', sub: [`${r.d} m away · seen ${day(r.seen)}`], done: checked(r.id),
-    btns: [['Check', () => showCheck({ kind: 'spot', row: r, title: 'The footpath here' })]] }));
-  return out.join('');
-}
-// a junction picked far away on the map: saved where the junction is, from memory
-const crossCtx = (j) => ({ junction: j.id, title: j.name, ...(j.d > NEAR_JUNCTION_M ? { far: true, lat: j.c[1], lng: j.c[0] } : {}) });
-function listCrossings() {
-  const n = N(), out = [];
-  const near = junctions(), ids = new Set(near.map(j => j.id));
-  for (const j of [...near, ...S.picked.j.map(id => X.juncs.get(id)).filter(j => j && !ids.has(j.id))]) { const p = jprofOf(j.id), v = p ? crossColor(currentOf(p)) : null;
-    out.push(row({ key: 'j:' + j.id, col: p ? (v ? VIEW_COLORS[v] : '#111827') : GREY, t: j.name, done: !!p && checked(p.latest),
-      sub: [away(j.d), j.d > NEAR_JUNCTION_M && !S.place.memory ? FAR_SAYS : '', p ? `${people(p.n)} · ${day(p.seen)}` : 'No details yet'],
-      btns: [[p ? 'Check' : 'Describe', () => p ? showCheck({ kind: 'junction', j, p, title: j.name }) : startThing('cross', crossCtx(j))]] })); }
-  for (const r of rowsOf('crossing')) out.push(row({ key: 'r:' + r.id, col: '#111827', t: 'A crossing between junctions', sub: [`${r.d} m away · seen ${day(r.seen)}`], done: checked(r.id),
-    btns: [['Check', () => showCheck({ kind: 'crossing', row: r, title: 'A crossing between junctions' })]] }));
-  return out.join('') || '<li class="none">No junction of main roads within 150 m. A crossing here can still be added, below.</li>';
+  const far = S.side.far ? nearestOn(c.c, { lng: S.side.at[0], lat: S.side.at[1] }).pt : null;
+  return { stretch: c.stretch, side: c.side, side_how: SIDE_HOW[S.side.how] || 'map', road_deg: S.side.deg, which, title: `${c.name}, ${word.toLowerCase()}`, ...(far ? { far: true, lng: far[0], lat: far[1] } : {}) };
 }
 const typeBtns = (kind, list) => list.map(p => answerBtn(`data-type="${kind}:${p[0]}"`, `${esc(p[1])}${p[0] === 'other' ? '<small>Say it in your own words</small>' : ''}`, '', ' go')).join('');
 function drawNear(keep = false) {                   // keep: the map stays open (a dot picked on it has joined the list)
@@ -502,16 +598,7 @@ function drawNear(keep = false) {                   // keep: the map stays open 
   if (!keep) { $('minibox').hidden = true; $('mini-tip').hidden = true; $('minimap-toggle').textContent = 'Show map'; }
   $('flood-msg').hidden = true;
   if (!S.near) { $('h-near').textContent = 'Looking…'; $('near-hint').textContent = ''; $('nearlists').innerHTML = ''; return; }
-  if (c === 'stop') {
-    $('h-near').textContent = 'Which bus stop?';
-    $('near-hint').textContent = mem ? 'Stops near the place. Check one that has details, or describe one that has none.' : 'Stops near you. Check one that has details, or describe one that has none.';
-    L.push(`<ul class="near">${listStops()}</ul><div class="grid2" style="margin-top:10px"><button type="button" class="btn btn-secondary" data-new="stop">My stop isn't listed</button></div>`);
-  } else if (c === 'walk') {
-    $('h-near').textContent = 'Which footpath or crossing?';
-    $('near-hint').innerHTML = S.side ? `On ${esc(S.side.mine.name)}. <a href="#" id="chg-side" style="color:var(--ink)">Not the right side? Change it</a>` : '';
-    L.push(`<p class="what-h" style="margin-top:0">Footpath</p><ul class="near">${listSides()}</ul><p class="what-h">Crossing</p><ul class="near">${listCrossings()}</ul>
-      <div class="grid2" style="margin-top:10px"><button type="button" class="btn btn-secondary" data-new="cross">Add a crossing here</button></div>`);
-  } else if (c === 'light') {
+  if (c === 'light') {  } else if (c === 'light') {
     $('h-near').textContent = 'What about the street lights here?';
     $('near-hint').textContent = 'Pick one. If someone has already reported it here, tell us whether it is still so.';
     const lr = lightRows();
@@ -987,7 +1074,7 @@ async function refreshNear() {
   if (!S.place) return;
   try {
     const r = await fetch(`${C.API}/${SURVEY}/around?lat=${S.place.lat.toFixed(5)}&lng=${S.place.lng.toFixed(5)}`, { credentials: 'omit', cache: 'no-store' });
-    if (r.ok) { S.near = await r.json(); X.at = []; const t = S.sent[S.sent.length - 1]; if (t && t.far) await loadViewAt(t.slng ?? t.lng, t.slat ?? t.lat); if (cur === 'thanks') drawHub(); if (cur === 'near') drawNear(); if (cur === 'choose') drawChoose(); }
+    if (r.ok) { S.near = await r.json(); X.at = []; const t = S.sent[S.sent.length - 1]; if (t && t.far) await loadViewAt(t.slng ?? t.lng, t.slat ?? t.lat); if (cur === 'thanks') drawHub(); if (cur === 'near') drawNear(); if (secOf(cur) === 'pick') openPick(); if (cur === 'choose') drawChoose(); }
   } catch { /* the old list stays */ }
 }
 async function send() {
@@ -1058,4 +1145,4 @@ fetch(`${C.API}/${SURVEY}/leaderboard.json`, { credentials: 'omit', cache: 'no-c
   if (!lb.week) document.querySelector('#topc-seg [data-p="week"]').hidden = true;      // an older server: all time only
   $('topc-seg').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) draw(b.dataset.p); });
 }).catch(() => {});
-if (LOCAL) window.__test = { S, show, next, cands, byHeading, guessSide, landmark, maps: () => ({ mini, smap, pinMap }) };
+if (LOCAL) window.__test = { S, show, next, cands, byHeading, guessSide, landmark, maps: () => ({ mini, smap, pinMap, pk: PK.map }), PK, X };
