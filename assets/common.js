@@ -75,7 +75,7 @@ window.Contribute = (() => {
 
   // the survey forms are filled in on a phone (Teja, 16 Nov 2026); a laptop sees a QR code to open the page on one.
   // Maps, results and downloads stay open anywhere. On this Mac, ?desk in the address skips it for testing.
-  function phoneOnly({ what, mapHref, mapLabel, atSpot = true }) {
+  function phoneOnly({ what, mapHref, mapLabel, atSpot = true, here = '' }) {   // here: a button label that opens the form on this computer
     const phone = matchMedia('(hover: none) and (pointer: coarse)').matches;
     const local = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) && new URLSearchParams(location.search).has('desk');
     const steps = document.querySelector('main .steps');
@@ -84,10 +84,11 @@ window.Contribute = (() => {
     const gate = document.createElement('section');
     gate.className = 'phone-gate';
     gate.innerHTML = `<p class="eyebrow">Contribute · ${esc(what)}</p><h1>Open this on your phone</h1>
-      <p class="hint">${atSpot ? 'This survey is filled in on a phone, at the place itself, so the location is right.' : 'This survey is filled in on a phone.'} Scan the code with your phone's camera.</p>
+      <p class="hint">${atSpot ? 'This survey is filled in on a phone, at the place itself, so the location is right.' : here ? 'This survey is easiest on a phone.' : 'This survey is filled in on a phone.'} Scan the code with your phone's camera${here ? ', or fill it in here' : ''}.</p>
       <div class="qr" aria-hidden="true"></div><p class="gate-url">${esc(url.replace(/^https?:\/\//, ''))}</p>
-      <a class="btn btn-secondary btn-lg" href="${esc(mapHref)}">${esc(mapLabel)}</a>`;
+      <div class="row-btns" style="display:flex;flex-wrap:wrap;gap:10px">${here ? `<button type="button" class="btn btn-primary btn-lg" data-here>${esc(here)}</button>` : ''}<a class="btn btn-secondary btn-lg" href="${esc(mapHref)}">${esc(mapLabel)}</a></div>`;
     steps.hidden = true; steps.before(gate);
+    if (here) gate.querySelector('[data-here]').onclick = () => { gate.remove(); steps.hidden = false; window.dispatchEvent(new Event('resize')); };
     const s = document.createElement('script');
     s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js';
     s.onload = () => { try { const q = window.qrcode(0, 'M'); q.addData(url); q.make(); gate.querySelector('.qr').innerHTML = q.createSvgTag({ cellSize: 5, margin: 2, scalable: true }); } catch { /* the address is shown too */ } };

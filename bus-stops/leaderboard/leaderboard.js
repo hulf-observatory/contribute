@@ -1,4 +1,4 @@
-// Leaderboard for bus stops and walking together: nicknames and points, worked out on the server (all time and the last 30 days).
+// Leaderboard for bus stops and walking together: nicknames and points, worked out on the server (all time, the last 30 days, the last 7 days).
 import { SURVEY, POINTS, esc, player } from '../questions.js?v=20261119a';
 
 const C = window.CONTRIBUTE;

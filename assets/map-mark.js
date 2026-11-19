@@ -16,7 +16,7 @@ function loadMapLib() {
 
 // host: an empty element; onChange({ lat, lng, ok }) after every move (ok = zoomed in enough, inside the HMDA area).
 // points: optional () => GeoJSON points (bus stops; property has = 1 for darker dots); tapping one puts the pin on it.
-export function mapMark(host, { onChange, label = 'Find the area', points = null } = {}) {
+export function mapMark(host, { onChange, label = 'Find the area', points = null, mark = 'pin' } = {}) {   // mark: what the centre mark is called in the hints
   const n = Math.random().toString(36).slice(2, 7);
   host.innerHTML = `<div class="field mm-field"><label class="field-label" for="mm-q-${n}">${label}</label>
       <div class="search"><input class="inp" type="search" id="mm-q-${n}" placeholder="An area, colony or road, for example Ameerpet"><div class="ps-results" id="mm-r-${n}" hidden></div></div></div>
@@ -34,8 +34,8 @@ export function mapMark(host, { onChange, label = 'Find the area', points = null
   const inside = (lng, lat) => lng >= C.HMDA[0] && lng <= C.HMDA[2] && lat >= C.HMDA[1] && lat <= C.HMDA[3];
   function report() {
     const c = map.getCenter(), z = map.getZoom(), inArea = inside(c.lng, c.lat), ok = z >= MARK_ZOOM - .01 && inArea;
-    $('mm-hint').textContent = !inArea ? 'The pin is outside the Hyderabad area (HMDA).' : ok ? 'The place is under the pin. Move the map to adjust.'
-      : 'Search for the area, or pinch to zoom in until you can see the street, then move the map until the pin sits on the place.';
+    $('mm-hint').textContent = !inArea ? `The ${mark} is outside the Hyderabad area (HMDA).` : ok ? `The place is under the ${mark}. Move the map to adjust.`
+      : `Search for the area, or zoom in until you can see the street, then move the map until the ${mark} sits on the place.`;
     onChange && onChange({ lat: c.lat, lng: c.lng, ok });
   }
   const api = {
