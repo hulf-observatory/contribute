@@ -363,6 +363,9 @@
   .tbox h3 { margin: 0; font: 700 17px/1.3 var(--font-ui); }
   .tbox p { margin: 2px 0 10px; font-size: 14px; line-height: 1.45; color: var(--text-2); }
   .tbox .msg { margin: 10px 0 0; padding: 8px 0; }
+  .tbox .pts { margin: 0 0 4px; font: 700 26px/1.15 var(--font-ui); color: var(--ink); }
+  .tbox .prof-in { margin: 0; padding: 0; border: 0; }
+  .tbox .pts[hidden], #prof-box[hidden] { display: none; }
   .tbox .ts:not(:empty) { margin: 0 0 10px; }
   .two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .prof-in { margin: 0; padding: 10px 0; border-top: 1px solid var(--border-2); border-bottom: 1px solid var(--border-2); font-size: 15px; color: var(--text-2); }
@@ -386,6 +389,10 @@
     body.fit #start-choices .choice b { font-size: clamp(16px, 2.5vh, 19px); }
     body.fit .step[data-step="start"] .fit-foot .btn { height: clamp(46px, 6.6vh, 56px); }
     body.fit .step h2.qt { font-size: 26px; }
+    body.fit .tbox { padding: 9px 12px 10px; }
+    body.fit .tbox .pts { font-size: 24px; margin-bottom: 2px; }
+    body.fit .tbox p { margin-bottom: 8px; }
+    body.fit .step[data-step="thanks"] .hint { margin-bottom: 10px; }
     body.q-mode .steps .choice.plain { padding: 8px 14px; }
     body.q-mode .step[data-step="mark"] .hint { margin-bottom: 10px; }
     body.q-mode .step[data-step="mark"] .mm-box { height: 32vh; min-height: 150px; }
@@ -614,15 +621,19 @@
             <p id="more-box-t"></p>
             <button type="button" class="btn btn-primary btn-lg" id="more-go">Add more details</button>
           </div>
-          <div class="tbox" id="prof-box" hidden>
+          <!-- the points and the profile go together, under "Add more details" (Teja, 19 Nov 2026) -->
+          <div class="tbox" id="pts-box" hidden>
+            <p class="pts" id="thanks-pts" hidden></p>
+            <div id="prof-box" hidden>
             <h3 id="prof-box-h">Add this to your profile</h3>
             <p id="prof-box-t">Keep your points: just a nickname and a 4-digit PIN. No name, phone number or email.</p>
             <div class="ts" id="ts-claim"></div>
             <div class="two" id="prof-btns"><button type="button" class="btn btn-secondary btn-lg" id="prof-create">Create profile</button><button type="button" class="btn btn-secondary btn-lg" id="prof-login">Log in</button></div>
             <button type="button" class="btn btn-secondary btn-lg" id="prof-retry" hidden>Try again</button>
             <p class="msg" id="prof-msg" hidden></p>
+            </div>
+            <p class="prof-in" id="thanks-prof" hidden>Added to <b id="thanks-prof-n"></b>'s profile · <a href="../profile/" id="thanks-prof-a">Your profile</a></p>
           </div>
-          <p class="prof-in" id="thanks-prof" hidden>Added to <b id="thanks-prof-n"></b>'s profile · <a href="../profile/" id="thanks-prof-a">Your profile</a></p>
         </div>
       </div>
       <div class="fit-foot">
@@ -655,6 +666,6 @@
 </footer>
 
 <script src="../assets/common.js?v=20261120a"></script>
-<script type="module" src="form.js?v=20261122b"></script>
+<script type="module" src="form.js?v=20261122c"></script>
 </body>
 </html>

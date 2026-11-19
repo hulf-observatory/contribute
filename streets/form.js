@@ -1022,8 +1022,9 @@ function drawHub() {
 // just sent without one (S.claim) is then put on the player's name by the server, with its points.
 let claimSpam = null;
 function drawProf() {
-  const p = S.noNick ? null : player.get(), c = S.claim, busy = !!S.claiming;
-  $('thanks-prof').hidden = !(p && !c); $('prof-box').hidden = !c;
+  const p = S.noNick ? null : player.get(), c = S.claim, busy = !!S.claiming, got = S.lastPts || 0;
+  $('thanks-pts').hidden = !got; $('thanks-pts').textContent = `+${got} point${got === 1 ? '' : 's'}`;
+  $('thanks-prof').hidden = !(p && !c); $('prof-box').hidden = !c; $('pts-box').hidden = !got && !c && !p;
   if (p) { $('thanks-prof-n').textContent = p.nick; $('thanks-prof-a').href = profileUrl(p.nick); }
   if (!c) return;
   claimSpam = claimSpam || Contribute.spamCheck($('ts-claim'));
@@ -1163,8 +1164,8 @@ function thanks(body, r) {
     if (!body.nick && claims.length + checks.length) S.claim = { claims: [...was.claims, ...claims].slice(-100), checks: [...was.checks, ...checks].slice(-20), pts: was.pts + pts };
     S.claimFail = null;
   }
-  $('thanks-h').textContent = more ? 'Added. Thank you' : pts ? `+${pts} points` : 'Thank you';
-  $('thanks-text').textContent = (more ? 'Your answers are added to what you sent.' : 'Your answers are now public. Thank you.')
+  $('thanks-h').textContent = more ? 'Added. Thank you' : 'Thank you'; S.lastPts = more ? 0 : pts;   // the points sit with the profile, below
+  $('thanks-text').textContent = (more ? 'Your answers are added to what you sent.' : 'Your answers are now public.')
     + (got ? ` ${got === 1 ? 'One check was' : got + ' checks were'} already sent from this phone, so not counted again.` : '');
   $('to-map').href = mapUrl(S.choice, r.ids && r.ids[0]);          // the thing itself; a bus stop or a check: its section
   { const t0 = S.items[0]; if (S.place && S.place.area && t0 && t0.lat != null) S.place = { lat: t0.lat, lng: t0.lng, acc: null, memory: true }; }   // a stop added to the map in a searched area: it is the place now
