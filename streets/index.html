@@ -285,6 +285,8 @@
   .look li { padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 15px; line-height: 1.4; }
   .look li small { display: block; color: var(--muted); font-size: 13px; margin-top: 2px; }
   .look p { margin: 0 0 6px; font-size: 15px; color: var(--text-2); }
+  .step[data-step="start"] .see-data { max-width: none; margin-top: 16px; }
+  .step[data-step="start"] .desk { margin-top: 20px; }
 </style>
 </head>
 <body>
@@ -313,12 +315,6 @@
         <div class="row-btns"><button type="button" class="btn btn-primary btn-lg" id="draft-send">Send it now</button><button type="button" class="btn btn-secondary btn-lg" id="draft-drop">Discard it</button></div>
         <p class="msg" id="draft-msg" hidden></p>
       </div>
-      <div class="profile-box" id="play-box">
-        <p class="pb-h">Keep track of what you add</p>
-        <p class="pb-t">Create a profile: just a nickname and a 4-digit PIN. No name, phone number or email.</p>
-        <div class="pb-btns"><button type="button" class="btn btn-secondary" id="play-create">Create profile</button><button type="button" class="btn btn-secondary" id="play-login">Log in</button></div>
-      </div>
-      <p class="small play-in" id="play-in" hidden>Contributing as <b id="play-name"></b> · <a href="../profile/" id="play-prof">Your profile</a> · <a href="#" id="play-out">Log out</a></p>
       <div class="desk" id="desk" hidden>
         <div class="qr" id="desk-qr" aria-hidden="true"></div>
         <div><p><b>Best on your phone, at the place.</b> Scan the code with your phone's camera.</p><p class="gate-url" id="desk-url"></p></div>
@@ -328,7 +324,13 @@
       <p class="msg" id="gps-msg" hidden></p>
       <p class="start-fine">Just looking? <a href="#" id="to-look">See the questions first</a></p>
       <p class="demo" style="margin-top:12px" data-demo hidden>At a desk: <a href="#" data-fakeplace="17.41775,78.44866">pretend I'm on Road No. 1, Banjara Hills</a> · <a href="#" data-fakeplace="17.43701,78.44822">at Ameerpet</a> · <a href="#" data-fakeplace="17.39370,78.43740">at Mehdipatnam</a></p>
-      <a class="btn btn-secondary btn-lg see-data" href="../walking/map/?from=streets">See what people found <svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+      <div class="profile-box" id="play-box">
+        <p class="pb-h">Keep track of what you add</p>
+        <p class="pb-t">Create a profile: just a nickname and a 4-digit PIN. No name, phone number or email.</p>
+        <div class="pb-btns"><button type="button" class="btn btn-secondary" id="play-create">Create profile</button><button type="button" class="btn btn-secondary" id="play-login">Log in</button></div>
+      </div>
+      <p class="small play-in" id="play-in" hidden>Contributing as <b id="play-name"></b> · <a href="../profile/" id="play-prof">Your profile</a> · <a href="#" id="play-out">Log out</a></p>
+      <a class="btn btn-secondary btn-lg see-data" href="../walking/map/?from=streets">See the map and data <svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
       <p class="res-h"><span class="meta" id="meta"></span></p>
       <!-- top contributors: the last 7 days, or all time (Teja, 19 Nov 2026) -->
       <div class="topc" id="topc" hidden>
