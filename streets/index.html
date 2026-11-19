@@ -62,7 +62,7 @@
   .inp::placeholder { color: var(--disabled); }
   .inp.pin-inp { max-width: 160px; letter-spacing: .3em; font-variant-numeric: tabular-nums; }
   .ps-results { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 10; background: #fff; border: 1px solid var(--border); border-radius: var(--r-card);
-    padding: 6px; max-height: min(380px, 55vh); overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,.08); }
+    padding: 6px; max-height: max(140px, min(380px, calc(100dvh - 305px))); overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,.08); }
   .ps-results[hidden] { display: none; }
   .ps-list { list-style: none; margin: 0; padding: 0; }
   .ps-item { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 10px; border-radius: 3px; cursor: pointer; }
@@ -665,6 +665,6 @@
 </footer>
 
 <script src="../assets/common.js?v=20261120a"></script>
-<script type="module" src="form.js?v=20261122f"></script>
+<script type="module" src="form.js?v=20261123a"></script>
 </body>
 </html>

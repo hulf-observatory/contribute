@@ -6,6 +6,8 @@
 //   spatial data repository/js/place-search.js        (maps viewer)
 //   city timeline/place-search.js                      (City Timeline)
 //   accessibility atlas/frontend/js/place-search.js    (Accessibility Atlas)
+// The Contribute forms (contribute/assets/place-search.js) hold a fourth copy with one addition, the `tidy`
+// option (19 Nov 2026); the check script doesn't cover it.
 //
 // What it does, the same in every app:
 //   - local matches first, from a list the host app already has
@@ -206,6 +208,7 @@ let uid = 0;
 //   getMap     () => the map to move
 //   padding    number/object, or a function returning one, for fitting extents
 //   marker     { set(map, lngLat), clear() } (default: one dot on getMap())
+//   tidy       (place) => place | null, for each OpenStreetMap result before it is listed: reword it, or drop it
 //   onSelect   (place) => void, after the map moves
 //   onToggle   (open) => void; default toggles results.hidden
 //   inline     true: results sit in a panel, not a popover (no close on outside
@@ -329,7 +332,9 @@ export function createPlaceSearch(opts) {
       const r = await searchPhoton(q, { signal: ctl.signal });
       if (my !== seq || r.aborted) return;
       ctl = null;
-      items = loc.concat(r.items);
+      let osm = r.items;
+      if (opts.tidy) { try { osm = osm.map(opts.tidy).filter(Boolean); } catch { osm = r.items; } }
+      items = loc.concat(osm);
       state = r.error ? 'error' : items.length ? '' : 'none';
       render();
     }, DEBOUNCE_MS);

@@ -11,7 +11,7 @@
 // no north or south: face the road, we work out the side (compass, else the nearest side) and say it with a landmark;
 // the person says yes or no. One thing leads to the next (a broken-footpath report → the footpath's questions, filled
 // in). A laptop sees the code for a phone and can add a place it knows on the map.
-import { mapMark } from '../assets/map-mark.js?v=20261122a';
+import { mapMark } from '../assets/map-mark.js?v=20261123a';
 import { SURVEY, SETS, ITEM, MIN, allQs, shown, real, nAnswered, optLabel, PROBLEMS, BLOCKED_BY, NEEDS, problemName, needName, REQUEST_COLOR,
   POINTS, VIEW_COLORS, footColor, crossColor, metres, angle, outward, bearingNear, inHmda, esc, player, checkPlayer,
   PLAYER_SAYS, currentOf, profileLines } from '../walking/questions.js?v=20261120a';
@@ -242,7 +242,7 @@ function openLook() {
   show('look');
 }
 document.querySelectorAll('[data-fakeplace]').forEach(a => a.onclick = (e) => { e.preventDefault(); const [lat, lng] = a.dataset.fakeplace.split(',').map(Number); begin({ lat, lng, acc: 8, memory: false }); });
-const marker = mapMark($('markbox'), { mark: 'dot', label: 'Search, or paste a Google Maps link', onPick: (pl) => markPicked(pl), onChange: ({ lat, lng, ok }) => { S.mark = { lat, lng, ok }; updateNext(); } });
+const marker = mapMark($('markbox'), { mark: 'dot', areas: false, label: 'Search, or paste a Google Maps link', onPick: (pl) => markPicked(pl), onChange: ({ lat, lng, ok }) => { S.mark = { lat, lng, ok }; updateNext(); } });
 // a laptop: the code that opens this page on a phone, and "add a place you know" on the map
 if (!PHONE) {
   const url = location.origin + location.pathname;
@@ -285,11 +285,12 @@ function seedX() {
 }
 const sprofOf = (id) => N().stop_profiles[id] || X.sprof[id];
 const jprofOf = (id) => N().profiles[id] || X.prof[id];
-async function loadViewAt(lng, lat) {
-  if (X.at.some(c => metres({ lng: c[0], lat: c[1] }, { lng, lat }) < 200)) return false;     // this part is loaded already
-  X.at.push([lng, lat]);
+// wide: only bus stops, within 2.5 km: an area found by searching is a point that can be a kilometre from its nearest stop
+async function loadViewAt(lng, lat, wide = false) {
+  if (X.at.some(c => !!c[2] === wide && metres({ lng: c[0], lat: c[1] }, { lng, lat }) < (wide ? 1000 : 200))) return false;     // this part is loaded already
+  X.at.push([lng, lat, wide]);
   try {
-    const r = await fetch(`${C.API}/${SURVEY}/view?lat=${lat.toFixed(4)}&lng=${lng.toFixed(4)}`, { credentials: 'omit', cache: 'no-store' });
+    const r = await fetch(`${C.API}/${SURVEY}/view?lat=${lat.toFixed(4)}&lng=${lng.toFixed(4)}${wide ? '&wide=1' : ''}`, { credentials: 'omit', cache: 'no-store' });
     if (!r.ok) return false;
     const v = await r.json(), P = S.place;
     for (const s of v.stops) if (!X.stops.has(s.id)) X.stops.set(s.id, { ...s, d: Math.round(metres(P, s)) });
@@ -552,19 +553,29 @@ $('pk-hint').addEventListener('click', (e) => { if (e.target.closest('#chg-side'
 function pkFit() {
   const b = new maplibregl.LngLatBounds([S.place.lng, S.place.lat], [S.place.lng, S.place.lat]), pad = { top: 36, left: 40, right: 40, bottom: $('pk-cards').offsetHeight + 28 };
   for (const it of PK.items) if (!it.add) b.extend(it.pos);
-  if (S.place.area) {                               // an area found by searching: the neighbourhood and every stop in it
-    PK.map.jumpTo({ center: [S.place.lng, S.place.lat], zoom: 14.8, padding: pad });
-    loadViewAt(S.place.lng, S.place.lat).then((ok) => { if (ok && secOf(cur) === 'pick') pkPaint(); });
+  const home = () => { PK.home = { center: PK.map.getCenter(), zoom: PK.map.getZoom() }; $('pk-home').hidden = true; };
+  if (S.place.area) {                               // an area found by searching: the place and the bus stops around it
+    const P = S.place, fit = () => {                // the six nearest stops: close in where they are many, further out where they are few
+      const all = [...X.stops.values()].sort((x, y) => x.d - y.d), near = all.filter(s => s.d <= 1500).slice(0, 6);
+      for (const s of near.length >= 3 ? near : all.slice(0, 3)) b.extend([s.lng, s.lat]);
+      const cam = PK.map.cameraForBounds(b, { padding: pad, maxZoom: 15 }), here = new maplibregl.LngLatBounds([P.lng, P.lat], [P.lng, P.lat]);
+      if (cam && cam.zoom >= 13) PK.map.jumpTo(cam);   // no further out than zoom 13 (the strip above the cards is short): then the place in its middle
+      else PK.map.fitBounds(here, { padding: pad, maxZoom: 13, duration: 0 });
+      home();
+    };
+    PK.map.fitBounds(new maplibregl.LngLatBounds([P.lng, P.lat], [P.lng, P.lat]), { padding: pad, maxZoom: 14.8, duration: 0 });   // until they arrive (jumpTo's padding would stay on the map, and no later fit would fit)
+    loadViewAt(P.lng, P.lat, true).then((ok) => { if (secOf(cur) !== 'pick' || S.place !== P) return; if (ok) pkPaint(); fit(); });
   } else PK.map.fitBounds(b, { padding: pad, maxZoom: 17.2, duration: 0 });
-  PK.home = { center: PK.map.getCenter(), zoom: PK.map.getZoom() }; $('pk-home').hidden = true;
+  home();
 }
 $('pk-home').onclick = () => { if (PK.map && PK.home) PK.map.easeTo({ ...PK.home, duration: 400 }); };
 async function pkMoved() {                          // the map was moved: offer the way back, and load what is around its new middle
   if (!PK.home || secOf(cur) !== 'pick') return;
   const c = PK.map.getCenter();
   $('pk-home').hidden = metres({ lat: PK.home.center.lat, lng: PK.home.center.lng }, { lat: c.lat, lng: c.lng }) < 80 && Math.abs(PK.map.getZoom() - PK.home.zoom) < 1;
-  if (PK.map.getZoom() < 13.5 || !inHmda(c.lng, c.lat)) return;
-  if (await loadViewAt(c.lng, c.lat)) pkPaint();
+  const wide = !!S.place.area;                      // a searched area is seen from further out: its stops load from there too
+  if (PK.map.getZoom() < (wide ? 11.5 : 13.5) || !inHmda(c.lng, c.lat)) return;
+  if (await loadViewAt(c.lng, c.lat, wide)) pkPaint();
 }
 function openPick() {
   const mode = pkMode();

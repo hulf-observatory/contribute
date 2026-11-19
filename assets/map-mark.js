@@ -1,7 +1,7 @@
 // Mark a place on a map with a fixed pin in the centre: move the map until the pin sits on the place. Offered when
 // the phone's location fails (Teja, 16 Nov 2026). A search box moves the map to an area or road first; a pasted
 // Google Maps link or coordinates jump straight to the place (Teja, 20 Nov 2026).
-import { createPlaceSearch } from './place-search.js';
+import { createPlaceSearch } from './place-search.js?v=20261123a';
 
 const C = window.CONTRIBUTE;
 const STYLE = 'https://tiles.openfreemap.org/styles/positron';
@@ -36,8 +36,11 @@ function loadMapLib() {
 
 // host: an empty element; onChange({ lat, lng, ok }) after every move (ok = zoomed in enough, inside the HMDA area).
 // points: optional () => GeoJSON points (bus stops; property has = 1 for darker dots); tapping one puts the pin on it.
+// areas: false leaves the wards and zones out of the search (Teja, 19 Nov 2026: people don't know ward names, and a ward
+// showed beside the village or locality of the same name); places then come from OpenStreetMap only, and the wards in
+// their second lines ("Ward 98 Ameerpet, Ameerpet mandal") go too.
 // onPick({ lat, lng }): optional; a place was chosen from the search, or pasted (the map has gone there).
-export function mapMark(host, { onChange, onPick = null, label = 'Search an area, or paste a Google Maps link or coordinates', points = null, mark = 'pin' } = {}) {   // mark: what the centre mark is called in the hints
+export function mapMark(host, { onChange, onPick = null, label = 'Search an area, or paste a Google Maps link or coordinates', points = null, mark = 'pin', areas = true } = {}) {   // mark: what the centre mark is called in the hints
   const n = Math.random().toString(36).slice(2, 7);
   host.innerHTML = `<div class="field mm-field"><label class="field-label" for="mm-q-${n}">${label}</label>
       <div class="search"><input class="inp" type="search" id="mm-q-${n}" placeholder="Ameerpet, or a link, or 17.4178, 78.4487"><div class="ps-results" id="mm-r-${n}" hidden></div></div>
@@ -50,7 +53,7 @@ export function mapMark(host, { onChange, onPick = null, label = 'Search an area
     <p class="picked mm-hint" id="mm-hint-${n}"></p>`;
   const $ = (id) => document.getElementById(`${id}-${n}`);
   let map = null, list = [];
-  fetch(C.AREAS_URL).then(r => r.json()).then(a => {
+  if (areas) fetch(C.AREAS_URL).then(r => r.json()).then(a => {
     const zones = a.zones || [];
     list = zones.map(z => ({ name: z.name, kind: 'Zone', bbox: z.bounds }))
       .concat((a.wards || []).map(w => ({ name: w.name, kind: 'Ward' + (w.no != null ? ' ' + w.no : ''), context: zones[w.zone] ? zones[w.zone].name + ' zone' : '', bbox: w.bounds })));
@@ -83,7 +86,9 @@ export function mapMark(host, { onChange, onPick = null, label = 'Search an area
         : r.status === 429 ? 'Too many links just now. Try again in a minute, or paste the coordinates.' : "That doesn't look like a Google Maps link. Paste the coordinates instead.");
     } catch { if (mine === asked) say("We couldn't check the link just now. Paste the coordinates, or find the place on the map."); }
   });
-  createPlaceSearch({ input: $('mm-q'), results: $('mm-r'), local: () => list, getMap: () => map, marker: { set() {}, clear() {} },
+  const isWard = (s) => /^ward\s*(no\.?\s*)?\d+/i.test(s.trim());
+  const noWards = (p) => isWard(p.name) ? null : { ...p, context: p.context.split(',').filter(x => !isWard(x)).map(x => x.trim()).join(', ') };
+  createPlaceSearch({ input: $('mm-q'), results: $('mm-r'), local: () => list, getMap: () => map, marker: { set() {}, clear() {} }, tidy: areas ? null : noWards,
     onSelect: (p) => { if (map) map.jumpTo({ center: p.center, zoom: MARK_ZOOM + 1 }); if (onPick && p.center) onPick({ lng: p.center[0], lat: p.center[1] }); } });   // street level at once: only a nudge left
   function report() {
     const c = map.getCenter(), z = map.getZoom(), inArea = inside(c.lng, c.lat), ok = z >= MARK_ZOOM - .01 && inArea;
