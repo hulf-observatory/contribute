@@ -356,6 +356,8 @@
   .or[hidden], .where-go[hidden], .tbox[hidden], .two[hidden], .prof-in[hidden], #prof-retry[hidden], #else-go[hidden] { display: none; }
   .step[data-step="where"] .msg { margin: 10px 0 12px; padding: 10px 0; font-size: 15px; }
   .where-go.again { min-height: 48px; font-size: 16px; }
+  .where-map { margin: 14px 0 0; }
+  .where-map a { color: var(--ink); }
   .where-go.again small { display: none; }
   .tbox { border: 1px solid var(--border-2); border-radius: var(--r-card); padding: 12px 14px; }
   .tbox h3 { margin: 0; font: 700 17px/1.3 var(--font-ui); }
@@ -445,6 +447,7 @@
         <button type="button" class="choice plain" id="to-mark"><span><b>Pick the place on a map</b><small>If you know where it is</small></span></button>
       </div>
       <p class="fine">These two are saved as "from memory".</p>
+      <p class="small where-map"><a href="../walking/map/?from=streets" id="where-map">See these on the map</a></p>
       <p class="demo" style="margin-top:12px" data-demo hidden>At a desk: <a href="#" data-fakeplace="17.41775,78.44866">pretend I'm on Road No. 1, Banjara Hills</a> · <a href="#" data-fakeplace="17.43701,78.44822">at Ameerpet</a> · <a href="#" data-fakeplace="17.39370,78.43740">at Mehdipatnam</a></p>
     </section>
 
@@ -652,6 +655,6 @@
 </footer>
 
 <script src="../assets/common.js?v=20261120a"></script>
-<script type="module" src="form.js?v=20261122a"></script>
+<script type="module" src="form.js?v=20261122b"></script>
 </body>
 </html>

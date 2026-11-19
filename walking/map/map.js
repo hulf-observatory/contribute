@@ -1,8 +1,9 @@
 // Walking and bus stops, the map (Teja, 18 Nov 2026): main-road footpaths a side at a time (junction to junction),
 // crossings (junctions have profiles; crossings between junctions are single points), footpaths on other streets,
 // problem pins (until 6 months after they were last seen), requests with their "me too" count, and the bus stops people
-// described. One filter at a time; tap for what people found, and check it ("still like this", "still there",
-// "gone", "me too"). Map or list; ?p=<profile> or ?r=<row id> opens one.
+// described. One section at a time, the same five as the form (Teja, 19 Nov 2026: no "All" view); tap for what people
+// found, and check it ("still like this", "still there", "gone", "me too"). Map or list; ?show=<section> opens on one
+// (stop / walk / light / problem / request); ?p=<profile> or ?r=<row id> opens one thing, in its section.
 // Data: ../roads.json, /walking/profiles.json, /walking/reports.json, /bus-stops/reports.json and profiles.json.
 import { SURVEY, SETS, allQs, shown, optLabel, real, esc, loadReports, currentOf, profileLines, PROBLEMS, BLOCKED_BY, problemName, needName,
   REQUEST_COLOR, VIEW_COLORS, footColor, crossColor, compass8, outward } from '../questions.js?v=20261120a';
@@ -34,10 +35,18 @@ const STOPS = new Map();
 for (const r of srows || []) if (r.stop_id && !STOPS.has(r.stop_id)) STOPS.set(r.stop_id, { id: r.stop_id, name: r.stop_name, towards: r.towards, lng: r.lng, lat: r.lat });
 const SPROF = sprof || {};
 
-// ── what to show: one kind at a time, or all ──
-const FILTERS = [['all', 'All'], ['stop', 'Bus stops'], ['foot', 'Footpaths'], ['cross', 'Crossings'], ['problem', 'Problems'], ['request', 'Suggestions']];
-let filt = 'all';
-const on = (f) => filt === 'all' || filt === f;
+// ── what to show: one section at a time, the form's five. Street lights are the problems and suggestions about them ──
+const FILTERS = [['stop', 'Bus stops'], ['walk', 'Footpaths and crossings'], ['light', 'Street lights'], ['problem', 'Problems'], ['request', 'Suggestions']];
+const asked = new URLSearchParams(location.search).get('show');
+let filt = FILTERS.some(f => f[0] === asked) ? asked : 'stop';
+const on = (f) => f === 'foot' || f === 'cross' ? filt === 'walk' : filt === f;
+const isLight = (r) => (r.item === 'problem' && ['light', 'dark'].includes(r.problem)) || (r.item === 'request' && r.need === 'lights');
+const sectionOf = (r) => isLight(r) ? 'light' : r.item === 'problem' ? 'problem' : r.item === 'request' ? 'request' : 'walk';
+const probs = () => filt === 'light' ? problems.filter(isLight) : filt === 'problem' ? problems.filter(r => !isLight(r)) : [];
+const reqs = () => filt === 'light' ? requests.filter(isLight) : filt === 'request' ? requests.filter(r => !isLight(r)) : [];
+const NOTES = { walk: 'Each side of a main road is described on its own, junction to junction, and so is crossing at each junction, from what people said there. Thin light lines: no one has described that side yet. Grey: mixed answers, no clear one yet.',
+  light: 'Street lights reported as not working, dark places, and places where people asked for lights. Reports stay until 6 months after they were last seen.',
+  problem: 'Problems stay until 6 months after they were last seen.' };
 const colour = (v) => v ? VIEW_COLORS[v] : MIXED;
 function sidesGeo() {
   const f = [];
@@ -57,8 +66,8 @@ function pointsGeo() {
   }
   if (on('foot')) for (const r of loose.filter(r => r.item === 'spot')) f.push(pt(r.lng, r.lat, { t: 'spot', id: r.id, col: colour(footColor(r)) }));
   if (on('stop')) for (const s of STOPS.values()) f.push(pt(s.lng, s.lat, { t: 'stop', id: s.id, col: STOP }));
-  if (on('problem')) for (const r of problems) f.push(pt(r.lng, r.lat, { t: 'problem', id: r.id, pv: r.problem }));
-  if (on('request')) for (const r of requests) f.push(pt(r.lng, r.lat, { t: 'request', id: r.id, col: REQUEST_COLOR, n: 1 + (r.metoo || 0) }));
+  for (const r of probs()) f.push(pt(r.lng, r.lat, { t: 'problem', id: r.id, pv: r.problem }));
+  for (const r of reqs()) f.push(pt(r.lng, r.lat, { t: 'request', id: r.id, col: REQUEST_COLOR, n: 1 + (r.metoo || 0) }));
   return { type: 'FeatureCollection', features: f };
 }
 function drawControls() {
@@ -67,12 +76,22 @@ function drawControls() {
   if (on('foot')) L.push(['line', VIEW_COLORS.good, 'Footpath'], ['line', VIEW_COLORS.mid, 'Only in parts'], ['line', VIEW_COLORS.bad, 'No footpath'], ['line', MIXED, 'No clear answer yet'], ['line', NONE, 'Not described yet']);
   if (on('cross')) L.push(['dot', '#111827', 'Crossing (colour: can people cross)']);
   if (on('stop')) L.push(['sq', STOP, 'Bus stop']);
-  if (on('problem')) L.push(['sqo', '#EF8A62', 'Problem']);
-  if (on('request')) L.push(['dot', REQUEST_COLOR, 'Suggestion']);
+  if (filt === 'problem') L.push(['sqo', '#EF8A62', 'Problem']);
+  if (filt === 'request') L.push(['dot', REQUEST_COLOR, 'Suggestion']);
+  if (filt === 'light') L.push(['sqo', '#EF8A62', 'Not working, or dark'], ['dot', REQUEST_COLOR, 'Street lights asked for']);
   $('legend').innerHTML = L.map(([k, c, l]) => `<span><i class="k-${k}" style="${k === 'sqo' ? `border-color:${c}` : `background:${c}`}"></i>${esc(l)}</span>`).join('');
+  $('note').textContent = NOTES[filt] || ''; $('note').hidden = !NOTES[filt];
+}
+// a section chosen: it shows in the address too, so the page can be linked or reloaded on it
+function setFilt(v) {
+  if (v === filt) return;
+  filt = v;
+  const P = new URLSearchParams(location.search); P.set('show', v);
+  history.replaceState(null, '', location.pathname + '?' + P + location.hash);
+  drawControls(); refresh(); drawList();
 }
 function refresh() { map.getSource('sides')?.setData(sidesGeo()); map.getSource('pts')?.setData(pointsGeo()); }
-$('chips').addEventListener('click', (e) => { const b = e.target.closest('.chip'); if (!b) return; filt = b.dataset.v; drawControls(); refresh(); drawList(); });
+$('chips').addEventListener('click', (e) => { const b = e.target.closest('.chip'); if (b) setFilt(b.dataset.v); });
 drawControls();
 
 // ── map ──
@@ -192,7 +211,7 @@ const keys = Object.keys(PROFILES), sideKeys = keys.filter(k => k.includes(':'))
 const km = sideKeys.reduce((a, k) => a + (STRETCH.get(k.split(':')[0])?.m || 0), 0) / 1000;
 const nw = (n, w) => `${fmt(n)} ${w}${n === 1 ? '' : 's'}`;
 $('counts').innerHTML = [nw(STOPS.size, 'bus stop'), `${nw(sideKeys.length, 'road side')} (${km.toFixed(1)} km)`, nw(keys.length - sideKeys.length + loose.filter(r => r.item === 'crossing').length, 'crossing'),
-  nw(problems.length, 'problem'), nw(requests.length, 'suggestion'), '<a href="../../bus-stops/leaderboard/">Leaderboard</a>', '<a href="../download/">Download</a>'].join(' · ');
+  nw(problems.length, 'problem'), nw(requests.length, 'suggestion'), '<a href="../../bus-stops/leaderboard/">Leaderboard</a>', '<a href="../download/">Download</a>', '<a href="../../streets/#questions">The questions</a>'].join(' · ');
 
 // ── map or list ──
 const many = (n, w) => `${n} ${w}${n > 1 ? 's' : ''}`;
@@ -215,9 +234,9 @@ function listItems() {
     out.push({ href: '?r=' + encodeURIComponent(r.id), at: r.observed_at, name: x ? 'Crossing between junctions' : 'Footpath on a smaller street', col: colour(x ? crossColor(r) : footColor(r)), facts: '',
       meta: [day(r.observed_at), r.nick ? esc(r.nick) : null, r.located === 'memory' ? 'from memory' : null, r.confirmed ? 'checked' : null] });
   }
-  if (on('problem')) for (const r of problems) out.push({ href: '?r=' + encodeURIComponent(r.id), at: r.seen || r.observed_at, name: problemName(r.problem), col: '#EF8A62', facts: r.note || '',
+  for (const r of probs()) out.push({ href: '?r=' + encodeURIComponent(r.id), at: r.seen || r.observed_at, name: problemName(r.problem), col: '#EF8A62', facts: r.note || '',
     meta: ['Problem', day(r.seen || r.observed_at), r.confirmed ? `${r.confirmed} said still there` : null] });
-  if (on('request')) for (const r of requests) out.push({ href: '?r=' + encodeURIComponent(r.id), at: r.observed_at, name: `Needed: ${needName(r.need).toLowerCase()}`, col: REQUEST_COLOR, facts: r.note || '',
+  for (const r of reqs()) out.push({ href: '?r=' + encodeURIComponent(r.id), at: r.observed_at, name: `Needed: ${needName(r.need).toLowerCase()}`, col: REQUEST_COLOR, facts: r.note || '',
     meta: ['Suggestion', day(r.observed_at), `${people(1 + (r.metoo || 0))} asked`] });
   if (on('stop')) for (const s of STOPS.values()) { const p = SPROF[s.id]; out.push({ href: '../../bus-stops/stop/?id=' + encodeURIComponent(s.id), at: p ? p.seen : '', name: s.name || 'Bus stop', col: STOP, facts: '',
     meta: ['Bus stop', s.towards ? 'towards ' + esc(s.towards) : null, p ? many(p.n, 'contribution') : null], stop: true }); }
@@ -249,6 +268,7 @@ function openItem(q) {
   else if (key && JUNCTION.has(key)) { at = JUNCTION.get(key).c; go = () => showJunction(key); }
   else if (r) { at = [r.lng, r.lat]; go = () => showRow(r.id); }
   if (!go) return;
+  setFilt(key ? 'walk' : sectionOf(r));              // the thing opened is shown: its section is chosen
   map.jumpTo({ center: at, zoom: 16.5 }); go();
 }
 $('rows').addEventListener('click', (e) => {

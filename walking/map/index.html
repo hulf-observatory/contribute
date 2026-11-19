@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>What people found: safer streets &amp; bus stops · Hyderabad Urban Observatory</title>
+<title>Map and data: safer streets &amp; bus stops · Hyderabad Urban Observatory</title>
 <meta name="description" content="Bus stops, footpaths, crossings, problems and requests in Hyderabad, as residents found them.">
 <link rel="icon" href="../../favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../../vendor/fonts/lato.css">
@@ -37,6 +37,7 @@
   @media (max-width: 767px) { .map-box { height: 58vh; min-height: 320px; margin: 0 -24px; border-radius: 0; border-left: 0; border-right: 0; } }
   #map { position: absolute; inset: 0; }
   .note { font-size: 13px; color: var(--muted); margin: 10px 0 0; }
+  .note[hidden] { display: none; }
   .maplibregl-popup-content { font: 14px/1.5 var(--font-ui); padding: 12px 14px; border-radius: var(--r-card); max-width: 280px; }
   dialog { border: 1px solid var(--border); border-radius: var(--r-card); padding: 22px; max-width: 420px; width: calc(100% - 32px); box-shadow: var(--shadow-float); }
   dialog::backdrop { background: rgba(17,24,39,.35); }
@@ -105,7 +106,7 @@
 <main class="wrap">
   <div class="top">
     <p class="eyebrow"><a href="../../streets/" data-form style="color:inherit;text-decoration:none">Contribute · Safer streets &amp; bus stops</a></p>
-    <h1>What people found</h1>
+    <h1>Map and data</h1>
     <p class="counts" id="counts">Loading…</p>
     <p class="counts loadmsg" id="loadmsg" hidden></p>
   </div>
@@ -115,8 +116,8 @@
   <div id="v-map">
     <div class="layout">
       <div><div class="map-box"><div id="map"></div></div>
-        <p class="note">Each side of a main road is described on its own, junction to junction, and so is crossing at each junction, from what people said there. Thin light lines: no one has described that side yet. Grey: mixed answers, no clear one yet. Problems stay until 6 months after they were last seen.</p></div>
-      <aside class="panel" id="panel"><p class="empty">Tap a side of a road, a crossing, a stop or a pin to see what people found there.</p></aside>
+        <p class="note" id="note" hidden></p></div>
+      <aside class="panel" id="panel"><p class="empty">Tap a stop, a side of a road, a crossing or a pin to see what people said there.</p></aside>
     </div>
   </div>
   <div id="v-list" hidden>
@@ -150,6 +151,6 @@
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script src="../../assets/common.js?v=20261119a"></script>
-<script type="module" src="map.js?v=20261120c"></script>
+<script type="module" src="map.js?v=20261122a"></script>
 </body>
 </html>

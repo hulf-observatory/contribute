@@ -57,6 +57,9 @@ const CHOICES = {
   problem: { name: 'Report a problem', again: 'Report another problem', blurb: 'Garbage, an open drain, waterlogging' },
   improve: { name: 'Suggest an improvement', again: 'Suggest another improvement', blurb: 'A crossing, a footpath, a bus stop' },
 };
+// the map and data page shows one section at a time, the same five: each choice links to its own (Teja, 19 Nov 2026)
+const MAP_OF = { stop: ['stop', 'bus stops'], walk: ['walk', 'footpaths and crossings'], light: ['light', 'street lights'], problem: ['problem', 'problems'], improve: ['request', 'suggestions'] };
+const mapUrl = (k, rid) => '../walking/map/?from=streets' + (rid ? '&r=' + encodeURIComponent(rid) : MAP_OF[k] ? '&show=' + MAP_OF[k][0] : '');
 const KIND_NAME = { stop: 'Bus stop', foot: 'Footpath', cross: 'Crossing', problem: 'Problem', request: 'Suggestion' };
 
 // ── state: the place, what's around it, the side of the road, the things added in this entry and the checks ──
@@ -185,6 +188,7 @@ function locBusy(t) {                               // after a failure the other
 }
 function drawWhere() {
   $('where-for').textContent = S.want ? CHOICES[S.want].name : '';
+  if (S.want) { $('where-map').textContent = `See ${MAP_OF[S.want][1]} on the map`; $('where-map').href = mapUrl(S.want); }
   $('loc-go').hidden = !PHONE;                      // a laptop: the two ways that need no phone
   $('gps-msg').hidden = !S.gpsFailed; locBusy('');
 }
@@ -1162,7 +1166,7 @@ function thanks(body, r) {
   $('thanks-h').textContent = more ? 'Added. Thank you' : pts ? `+${pts} points` : 'Thank you';
   $('thanks-text').textContent = (more ? 'Your answers are added to what you sent.' : 'Your answers are now public. Thank you.')
     + (got ? ` ${got === 1 ? 'One check was' : got + ' checks were'} already sent from this phone, so not counted again.` : '');
-  $('to-map').href = r.ids && r.ids[0] ? '../walking/map/?from=streets&r=' + encodeURIComponent(r.ids[0]) : '../walking/map/?from=streets';
+  $('to-map').href = mapUrl(S.choice, r.ids && r.ids[0]);          // the thing itself; a bus stop or a check: its section
   { const t0 = S.items[0]; if (S.place && S.place.area && t0 && t0.lat != null) S.place = { lat: t0.lat, lng: t0.lng, acc: null, memory: true }; }   // a stop added to the map in a searched area: it is the place now
   S.sent.push(...S.items); for (const c of S.checks) S.doneIds.add(c.id);
   if (S.items.some(i => i.k === 'foot' && !i.stretch)) S.spot = null;   // the spot tapped on a side street has been used
