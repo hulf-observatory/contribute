@@ -1,5 +1,5 @@
 // Leaderboard for bus stops and walking together: nicknames and points, worked out on the server (all time and the last 30 days).
-import { SURVEY, POINTS, esc, player } from '../questions.js?v=20261118c';
+import { SURVEY, POINTS, esc, player } from '../questions.js?v=20261119a';
 
 const C = window.CONTRIBUTE;
 const $ = (id) => document.getElementById(id);
@@ -23,9 +23,10 @@ document.querySelector('.seg').addEventListener('click', (e) => {
 });
 if (me) { $('me-box').hidden = false; $('me-box').innerHTML = `You're contributing as <b>${esc(me)}</b> · <a href="${prof(me)}">Your profile</a>`; }
 const P = (lb && lb.points && (lb.points['bus-stops'] || lb.points)) || POINTS;
-const W = (lb && lb.points && lb.points.walking) || { spot: 10, crossing: 10, memory: 5, photo: 5 };
+const W = (lb && lb.points && lb.points.walking) || { spot: 10, crossing: 10, problem: 5, request: 5, memory: 5, photo: 5, metoo: 2 };
 // every entry the same, first at a place or an update; from memory half; spam earns nothing (Teja, 18 Nov 2026)
-$('pts').innerHTML = [['Tell us about a bus stop, at the stop', P.rating], ['A footpath spot or a crossing', W.spot],
-  ['Either from memory, not there', P.memory ?? 5], ['Add a missing stop', '+' + P.missing], ['Add a photo', '+' + P.photo],
-  ['Check someone else\'s entry: still the same', P.confirm], ['Report spam or a bad photo', P.flag]].map(([k, v]) => `<li><span>${k}</span><b>${v}</b></li>`).join('')
+$('pts').innerHTML = [['Tell us about a bus stop, at the stop', P.rating], ['A footpath or a crossing', W.spot],
+  ['Any of these from memory, not there', P.memory ?? 5], ['Add a missing stop', '+' + P.missing], ['Report a problem, or ask for something needed', W.problem ?? 5],
+  ['Add a photo', '+' + P.photo], ['Check someone else\'s entry: still the same, still there or gone', P.confirm], ['Say you need something too', W.metoo ?? 2],
+  ['Report spam or a bad photo', P.flag]].map(([k, v]) => `<li><span>${k}</span><b>${v}</b></li>`).join('')
   + '<li class="fine">Entries removed as spam earn nothing.</li>';

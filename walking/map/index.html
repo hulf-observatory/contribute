@@ -3,16 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Walking map · Hyderabad Urban Observatory</title>
-<meta name="description" content="Footpaths and crossings in Hyderabad as residents found them: is there a footpath, is it blocked, can you cross safely?">
+<title>Walking and bus stops map · Hyderabad Urban Observatory</title>
+<meta name="description" content="Bus stops, footpaths, crossings, problems and requests in Hyderabad, as residents found them.">
 <link rel="icon" href="../../favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../../vendor/fonts/lato.css">
 <link rel="stylesheet" href="../../vendor/fonts/outfit.css">
-<link rel="stylesheet" href="../../assets/contribute.css?v=20261118c">
+<link rel="stylesheet" href="../../assets/contribute.css?v=20261119a">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 <!-- visit counter: page, referring site, country; no cookies, no IP addresses (live-feed/visits.js) -->
 <script src="https://api.urbanobservatory.in/visits.js" defer></script>
-<script src="../../assets/config.js?v=20261118c"></script>
+<script src="../../assets/config.js?v=20261119a"></script>
 <style>
   .top { margin-bottom: 20px; }
   .counts { font-size: 15px; color: var(--text-2); margin: 4px 0 0; }
@@ -28,7 +28,11 @@
   .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 14px; color: var(--text-2); margin: 0 0 12px; }
   .legend .key-x, .legend .key-f { display: inline-block; width: 12px; height: 12px; border-radius: 50%; vertical-align: middle; margin-right: 6px; background: #fff; border: 2px solid #111827; }
   .legend .key-f { width: 9px; height: 9px; border: 1.5px solid #9CA3AF; }
-  .legend i { display: inline-block; width: 22px; height: 5px; border-radius: 3px; vertical-align: middle; margin-right: 6px; }
+  .legend i { display: inline-block; width: 12px; height: 12px; vertical-align: middle; margin-right: 6px; }
+  .legend .k-line { width: 22px; height: 5px; border-radius: 3px; }
+  .legend .k-dot { border-radius: 50%; }
+  .legend .k-sq { border-radius: 2px; }
+  .legend .k-sqo { border-radius: 2px; background: #fff; border: 2.5px solid; box-sizing: border-box; }
   .map-box { position: relative; height: 62vh; min-height: 380px; max-height: 680px; border: 1px solid var(--border); border-radius: var(--r-card); overflow: hidden; }
   @media (max-width: 767px) { .map-box { height: 58vh; min-height: 320px; margin: 0 -24px; border-radius: 0; border-left: 0; border-right: 0; } }
   #map { position: absolute; inset: 0; }
@@ -100,7 +104,7 @@
 
 <main class="wrap">
   <div class="top">
-    <p class="eyebrow"><a href="../" style="color:inherit;text-decoration:none">Contribute · Walking</a></p>
+    <p class="eyebrow"><a href="../" style="color:inherit;text-decoration:none">Contribute · Walking and bus stops</a></p>
     <h1>Results so far</h1>
     <p class="counts" id="counts">Loading…</p>
     <p class="counts loadmsg" id="loadmsg" hidden></p>
@@ -111,8 +115,8 @@
   <div id="v-map">
     <div class="layout">
       <div><div class="map-box"><div id="map"></div></div>
-        <p class="note">Each side of a main road has its own profile, and so does each junction, from what people said there. Grey: no clear answer yet (no answers, or mixed ones).</p></div>
-      <aside class="panel" id="panel"><p class="empty">Tap a side of a road, a junction or a dot to see what people found there.</p></aside>
+        <p class="note">Each side of a main road is described on its own, junction to junction, and so is crossing at each junction, from what people said there. Grey: no clear answer yet (no answers, or mixed ones). Problems stay until 6 months after they were last seen.</p></div>
+      <aside class="panel" id="panel"><p class="empty">Tap a side of a road, a crossing, a stop or a pin to see what people found there.</p></aside>
     </div>
   </div>
   <div id="v-list" hidden>
@@ -145,7 +149,7 @@
 </footer>
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-<script src="../../assets/common.js?v=20261118c"></script>
-<script type="module" src="map.js?v=20261118c"></script>
+<script src="../../assets/common.js?v=20261119a"></script>
+<script type="module" src="map.js?v=20261119a"></script>
 </body>
 </html>

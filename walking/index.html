@@ -3,15 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Tell us about walking here · Hyderabad Urban Observatory</title>
-<meta name="description" content="Tell us about footpaths and crossings in Hyderabad: is there a footpath, is it blocked, can you cross safely? On your phone, at the place; no sign-in.">
+<title>Walking and bus stops · Hyderabad Urban Observatory</title>
+<meta name="description" content="Tell us about bus stops, footpaths and crossings in Hyderabad, or report a problem on the way. On your phone, at the place; no sign-in.">
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../vendor/fonts/lato.css">
 <link rel="stylesheet" href="../vendor/fonts/outfit.css">
-<link rel="stylesheet" href="../assets/contribute.css?v=20261118c">
+<link rel="stylesheet" href="../assets/contribute.css?v=20261119a">
 <!-- visit counter: page, referring site, country; no cookies, no IP addresses (live-feed/visits.js) -->
 <script src="https://api.urbanobservatory.in/visits.js" defer></script>
-<script src="../assets/config.js?v=20261118c"></script>
+<script src="../assets/config.js?v=20261119a"></script>
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <style>
@@ -172,6 +172,53 @@
   }
   .see-data { display: flex; width: 100%; max-width: 420px; margin-top: 10px; }
   .res-h .meta { margin-left: 0; }
+  /* the walking entry (Teja, 18 Nov 2026): around you, check, side of the road, add more */
+  .what-h { margin: 16px 0 8px; font: 700 13px/1.3 var(--font-ui); color: var(--text-2); letter-spacing: .02em; }
+  .near { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--border); max-height: 40vh; overflow-y: auto; }
+  .near li { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+  .near .ic { flex: none; width: 24px; height: 24px; border-radius: 4px; display: grid; place-items: center; color: #fff; font: 900 12px var(--font-ui); }
+  .near .ic.r { border-radius: 50%; }
+  .near .t { flex: 1; min-width: 0; font: 700 15px/1.3 var(--font-ui); }
+  .near .t small { display: block; font: 400 13px/1.35 var(--font-ui); color: var(--muted); }
+  .near button { flex: none; min-height: 36px; padding: 0 12px; border: 1px solid var(--border-2); border-radius: var(--r-ctl); background: #fff; font: 700 13px var(--font-ui); cursor: pointer; color: var(--ink); }
+  .near button[disabled] { color: var(--muted); cursor: default; }
+  .near .none { color: var(--muted); font-size: 14px; padding: 10px 0; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .grid2 .btn { min-height: 48px; white-space: normal; line-height: 1.2; }
+  .mini { position: relative; height: 150px; border: 1px solid var(--border); border-radius: var(--r-card); overflow: hidden; margin: 0 0 12px; }
+  .mini > div { position: absolute; inset: 0; }
+  .ans { list-style: none; margin: 8px 0 0; padding: 0; border-top: 1px solid var(--border); }
+  .ans li { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 15px; }
+  .ans li span { color: var(--muted); }
+  .ans li b { text-align: right; }
+  .ans li small { grid-column: 1 / -1; color: var(--muted); font-size: 12.5px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chips[hidden] { display: none; }
+  .chips button { min-height: 36px; padding: 0 12px; border: 1px solid var(--border-2); border-radius: 18px; background: #fff; font: 400 14px var(--font-ui); cursor: pointer; color: var(--ink); }
+  .chips button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; font-weight: 700; }
+  .sidebox[hidden] { display: none; }
+  .side-map { position: relative; height: 34vh; min-height: 170px; border: 1px solid var(--border); border-radius: var(--r-card); overflow: hidden; margin-top: 10px; }
+  .side-map > div { position: absolute; inset: 0; }
+  .youdir { width: 120px; height: 120px; pointer-events: none; }
+  .youdir svg { width: 100%; height: 100%; transition: transform .15s linear; }
+  .heading { margin: 0 0 8px; font-size: 14px; color: var(--text-2); }
+  .heading b { color: var(--ink); }
+  .answer.go::after { content: ''; margin-left: auto; width: 9px; height: 9px; border-right: 2px solid var(--muted); border-top: 2px solid var(--muted); transform: rotate(45deg); flex: none; }
+  .answer .sw { margin-left: auto; width: 14px; height: 14px; border-radius: 3px; flex: none; }
+  .answer.add { border-style: dashed; }
+  .added { margin: 0 0 14px; font-size: 14px; color: var(--text-2); }
+  .sum { list-style: none; margin: 0 0 8px; padding: 0; border-top: 1px solid var(--border); }
+  .sum li { display: flex; gap: 10px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 15px; }
+  .sum li span { flex: none; width: 82px; color: var(--muted); font-size: 13px; }
+  .sum li b { flex: 1; min-width: 0; }
+  .sum li b small { display: block; font-weight: 400; color: var(--muted); font-size: 13px; }
+  .sum li button { flex: none; background: none; border: 0; padding: 0; font: 400 13px var(--font-ui); text-decoration: underline; text-decoration-color: var(--border-2); text-underline-offset: 3px; cursor: pointer; color: var(--muted); }
+  .pin-map .centre-pin, .mm-box .centre-pin { position: absolute; left: 50%; top: 50%; width: 24px; height: 34px; margin: -34px 0 0 -12px; pointer-events: none;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 34'%3E%3Cpath d='M12 33s10-11 10-20A10 10 0 0 0 2 13c0 9 10 20 10 20z' fill='%23111827'/%3E%3Ccircle cx='12' cy='13' r='4' fill='white'/%3E%3C/svg%3E") no-repeat; }
+  @media (max-width: 767px) { body.q-mode .side-map { height: 28vh; } body.q-mode .near { max-height: 30vh; } }
+  #problist, #mainlist { gap: 6px; }
+  body.q-mode #problist .answer, body.q-mode #mainlist .answer { min-height: 42px; padding: 8px 14px; font-size: 16px; }
+  .step[data-step="report"] .what-h { margin: 12px 0 6px; }
 </style>
 </head>
 <body>
@@ -189,9 +236,9 @@
 
     <!-- the survey's own page: start, or see what people found as a map or a list (Teja, 17 Nov 2026) -->
     <section class="step on" data-step="start">
-      <p class="eyebrow">Contribute · Walking</p>
-      <h1>Walking</h1>
-      <p class="lede">Tell us what a footpath or crossing is like, or record a walk. A spot takes two minutes.</p>
+      <p class="eyebrow">Contribute</p>
+      <h1>Walking and bus stops</h1>
+      <p class="lede">Tell us about bus stops, footpaths and crossings, or report a problem on the way.</p>
       <p class="lede">Stay safe while you do it. Answers become open data; they aren't sent as complaints.</p>
       <div class="draft" id="draft" hidden>
         <p class="eyebrow">Not sent yet</p>
@@ -212,130 +259,137 @@
       <a class="btn btn-secondary btn-lg see-data" href="map/">See data <svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
     </section>
 
-    <section class="step" data-step="mode">
-      <h2 class="qt" id="q-mode">What would you like to tell us about?</h2>
-      <div class="answers" role="radiogroup" aria-labelledby="q-mode" id="mode">
-        <button type="button" class="answer" role="radio" aria-checked="false" data-val="spot"><span>The footpath where I am</span><i class="tick"></i></button>
-        <button type="button" class="answer" role="radio" aria-checked="false" data-val="crossing"><span>A crossing where I am</span><i class="tick"></i></button>
-        <button type="button" class="answer" role="radio" aria-checked="false" data-val="walk"><span>A walk<small>Your phone follows the route; add spots as you go</small></span><i class="tick"></i></button>
-        <button type="button" class="answer" role="radio" aria-checked="false" data-val="away"><span>I'm not there now</span><i class="tick"></i></button>
-      </div>
-    </section>
-
-    <!-- not there now: from memory, if they know the place well -->
-    <section class="step" data-step="away">
-      <h2 class="qt">Know a place well?</h2>
-      <p class="hint">You can add it from the map. We'll mark it as added from memory.</p>
+    <!-- where are you: the phone's location, or a place picked on the map (then "from memory") -->
+    <section class="step" data-step="loc">
+      <h2 class="qt" id="h-loc">Where are you?</h2>
+      <p class="hint">We use your location to show what's around you. We keep only the place of what you describe, never your route.</p>
       <div class="stack">
-        <button type="button" class="btn btn-primary btn-lg" id="mem-spot">A footpath</button>
-        <button type="button" class="btn btn-secondary btn-lg" id="mem-crossing">A crossing</button>
-      </div>
-      <p class="small" style="margin-top:28px">If not, come back when you're there.</p>
-    </section>
-
-    <section class="step" data-step="locate">
-      <h2 class="qt">Share your location?</h2>
-      <p class="hint">Only to place it on the map. Nothing is saved until you press Send.</p>
-      <div class="stack">
-        <button type="button" class="btn btn-primary btn-lg" id="gps-go">Share my location</button>
-        <button type="button" class="btn btn-secondary btn-lg" id="to-mark">Location not working? Use the map</button>
+        <button type="button" class="btn btn-primary btn-lg" id="gps-go">Use my location</button>
+        <button type="button" class="btn btn-secondary btn-lg" id="to-mark">Pick a place on the map instead</button>
       </div>
       <p class="msg" id="gps-msg" hidden></p>
+      <p class="demo" style="margin-top:12px" data-demo hidden>At a desk: <a href="#" data-fakeplace="17.41775,78.44866">pretend I'm on Road No. 1, Banjara Hills</a> · <a href="#" data-fakeplace="17.39370,78.43740">at Mehdipatnam</a></p>
     </section>
 
-    <!-- the phone's location; the dot can be dragged up to 100 m, so they can stand somewhere safe -->
-    <section class="step" data-step="where">
-      <h2 class="qt">Is the dot on the place?</h2>
-      <p class="hint">Standing a little away? Drag the dot to it (up to 100 m).</p>
-      <div class="map-box"><div id="wheremap"></div></div>
-      <p class="picked" id="where-info" hidden></p>
-      <p class="msg" id="where-msg" hidden></p>
-    </section>
-
-    <!-- when the phone's location fails, or from memory: a map with a fixed pin in the centre -->
     <section class="step" data-step="mark">
-      <h2 class="qt">Find the place on the map</h2>
-      <p class="hint" id="mark-hint"></p>
+      <h2 class="qt">Pick a place</h2>
+      <p class="hint">Move the map so the pin is on the place. What you add will be marked "from memory".</p>
       <div id="markbox"></div>
     </section>
 
-    <!-- a walk: the phone follows the route -->
-    <section class="step" data-step="walk">
-      <h2 class="qt" id="walk-h">Record a walk</h2>
-      <p class="hint" id="walk-hint"></p>
-      <div class="map-box walk-box"><div id="walkmap"></div></div>
-      <div class="walkstat" id="walkstat" hidden><div><b id="ws-dist">0 m</b>walked</div><div><b id="ws-spots">0</b>spots</div><div><b id="ws-gps">—</b>location</div></div>
-      <div class="stack" id="walk-start-box" style="margin-top:14px">
-        <button type="button" class="btn btn-primary btn-lg" id="walk-start">Start the walk</button>
-      </div>
-      <div class="stack" id="walk-on-box" hidden>
-        <button type="button" class="btn btn-primary btn-lg" id="walk-add">Add a footpath spot here</button>
-        <div class="pair" style="max-width:none"><button type="button" class="btn btn-secondary btn-lg" id="walk-xing">Add a crossing</button><button type="button" class="btn btn-secondary btn-lg" id="walk-finish">Finish</button></div>
-      </div>
-      <p class="demo" style="margin-top:10px" id="demo-line" hidden>Trying this at a desk? <a href="#" id="demo-step">Pretend to walk 60 m</a> · <a href="#" id="demo-turn">Turn the corner</a></p>
-      <p class="msg" id="walk-msg" hidden></p>
-      <ul class="spotlist" id="spotlist"></ul>
+    <!-- around you: what's already here, missing from the map, report or ask -->
+    <section class="step" data-step="near">
+      <h2 class="qt" id="h-near">Around you</h2>
+      <div class="mini"><div id="minimap"></div></div>
+      <p class="what-h" style="margin-top:0">Here already</p>
+      <ul class="near" id="nearlist"><li class="none">Looking…</li></ul>
+      <p class="what-h">Missing from the map</p>
+      <div class="grid2"><button type="button" class="btn btn-secondary" data-new="stop">Bus stop</button><button type="button" class="btn btn-secondary" data-new="cross">Crossing between junctions</button></div>
+      <p class="what-h">Report or ask</p>
+      <div class="grid2"><button type="button" class="btn btn-secondary" data-new="problem">A problem</button><button type="button" class="btn btn-secondary" data-new="ask">Something needed</button></div>
+      <p class="msg" id="near-msg" hidden></p>
     </section>
 
-    <!-- side of the road: point the phone at the road; buttons as a fallback -->
-    <section class="step" data-step="dir">
-      <h2 class="qt" id="side-q">Which side of the road are you on?</h2>
-      <div id="aim">
-        <p class="hint" id="aim-hint">Hold your phone flat, point its top at the road and tap the button.</p>
-        <div class="aimpic" aria-hidden="true"><svg viewBox="0 0 240 110" width="240" height="110"><rect x="0" y="0" width="240" height="46" fill="#E5E7EB"/><path d="M0 23h240" stroke="#fff" stroke-width="3" stroke-dasharray="14 10"/><rect x="0" y="46" width="240" height="14" fill="#D1D5DB"/><rect x="104" y="66" width="32" height="42" rx="5" fill="#111827"/><rect x="108" y="71" width="24" height="30" rx="2" fill="#fff"/><path d="M120 62V50" stroke="#111827" stroke-width="2.5"/><path d="M114 54l6-8 6 8" fill="none" stroke="#111827" stroke-width="2.5" stroke-linejoin="round"/><text x="6" y="16" font-size="11" fill="#6B7280" font-family="Lato, sans-serif">Road</text><text x="6" y="57" font-size="9" fill="#374151" font-family="Lato, sans-serif">Footpath</text></svg></div>
-        <div class="stack"><button type="button" class="btn btn-primary btn-lg" id="aim-go">I'm pointing at the road</button></div>
-        <p class="sideline" id="aim-msg" hidden></p>
-        <p class="alt-link"><a href="#" id="to-manual">No compass? Choose instead</a></p>
-        <p class="demo" data-demo hidden>Desk test (this Mac only): pretend the phone points <a href="#" data-fake="5">north</a> · <a href="#" data-fake="92">east</a> · <a href="#" data-fake="181">south</a> · <a href="#" data-fake="268">west</a></p>
-      </div>
-      <div id="manual" hidden>
-        <p class="hint" id="dir-hint">Stand on the footpath facing along the road.</p>
-        <h3 class="subq" id="dir-q">Which way are you facing?</h3>
-        <div class="compass" role="radiogroup" aria-labelledby="dir-q" id="compass">
-          <button type="button" class="opt c-n" role="radio" aria-checked="false" data-v="n">North</button>
-          <button type="button" class="opt c-w" role="radio" aria-checked="false" data-v="w">West</button>
-          <span class="you" aria-hidden="true"><span><i id="you-arrow"></i>You</span></span>
-          <button type="button" class="opt c-e" role="radio" aria-checked="false" data-v="e">East</button>
-          <button type="button" class="opt c-s" role="radio" aria-checked="false" data-v="s">South</button>
-        </div>
-        <h3 class="subq" id="h-side">Facing that way, which side are you on?</h3>
-        <div class="opts" role="radiogroup" aria-labelledby="h-side" id="side">
-          <button type="button" class="opt" role="radio" aria-checked="false" data-v="left">Left</button>
-          <button type="button" class="opt" role="radio" aria-checked="false" data-v="right">Right</button>
-          <button type="button" class="opt" role="radio" aria-checked="false" data-v="dk">Don't know</button>
-        </div>
-        <p class="sideline" id="sideline" hidden></p>
-        <p class="alt-link" id="to-aim-p"><a href="#" id="to-aim">Use the phone's compass instead</a></p>
-      </div>
+    <!-- checking something already described -->
+    <section class="step" data-step="check">
+      <p class="qtopic" id="check-k"></p>
+      <h2 class="qt" id="check-h"></h2>
+      <p class="hint" id="check-m"></p>
+      <ul class="ans" id="check-a"></ul>
+      <p class="small" id="check-q">Is this still what you see?</p>
+      <div class="pair" style="margin-top:14px;max-width:none"><button type="button" class="btn btn-secondary btn-lg" id="check-change">Something changed</button><button type="button" class="btn btn-primary btn-lg" id="check-same">Still the same</button></div>
     </section>
 
-    <!-- later spots on a walk -->
-    <section class="step" data-step="same">
-      <h2 class="qt" id="same-q">Same as spot 1?</h2>
-      <p class="hint" id="same-prev"></p>
-      <div class="answers" role="radiogroup" aria-labelledby="same-q" id="same">
-        <button type="button" class="answer" role="radio" aria-checked="false" data-val="yes"><span>Yes, the same<small>Added straight away</small></span><i class="tick"></i></button>
-        <button type="button" class="answer" role="radio" aria-checked="false" data-val="no"><span>No, something changed<small>Change only what's different</small></span><i class="tick"></i></button>
+    <section class="step" data-step="stoppick">
+      <h2 class="qt">Which stop?</h2>
+      <p class="hint">Stops near you</p>
+      <div class="answers" id="stoplist"></div>
+    </section>
+
+    <section class="step" data-step="stopname">
+      <h2 class="qt">What is the stop called?</h2>
+      <p class="hint">As people call it, or as on a sign.</p>
+      <input class="inp" id="stop-name" maxlength="80" autocomplete="off" placeholder="For example Rethibowli">
+      <label class="field-label" for="stop-towards">Buses go towards (if you know)</label>
+      <input class="inp" id="stop-towards" maxlength="80" autocomplete="off" placeholder="For example Koti">
+    </section>
+
+    <!-- put the pin on it: a problem, a request, a crossing between junctions, a missing stop -->
+    <section class="step" data-step="pin">
+      <h2 class="qt" id="pin-h">Put the pin on it</h2>
+      <p class="hint" id="pin-hint">Move the map so the pin sits on the place.</p>
+      <div class="map-box pin-map"><div id="pinmap"></div><span class="centre-pin" aria-hidden="true"></span></div>
+      <p class="picked" id="pin-info"></p>
+    </section>
+
+    <!-- which side of the road: the compass, or the traffic; the map shows the answer, and a tap fixes it -->
+    <section class="step" data-step="sidepick">
+      <h2 class="qt">Which side of the road?</h2>
+      <div id="roadpick" hidden><p class="qtopic" style="margin:2px 0 6px">You're near a junction. Which road?</p><div class="chips" id="roadchips" style="margin-bottom:10px"></div></div>
+      <div class="sidebox" id="compassbox">
+        <p style="margin:0 0 8px;font-weight:700">Stand facing the road and point your phone across it.</p>
+        <p class="heading">Your phone points: <b id="heading-v">–</b></p>
+        <button type="button" class="btn btn-secondary btn-lg wide" id="compass-go">Read the direction</button>
+        <p class="small" style="margin-top:8px">Can't use the compass? <a href="#" id="to-traffic">Answer a question instead</a></p>
+        <p class="demo" data-demo hidden>At a desk: <a href="#" data-fakeheading="0">phone points north</a> · <a href="#" data-fakeheading="90">east</a> · <a href="#" data-fakeheading="180">south</a> · <a href="#" data-fakeheading="270">west</a></p>
       </div>
+      <div class="sidebox" id="trafficbox" hidden>
+        <p style="margin:0 0 8px;font-weight:700">Which way is the nearest traffic going?</p>
+        <div class="answers" id="trafficopts"></div>
+        <p class="small" style="margin-top:8px" id="to-compass-p"><a href="#" id="to-compass">Use the compass instead</a></p>
+      </div>
+      <div class="side-map"><div id="sidemap"></div></div>
+      <p class="small" id="sidepicked" style="margin-top:6px">Or tap your side on the map.</p>
+    </section>
+
+    <section class="step" data-step="sidewhich">
+      <h2 class="qt">Which side are you describing?</h2>
+      <p class="hint" id="sw-hint"></p>
+      <div class="answers" id="swopts"></div>
+    </section>
+
+    <section class="step" data-step="crosspick">
+      <h2 class="qt">Which crossing?</h2>
+      <div class="answers" id="crosslist"></div>
+    </section>
+
+    <section class="step" data-step="report">
+      <h2 class="qt">What's here?</h2>
+      <div class="answers" id="problist"></div>
+      <p class="what-h">Or tell us about</p>
+      <div class="answers" id="mainlist"></div>
+    </section>
+
+    <section class="step" data-step="ask">
+      <h2 class="qt">What's needed here?</h2>
+      <p class="hint">Others nearby can say they need it too.</p>
+      <div class="answers" id="asklist"></div>
+    </section>
+
+    <section class="step" data-step="blockedby">
+      <h2 class="qt">Blocked by what?</h2>
+      <p class="hint">Tick all you see</p>
+      <div class="answers" id="blist"></div>
     </section>
 
     <div id="topics"></div>
 
     <section class="step" data-step="photo">
-      <h2 class="qt">Add a photo?</h2>
-      <p class="hint" id="photo-hint">Step away from traffic first. Keep faces and number plates out of it.</p>
+      <h2 class="qt" id="photo-h">Add a photo?</h2>
+      <p class="hint" id="photo-hint">It helps others see it. Step away from traffic first. Keep faces and number plates out of it.</p>
       <img id="photo-prev" alt="Your photo">
       <label class="btn btn-secondary btn-lg wide" for="photo-in" id="photo-btn">Take or choose a photo</label>
-      <p class="hint" id="photo-full" hidden>This walk already has 10 photos, the most one walk can hold.</p>
       <input type="file" accept="image/*" id="photo-in" class="photo-in">
       <p class="fine" id="photo-info">The phone makes it smaller and removes the location stored in it.</p>
+      <label class="field-label" for="note" id="note-l">Anything to add? (optional)</label>
+      <textarea class="inp" id="note" maxlength="300" placeholder="For example: cars parked on the footpath every evening"></textarea>
+      <p class="msg" id="photo-few" hidden></p>
     </section>
 
-    <section class="step" data-step="note">
-      <h2 class="qt"><label for="note">Anything to add?</label></h2>
-      <p class="hint">Shown publicly. No names or phone numbers.</p>
-      <textarea class="inp" id="note" maxlength="300" placeholder="For example: cars parked on the footpath every evening"></textarea>
-      <p class="msg" id="note-few" hidden></p>
+    <section class="step" data-step="more">
+      <h2 class="qt">Add more here?</h2>
+      <p class="added" id="added"></p>
+      <div class="answers" id="morelist"></div>
     </section>
 
     <section class="step" data-step="player">
@@ -356,17 +410,14 @@
       <p class="alt-link" id="p-switch-line"><span id="p-switch-text">Have one already?</span> <a href="#" id="p-switch">Log in</a></p>
     </section>
 
-    <!-- a short summary; the full list opens only if asked -->
     <section class="step" data-step="review">
       <h2 class="qt">Ready to send</h2>
-      <dl class="review" id="review"></dl>
-      <div class="all-answers" id="all-answers" hidden></div>
-      <p class="small" id="review-hint" hidden></p>
+      <ul class="sum" id="sum"></ul>
       <p class="anon" id="anon" hidden>Sending anonymously. <a href="#" id="anon-create">Create a profile</a> or <a href="#" id="anon-login">log in</a> to get points for this.</p>
       <div class="ts" id="ts-review"></div>
       <input type="text" name="website" id="trap" tabindex="-1" autocomplete="off" aria-hidden="true" class="trap">
       <p class="msg" id="send-msg" hidden></p>
-      <p class="small" id="review-fine">Shared as open data (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>), without photos. No names, no email, no IP addresses.</p>
+      <p class="small" id="review-fine">Shared as open data (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>), with photos. No names, no email, no IP addresses. We keep the places you describe, not your route.</p>
       <p class="accuracy" id="accuracy">By sending, you confirm this is what you saw, to the best of your knowledge.</p>
     </section>
 
@@ -375,11 +426,10 @@
       <h2 class="qt">Thank you</h2>
       <p class="hint" id="thanks-text">Your answers are now public.</p>
       <p class="small" id="thanks-prof" hidden><a href="../profile/" id="thanks-prof-a">See your profile</a></p>
-      <div class="stack">
+      <div class="stack" style="margin-top:16px">
         <a class="btn btn-primary btn-lg" id="to-map" href="map/">See it on the map <svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
-        <button type="button" class="btn btn-secondary btn-lg" id="again">Add another</button>
+        <button type="button" class="btn btn-secondary btn-lg" id="again">Add more</button>
       </div>
-      <p class="small" style="margin-top:22px">Hear about new surveys on <a href="https://chat.whatsapp.com/GJUFWd2UJyEImsmgxbEKlg" target="_blank" rel="noopener">WhatsApp</a></p>
     </section>
 
     <div class="nav" id="nav" hidden>
@@ -397,7 +447,7 @@
   </div>
 </footer>
 
-<script src="../assets/common.js?v=20261118c"></script>
-<script type="module" src="form.js?v=20261118c"></script>
+<script src="../assets/common.js?v=20261119a"></script>
+<script type="module" src="form.js?v=20261119a"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 // A contributor's public page (Teja, 18 Nov 2026): points, place on the leaderboard, what they added and their
 // entries, newest first. Dates only, never the time of day; spam reports are counted but not listed.
-import { esc, player } from '../bus-stops/questions.js?v=20261118c';
+import { esc, player } from '../bus-stops/questions.js?v=20261119a';
 
 const C = window.CONTRIBUTE;
 const $ = (id) => document.getElementById(id);
@@ -10,7 +10,8 @@ const me = player.get()?.nick || '';
 let n = (new URLSearchParams(location.search).get('n') || '').trim();
 if (!n && me) { n = me; history.replaceState(null, '', '?n=' + encodeURIComponent(me)); }
 
-const KIND = { stop: 'Bus stop', missing: 'Added a missing stop', spot: 'Footpath', crossing: 'Crossing', confirm: 'Checked: still the same' };
+const KIND = { stop: 'Bus stop', missing: 'Added a missing stop', spot: 'Footpath', crossing: 'Crossing', problem: 'Problem', request: 'Request',
+  confirm: 'Checked: still the same', gone: 'Checked: gone', metoo: 'Needs it too' };
 function link(e) {
   if (e.stop) return '../bus-stops/stop/?id=' + encodeURIComponent(e.stop);
   if (e.place) return '../walking/map/?p=' + encodeURIComponent(e.place);
@@ -38,8 +39,8 @@ if (!n) {
     $('s-rank').textContent = p.rank ? '#' + p.rank : '–';
     $('s-of').textContent = p.rank ? `of ${fmt(p.of)} on the board` : 'on the leaderboard';
     const c = p.counts;
-    $('did').textContent = [['Bus stops', c.stops], ['Stops added', c.missing], ['Footpath spots', c.spots], ['Crossings', c.crossings],
-      ['Checks', c.confirms], ['Photos', c.photos], ['Spam reports', c.flags]].filter(([, v]) => v).map(([k, v]) => `${k} ${fmt(v)}`).join(' · ');
+    $('did').textContent = [['Bus stops', c.stops], ['Stops added', c.missing], ['Footpaths', c.spots], ['Crossings', c.crossings],
+      ['Problems', c.problems], ['Requests', c.requests], ['Checks', c.confirms], ['Me too', c.metoo], ['Photos', c.photos], ['Spam reports', c.flags]].filter(([, v]) => v).map(([k, v]) => `${k} ${fmt(v)}`).join(' · ');
     $('list-h').hidden = !p.entries.length;
     $('entries').innerHTML = p.entries.map(e => {
       const name = esc(e.name) + (e.towards ? `, towards ${esc(e.towards)}` : ''), href = link(e);
