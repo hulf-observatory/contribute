@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mission Un-choke: what people sent</title>
+<!-- (Teja, 19 Nov 2026) The entries of the Un-choke survey (../), on a map and as a list. Like the survey, not listed
+     on the site and kept out of search engines. Read live from the server; the download is on the survey page. -->
+<meta name="robots" content="noindex">
+<link rel="icon" href="../../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../../vendor/fonts/lato.css">
+<link rel="stylesheet" href="../../assets/contribute.css?v=20261120a">
+<!-- visit counter: page, referring site, country; no cookies, no IP addresses (live-feed/visits.js) -->
+<script src="https://api.urbanobservatory.in/visits.js" defer></script>
+<script src="../../assets/config.js?v=20261120a"></script>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<style>
+  :root { --font: var(--font-ui); }
+  * { box-sizing: border-box; }
+  body { font: 400 16px/1.5 var(--font); color: var(--ink); background: #fff; }
+  [hidden] { display: none !important; }
+  .page { width: 100%; max-width: 1200px; margin: 0 auto; padding: clamp(20px, 4vh, 40px) 16px 32px; }
+  .eyebrow { margin: 0 0 6px; }
+  h1 { font: 700 26px/1.2 var(--font); letter-spacing: -.005em; margin: 0 0 8px; }
+  .lede { font-size: 15px; color: var(--text-2); margin: 0 0 16px; max-width: 640px; }
+  .acts { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 20px; }
+  .btn { height: auto; min-height: 40px; padding: 6px 16px; font: 700 15px/1.2 var(--font); border-radius: 4px; text-decoration: none; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 12px; border: 1px solid var(--border-2); border-radius: 17px; background: #fff; font: 400 14px var(--font); color: var(--ink); cursor: pointer; }
+  .chip i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .chip span { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .chip[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); font-weight: 700; }
+  .cols { display: grid; gap: 20px; }
+  #map { height: 46vh; min-height: 260px; border: 1px solid var(--border-2); border-radius: 4px; overflow: hidden; }
+  .maplibregl-ctrl-attrib { font-size: 10px; }
+  .list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--border); }
+  .list li { padding: 14px 8px; border-bottom: 1px solid var(--border); cursor: pointer; }
+  .list li.on { background: var(--band); box-shadow: inset 3px 0 0 var(--ink); }
+  .list .k { display: flex; align-items: center; gap: 8px; font: 900 11px/1.3 var(--font); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .list .k i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .list .k time { margin-left: auto; font-weight: 400; letter-spacing: 0; text-transform: none; font-size: 12.5px; }
+  .list h3 { font: 700 16px/1.3 var(--font); margin: 4px 0 4px; }
+  .list p { margin: 0; font-size: 14px; line-height: 1.45; color: var(--text-2); }
+  .list p.note { margin-top: 4px; color: var(--ink); }
+  .list p.sub { font-size: 12.5px; color: var(--muted); margin-top: 8px; }
+  .shots { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .shots a { display: block; width: 64px; height: 64px; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; background: var(--band); }
+  .shots img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .linkbtn { border: 0; background: none; padding: 0; font: 400 12.5px var(--font); color: var(--muted); text-decoration: underline; cursor: pointer; }
+  .empty { padding: 20px 0; color: var(--text-2); font-size: 15px; }
+  .fine { font-size: 12.5px; color: var(--muted); margin: 20px 0 0; }
+  .fine a { color: var(--ink); }
+  @media (min-width: 900px) {
+    .cols { grid-template-columns: minmax(0, 3fr) minmax(320px, 2fr); align-items: start; }
+    #map { position: sticky; top: 12px; height: calc(100vh - 120px); }
+  }
+</style>
+</head>
+<body>
+<main class="page">
+  <p class="eyebrow">Let's Un-choke Hyderabad</p>
+  <h1>Mission Un-choke: what people sent</h1>
+  <p class="lede" id="lede">Places where people asked for a zebra crossing or cycle parking at a bus stop, a footpath, street lights or a vehicle-free street.</p>
+  <div class="acts"><a class="btn btn-primary" href="../#start">Add a place</a><a class="btn btn-secondary" href="../#download">Download the data</a></div>
+  <div class="chips" id="chips"></div>
+  <div class="cols">
+    <div id="map"></div>
+    <div>
+      <ul class="list" id="list"></ul>
+      <p class="empty" id="empty" hidden></p>
+      <div id="ts"></div><input type="text" id="trap" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
+      <p class="fine">Sent by residents; not checked on the ground by us. Times are rounded to the hour. Names and emails are never published. Open data, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>.</p>
+    </div>
+  </div>
+</main>
+
+<script src="../../assets/common.js?v=20261120a"></script>
+<script type="module">
+const C = window.CONTRIBUTE, SURVEY = 'unchoke-hyd', esc = Contribute.esc;
+const $ = (id) => document.getElementById(id);
+// data in colour (the design system's categories, in order); everything else ink and grey
+const ABOUT = { zebra: ['Zebra crossing at a bus stop', '#185FA5'], cycle: ['Cycle parking at a bus stop', '#D9772B'], footpath: ['Footpath', '#2E8B7A'],
+  lights: ['Street lights', '#8E5AA8'], vehicle_free: ['Vehicle-free street', '#C2413B'] };
+const SAY = {
+  crossing: { yes: 'A crossing is near the stop', no: 'No crossing near the stop' },
+  crossing_marked: { zebra: 'marked with zebra stripes', faded: 'its marking is faded', none: 'it is not marked' },
+  crossing_can: { yes: 'people can cross here', hard: 'crossing is difficult', no: "people can't cross here" },
+  cycle_stand: { yes: 'There is a cycle stand now', no: 'No cycle stand now' },
+  cycle_space: { yes: 'there is space for one', little: 'a little space for one', no: 'no space for one' },
+  cycle_room: { upto5: 'room for up to 5 cycles', '6to10': 'room for 6 to 10 cycles', over10: 'room for more than 10 cycles' },
+  footpath: { yes: 'Footpath most of the way', parts: 'Footpath only in parts', no: 'No footpath' },
+  broken: { no: 'not broken', places: 'broken in places', mostly: 'mostly broken' },
+  blocked: { no: 'not blocked', places: 'blocked in places', mostly: 'mostly blocked' },
+  street_lights: { not_working: "A street light isn't working", dark: "It's dark here, no street lights", asked: 'Street lights asked for' },
+  vf_hours: { all_day: 'Vehicle-free all day', hours: 'Vehicle-free for certain hours', market_days: 'Vehicle-free on market days' },
+};
+const BY = { parked: 'parked vehicles', vendors: 'vendors or shops', works: 'construction or debris', poles: 'poles, trees or transformers', garbage: 'garbage' };
+const FACTS = { zebra: ['crossing', 'crossing_marked', 'crossing_can'], cycle: ['cycle_stand', 'cycle_space', 'cycle_room'], footpath: ['footpath', 'broken', 'blocked'], lights: ['street_lights'], vehicle_free: ['vf_hours'] };
+
+let rows = [], filt = 'all', map = null, sel = null;
+const title = (p) => p.stop_name ? p.stop_name + (p.towards ? `, towards ${p.towards}` : '') : p.vf_name || [p.ward, p.zone && p.zone + ' zone'].filter(Boolean).join(', ') || 'Hyderabad';
+function facts(p) {
+  const out = FACTS[p.about].map(k => (SAY[k] || {})[p[k]]).filter(Boolean);
+  if (p.blocked_by && p.blocked_by.length) out.push('by ' + p.blocked_by.map(b => BY[b] || b).join(', '));
+  const s = out.join('; ');
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) + '.' : '';
+}
+const day = (t) => t ? new Date(t).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+const shown = () => rows.filter(r => filt === 'all' || r.properties.about === filt);
+
+function draw() {
+  const n = (k) => rows.filter(r => k === 'all' || r.properties.about === k).length;
+  $('chips').innerHTML = [['all', ['All', null]], ...Object.entries(ABOUT)].map(([k, [name, col]]) =>
+    `<button type="button" class="chip" data-k="${k}" aria-pressed="${filt === k}">${col ? `<i style="background:${col}"></i>` : ''}${esc(name)} <span>${n(k)}</span></button>`).join('');
+  const list = shown();
+  $('list').innerHTML = list.map(({ properties: p }) => `<li data-id="${p.id}" class="${sel === p.id ? 'on' : ''}">
+      <div class="k"><i style="background:${ABOUT[p.about][1]}"></i>${esc(ABOUT[p.about][0])}<time>${day(p.observed_at)}</time></div>
+      <h3>${esc(title(p))}</h3>
+      ${facts(p) ? `<p>${esc(facts(p))}</p>` : ''}${p.note ? `<p class="note">“${esc(p.note)}”</p>` : ''}
+      ${(p.photos || []).length ? `<div class="shots">${p.photos.map((u, i) => `<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="Photo ${i + 1}" loading="lazy"></a>`).join('')}</div>` : ''}
+      <p class="sub">${p.stop_name || p.vf_name ? esc([p.ward, p.zone && p.zone + ' zone'].filter(Boolean).join(', ')) + ' · ' : ''}${p.located === 'memory' ? 'Sent from memory' : 'Sent from the place'} · <button type="button" class="linkbtn" data-flag="spam">Report as spam</button>${(p.photos || []).length ? ' · <button type="button" class="linkbtn" data-flag="photo">Report a photo</button>' : ''}</p>
+    </li>`).join('');
+  $('empty').hidden = !!list.length;
+  $('empty').innerHTML = rows.length ? 'Nothing of this kind yet.' : 'Nothing has been sent yet. <a href="../#start" style="color:var(--ink)">Add the first place</a>.';
+  if (map && map.getSource('pts')) {
+    map.getSource('pts').setData({ type: 'FeatureCollection', features: list.filter(r => r.geometry) });
+    map.setFilter('sel', ['==', ['get', 'id'], sel || '']);
+  }
+}
+$('chips').onclick = (e) => { const b = e.target.closest('.chip'); if (b) { filt = b.dataset.k; draw(); } };
+function pick(id, fly) {
+  sel = id; draw();
+  const r = rows.find(x => x.properties.id === id);
+  if (fly && r && r.geometry && map) map.easeTo({ center: r.geometry.coordinates, zoom: Math.max(map.getZoom(), 15.5), duration: 400 });
+  if (!fly) { const li = $('list').querySelector(`[data-id="${id}"]`); if (li) li.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+}
+// three "spam" flags hide an entry and three "photo" flags its photos, until we check (one count per phone)
+const spam = Contribute.spamCheck($('ts'));
+$('list').onclick = async (e) => {
+  const li = e.target.closest('li[data-id]'); if (!li) return;
+  const f = e.target.closest('[data-flag]');
+  if (!f) { if (!e.target.closest('a')) pick(li.dataset.id, true); return; }
+  if (!confirm(f.dataset.flag === 'spam' ? 'Report this entry as spam or fake?' : 'Report a problem with a photo here (a face, a number plate, or not of this place)?')) return;
+  f.disabled = true; f.textContent = 'Sending…';
+  try {
+    const token = await spam.token();
+    const r = await Contribute.post(`/${SURVEY}/reports/${li.dataset.id}/feedback`, { kind: f.dataset.flag, device: Contribute.device(), token, website: $('trap').value });
+    f.textContent = r.accepted === false ? 'Already reported from this phone' : 'Reported. Thank you.';
+  } catch { f.textContent = "It didn't go. Try again."; f.disabled = false; } finally { spam.reset(); }
+};
+
+map = new maplibregl.Map({ container: 'map', style: 'https://tiles.openfreemap.org/styles/positron', center: [78.475, 17.405], zoom: 10.5, minZoom: 9, maxZoom: 19,
+  maxBounds: [77.6, 16.6, 79.5, 18.3], attributionControl: { compact: true } });
+map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+map.on('load', () => {
+  map.getContainer().querySelectorAll('.maplibregl-compact-show').forEach(x => x.classList.remove('maplibregl-compact-show'));
+  map.addSource('pts', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+  const colour = ['match', ['get', 'about'], ...Object.entries(ABOUT).flatMap(([k, v]) => [k, v[1]]), '#B8BDC6'];
+  map.addLayer({ id: 'pts', type: 'circle', source: 'pts', paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 5, 15, 8], 'circle-color': colour, 'circle-stroke-color': '#fff', 'circle-stroke-width': 1.5 } });
+  map.addLayer({ id: 'sel', type: 'circle', source: 'pts', filter: ['==', ['get', 'id'], ''], paint: { 'circle-radius': 13, 'circle-color': colour, 'circle-stroke-color': '#111827', 'circle-stroke-width': 3 } });
+  map.on('click', (e) => { const p = e.point, f = map.queryRenderedFeatures([[p.x - 12, p.y - 12], [p.x + 12, p.y + 12]], { layers: ['pts'] })[0]; if (f) pick(f.properties.id, false); });
+  map.on('mousemove', (e) => { map.getCanvas().style.cursor = map.queryRenderedFeatures(e.point, { layers: ['pts'] }).length ? 'pointer' : ''; });
+  draw(); fit();
+});
+function fit() {
+  const pts = rows.filter(r => r.geometry).map(r => r.geometry.coordinates);
+  if (!pts.length || !map.loaded()) return;
+  const b = pts.reduce((b, c) => b.extend(c), new maplibregl.LngLatBounds(pts[0], pts[0]));
+  map.fitBounds(b, { padding: 50, maxZoom: 15, duration: 0 });
+}
+try {
+  const r = await fetch(`${C.API}/${SURVEY}/reports.json`, { credentials: 'omit', cache: 'no-cache' });
+  rows = (await r.json()).features || [];
+  $('lede').textContent = `${rows.length} ${rows.length === 1 ? 'place' : 'places'} sent so far: where people asked for a zebra crossing or cycle parking at a bus stop, a footpath, street lights or a vehicle-free street.`;
+  draw(); fit();
+} catch { $('empty').hidden = false; $('empty').textContent = "The entries couldn't be loaded. Check your connection and open the page again."; }
+if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__um = { map, rows: () => rows };   // local checks only
+</script>
+</body>
+</html>

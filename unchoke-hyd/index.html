@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mission Un-choke: My City, My Sujhaav</title>
+<meta name="description" content="Tell Let's Un-choke Hyderabad where the city needs a zebra crossing or cycle parking at a bus stop, a footpath, street lights or a vehicle-free street.">
+<!-- (Teja, 19 Nov 2026) A small survey for the citizens' group Let's Un-choke Hyderabad, from their Google Form. Not
+     listed on the site and kept out of search engines: people come by the link. Its entries are kept apart from the streets
+     and bus stop data, with their own map (map/) and download. No profile here. -->
+<meta name="robots" content="noindex">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../vendor/fonts/lato.css">
+<link rel="stylesheet" href="../assets/contribute.css?v=20261120a">
+<!-- visit counter: page, referring site, country; no cookies, no IP addresses (live-feed/visits.js) -->
+<script src="https://api.urbanobservatory.in/visits.js" defer></script>
+<script src="../assets/config.js?v=20261120a"></script>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<style>
+  :root { --font: var(--font-ui); }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { font: 400 16px/1.5 var(--font); color: var(--ink); background: var(--surface-2); display: flex; flex-direction: column; min-height: 0; }
+  [hidden] { display: none !important; }
+  .phone { flex: 1; min-height: 0; width: 100%; max-width: 430px; margin: 0 auto; background: #fff; display: flex; flex-direction: column; border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
+  .top { flex: none; display: flex; align-items: center; gap: 14px; padding: 10px 16px; border-bottom: 1px solid var(--border); min-height: 45px; }
+  body:not(.in) .top { display: none; }
+  .top .back { border: 0; background: none; padding: 0 6px 0 0; min-width: 32px; min-height: 32px; font: 400 20px/1 var(--font); cursor: pointer; color: var(--ink); text-align: left; }
+  .prog { flex: 1; height: 3px; background: var(--surface-2); } .prog i { display: block; height: 100%; background: var(--ink); transition: width .2s ease; }
+
+  .step { display: none; flex: 1; min-height: 0; flex-direction: column; padding: 10px 16px 0; }
+  .step.on { display: flex; }
+  .body { flex: 1; min-height: 0; overflow-y: auto; }
+  .foot { flex: none; padding: 8px 0 calc(8px + env(safe-area-inset-bottom)); display: grid; gap: 6px; }
+  .eyebrow { margin: 0 0 6px; }
+  .step h1, .step h2 { font: 700 24px/1.2 var(--font); margin: 0 0 6px; letter-spacing: -.005em; }
+  .step h1 { font-size: 26px; }
+  .step h2 small { font-weight: 400; color: var(--muted); font-size: .65em; }
+  .step h2:focus { outline: none; }
+  .hint { font-size: 15px; line-height: 1.4; color: var(--text-2); margin: 0 0 12px; }
+  .lede { font-size: 15px; line-height: 1.45; color: var(--text-2); margin: 6px 0 0; }
+  .fine { font-size: 12.5px; line-height: 1.35; color: var(--muted); margin: 0; text-align: center; }
+  .fine.left { text-align: left; margin-top: 8px; }
+  .fine a, .lede a { color: var(--ink); }
+  .tag { display: inline-block; margin: 0 0 8px; padding: 3px 8px; border-radius: 3px; background: var(--surface-2); font-size: 13px; color: var(--text-2); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .stack { display: grid; gap: 6px; }
+  .choice { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; width: 100%; min-height: 48px; padding: 6px 14px; text-align: left;
+    background: #fff; border: 1px solid var(--border-2); border-radius: 4px; cursor: pointer; font: inherit; color: inherit; }
+  .choice b { display: block; font: 700 16px/1.25 var(--font); }
+  .choice small { display: block; font-size: 12.5px; color: var(--muted); line-height: 1.3; }
+  .choice .tick { width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--border-2); }
+  .choice.multi .tick { border-radius: 3px; }
+  .choice[aria-checked="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); background: var(--band); }
+  .choice[aria-checked="true"] .tick { border: 6px solid var(--ink); }
+  .choice.go .tick { width: 9px; height: 9px; border: 0; border-radius: 0; border-right: 2px solid var(--muted); border-top: 2px solid var(--muted); transform: rotate(45deg); margin-right: 4px; }
+  .or { margin: 16px 0 8px; font: 700 15px/1.3 var(--font); color: var(--text-2); }
+
+  .btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: auto; min-height: 46px; padding: 6px 16px; border-radius: 4px; border: 1px solid var(--ink);
+    font: 700 16px/1.2 var(--font); cursor: pointer; text-decoration: none; }
+  .btn small { font-weight: 400; font-size: 13px; opacity: .8; }
+  .btn.big { flex-direction: column; gap: 1px; min-height: 64px; font-size: 18px; }
+  .btn-primary { background: var(--ink); color: #fff; }
+  .btn-primary:disabled { background: var(--surface-2); border-color: var(--surface-2); color: var(--disabled); cursor: default; }
+  .btn-secondary { background: #fff; color: var(--ink); border-color: var(--border-2); }
+  .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .msg { margin: 10px 0 0; padding: 8px 0; border-top: 1px solid var(--border-2); border-bottom: 1px solid var(--border-2); color: var(--text-2); font-size: 14px; line-height: 1.4; }
+  .inp { width: 100%; height: 46px; padding: 0 14px; border: 1px solid var(--border-2); border-radius: 4px; background: #fff; font: 400 16px var(--font); color: var(--ink); }
+  .inp::placeholder { color: var(--disabled); }
+  textarea.inp { height: 62px; padding: 8px 14px; resize: none; line-height: 1.35; }
+  .inp:focus, .btn:focus-visible, .choice:focus-visible, .card:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .field-label { display: block; font: 700 14px/1.3 var(--font); margin: 10px 0 4px; }
+  .trap { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+
+  /* the place picker (assets/map-mark.js): its search box, the map with the dot in the middle, a line under it */
+  #mark-host { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  #mark-host .field { margin: 0 0 8px; }
+  #mark-host .field-label { margin-top: 0; font-weight: 400; font-size: 13px; color: var(--muted); }
+  #mark-host .search { position: relative; }
+  #mark-host .mm-box { flex: 1; height: auto; min-height: 130px; max-height: none; border-color: var(--border-2); }
+  #mark-host .picked { margin: 6px 0 0; font-size: 13px; line-height: 1.35; color: var(--muted); }
+  .ps-results { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 10; background: #fff; border: 1px solid var(--border); border-radius: 4px; padding: 4px; max-height: 240px; overflow-y: auto; box-shadow: var(--shadow-float); }
+  .ps-list { list-style: none; margin: 0; padding: 0; }
+  .ps-item { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 10px; border-radius: 3px; cursor: pointer; }
+  .ps-item.ps-active { background: var(--surface-2); }
+  .ps-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+  .ps-name, .ps-ctx { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ps-name { font-size: 15px; line-height: 1.3; }
+  .ps-ctx { font-size: 13px; color: var(--muted); line-height: 1.3; }
+  .ps-kind { flex: none; font: 900 10.5px/1 var(--font); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .ps-status { margin: 6px 10px; font-size: 13px; color: var(--muted); }
+  .ps-credit { margin: 6px 4px 0; padding: 6px 6px 0; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+
+  /* which bus stop */
+  .mapbox { position: relative; flex: 1; min-height: 130px; border: 1px solid var(--border-2); border-radius: 4px; overflow: hidden; background: var(--band); }
+  .mapbox > .m { position: absolute; inset: 0; }
+  .maplibregl-ctrl-attrib { font-size: 10px; }
+  .me { width: 14px; height: 14px; border-radius: 50%; background: #2563EB; border: 2px solid #fff; box-shadow: 0 0 0 1px #2563EB; }
+  .under { font-size: 13px; line-height: 1.35; color: var(--muted); margin: 6px 0 0; min-height: 18px; }
+  .cards { flex: none; display: flex; gap: 8px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 8px 0 2px; margin: 0; scrollbar-width: none; }
+  .cards::-webkit-scrollbar { display: none; }
+  .card { flex: none; width: 72%; scroll-snap-align: start; text-align: left; padding: 8px 12px; border: 1px solid var(--border-2); border-radius: 4px; background: #fff; cursor: pointer; font: inherit; color: inherit; }
+  .card b { display: block; font: 700 15px/1.25 var(--font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card small { display: block; font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card[aria-checked="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); background: var(--band); }
+  .card.none { width: 100%; cursor: default; color: var(--muted); font-size: 14px; }
+  .linkbtn { border: 0; background: none; padding: 0; font: 400 13px var(--font); color: var(--ink); text-decoration: underline; cursor: pointer; }
+
+  /* photos */
+  .thumbs { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin: 0 0 8px; }
+  .thumb { position: relative; aspect-ratio: 1; border: 1px dashed var(--border-2); border-radius: 4px; background: var(--band); overflow: hidden; }
+  .thumb.has { border-style: solid; }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb button { position: absolute; right: 0; top: 0; width: 22px; height: 22px; border: 0; background: rgba(17,24,39,.85); color: #fff; font: 700 14px/1 var(--font); cursor: pointer; }
+  .photo-in { position: absolute; width: 1px; height: 1px; opacity: 0; }
+  label.btn.off { opacity: .5; pointer-events: none; }
+
+  /* thank you, download, the questions */
+  .sum { margin: 0 0 10px; padding: 0; list-style: none; border-top: 1px solid var(--border); }
+  .sum li { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 14.5px; line-height: 1.4; }
+  .sum li span:first-child { color: var(--muted); flex: none; }
+  .sum li span:last-child { text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .files { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--border); }
+  .files li { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .files b { display: block; font: 700 15px/1.25 var(--font); }
+  .files small { display: block; font-size: 12.5px; color: var(--muted); line-height: 1.3; }
+  .files a, .files button { font: 700 14px var(--font); color: var(--ink); padding: 8px 12px; border: 1px solid var(--border-2); border-radius: 4px; text-decoration: none; background: #fff; cursor: pointer; }
+  .files button:disabled { color: var(--disabled); cursor: default; }
+  .qlist h3 { font: 700 15px/1.3 var(--font); margin: 14px 0 4px; }
+  .qlist h3:first-child { margin-top: 0; }
+  .qlist p { margin: 0 0 6px; font-size: 14px; line-height: 1.4; color: var(--text-2); }
+  .qlist p span { color: var(--muted); }
+
+  /* standalone (Teja, 19 Nov 2026): no Observatory header or footer on this page or its map */
+  /* spacing (Teja, 19 Nov 2026: "clustered at the top and the bottom"): the buttons follow the content instead of
+     sitting at the foot of the screen, gaps grow with the screen's height, and the first and last screens sit in the
+     middle. On a small phone (548 px high) every gap is at its smallest, so each screen still fits. */
+  .step { padding-top: clamp(10px, 3.5vh, 36px); }
+  .body { flex: 0 1 auto; }
+  .foot { padding-top: clamp(10px, 2.6vh, 24px); gap: clamp(6px, 1.2vh, 10px); }
+  .step h1, .step h2 { margin-bottom: clamp(6px, 1.4vh, 12px); }
+  .hint { margin-bottom: clamp(12px, 2.6vh, 22px); }
+  .stack { gap: clamp(6px, 1.4vh, 12px); }
+  .choice { min-height: clamp(48px, 7.6vh, 62px); }
+  .btn { min-height: clamp(46px, 6.4vh, 54px); }
+  .or { margin-top: clamp(16px, 3.4vh, 30px); }
+  .tag { margin-bottom: clamp(8px, 1.8vh, 16px); }
+  .field-label { margin-top: clamp(10px, 2.2vh, 20px); }
+  .thumbs { margin-bottom: clamp(8px, 1.6vh, 14px); }
+  .step[data-step="start"], .step[data-step="thanks"] { justify-content: center; padding-bottom: clamp(0px, 6vh, 60px); }
+  .step[data-step="start"] .lede { font-size: clamp(15px, 2.2vh, 17px); margin-top: clamp(6px, 1.6vh, 14px); }
+  /* the first screen carries the group's introduction: the text scrolls, the buttons stay in view under it */
+  .step[data-step="start"] { justify-content: flex-start; padding-top: 16px; padding-bottom: 0; }
+  .banner { display: block; width: 100%; height: auto; margin: 0 0 16px; border-radius: 4px; }
+  .why { margin: 14px 0 0; padding: 0 0 0 20px; display: grid; gap: 10px; font-size: 15px; line-height: 1.45; color: var(--text-2); }
+  .why b { color: var(--ink); }
+  .when { margin: 14px 0 4px; font-size: 14px; color: var(--muted); }
+  .step[data-step="start"] .foot { padding-top: 12px; border-top: 1px solid var(--border); margin: 0 -16px; padding-left: 16px; padding-right: 16px; }
+  .step[data-step="start"] .fine { margin-top: clamp(2px, 1vh, 10px); }
+  .step[data-step="thanks"] .sum li { padding: clamp(5px, 1.4vh, 12px) 0; }
+  .sum { margin-bottom: 0; }
+  .files li { padding: clamp(8px, 1.8vh, 14px) 0; }
+  .btn.wa { flex-direction: column; gap: 1px; }
+  /* a message on the photo screen (a photo left out, or it didn't send) takes the place of the small print */
+  .step[data-step="photo"]:has(#send-msg:not([hidden])) :is(.hint, #p-info) { display: none; }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="top">
+    <button type="button" class="back" id="back" aria-label="Back">←</button>
+    <div class="prog" id="prog"><i id="bar"></i></div>
+  </div>
+
+  <!-- 1. first screen -->
+  <section class="step on" data-step="start">
+    <div class="body">
+      <!-- the group's banner: the left half of the picture they sent (Teja, 19 Nov 2026); it carries their name -->
+      <img class="banner" src="banner.jpg" width="514" height="200" alt="Let's Un-choke Hyderabad">
+      <h1>Mission Un-choke: My City, My Sujhaav</h1>
+      <!-- the group's own words, from their Google Form (Teja, 19 Nov 2026); the five are in the survey's order -->
+      <p class="lede"><i>Let's Un-choke Hyderabad</i> is a citizens' collective working towards improving mobility in the city. We have submitted a <a href="https://docs.google.com/document/d/1g2u9sHkGRuwnnxP4lmKBa5U654DZxUwS/edit" target="_blank" rel="noopener">petition</a> on quick-to-implement and high-impact traffic solutions to various departments of the government. As a next step, we are now compiling specific areas where these recommendations can be implemented.</p>
+      <ol class="why">
+        <li><b>Zebra crossings:</b> Every bus stop must have a safe and clearly marked zebra crossing within 100 meters, to be able to cross to the other side of the road. If your bus stop is missing a crossing, submit details below. 🚶</li>
+        <li><b>Bicycle parking:</b> You should be able to cycle to your nearest bus stop and catch a bus without worrying about cycle theft. Help us identify bus stops where bicycle stands can be installed. 🚲</li>
+        <li><b>Footpaths:</b> The Supreme Court ruled that walking is a fundamental right for all. Do you know any wide roads with a missing, insufficient or broken footpath? Report it here. 👣</li>
+        <li><b>Street lights:</b> Well-lit streets are essential to a safe and pleasant walking experience. Tell us about streets, especially near bus stops or metro stations, with missing or inadequate lighting. 💡</li>
+        <li><b>Creating vehicle-free zones:</b> Know any high-footfall areas within Hyderabad city where vehicular movement can be restricted so that the street becomes pedestrian-only? (Example: Monda Market or Sultan Bazar)</li>
+      </ol>
+      <p class="when"><i>November 2026</i></p>
+    </div>
+    <div class="foot">
+      <button type="button" class="btn btn-primary" id="go">Start survey</button>
+      <button type="button" class="btn btn-secondary" id="to-dl">Download the data</button>
+      <p class="fine">About two minutes. No email or name needed. Answers and photos become open data.</p>
+    </div>
+  </section>
+
+  <!-- 2. choose one -->
+  <section class="step" data-step="choose">
+    <div class="body">
+      <h2 tabindex="-1">What do you want to tell us about?</h2>
+      <p class="hint">Choose one. You can add more after sending.</p>
+      <div class="stack" id="choices"></div>
+    </div>
+  </section>
+
+  <!-- 3. where is it -->
+  <section class="step" data-step="where">
+    <div class="body">
+      <h2 tabindex="-1">Where is it?</h2>
+      <p class="hint" id="where-for"></p>
+      <button type="button" class="btn btn-primary big" id="use-loc">Use my phone's location<small>I'm there now</small></button>
+      <p class="msg" id="loc-msg" hidden></p>
+      <p class="or">Not there now?</p>
+      <div class="stack">
+        <button type="button" class="choice go" id="to-search"><span><b>Search for the area</b><small>Type an area, a road or a landmark</small></span><i class="tick"></i></button>
+        <button type="button" class="choice go" id="to-mark"><span><b>Pick the place on a map</b><small>Or paste a Google Maps link</small></span><i class="tick"></i></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3a. the exact place (or, for a bus stop, the area): the map moves under the dot -->
+  <section class="step" data-step="mark">
+    <h2 tabindex="-1" id="mark-h">Pick the place</h2>
+    <div id="mark-host"></div>
+    <div class="foot"><button type="button" class="btn btn-primary" id="mark-ok" disabled>This is the place</button></div>
+  </section>
+
+  <!-- 3b. which bus stop -->
+  <section class="step" data-step="stop">
+    <h2 tabindex="-1">Which bus stop?</h2>
+    <p class="hint" style="margin-bottom:8px">Tap the bus stop on the map, or its card.</p>
+    <div class="mapbox"><div class="m" id="stop-map"></div></div>
+    <div class="cards" id="cards"></div>
+    <p class="under" style="margin-top:2px"><button type="button" class="linkbtn" id="no-stop">My bus stop isn't on the map</button></p>
+    <div class="foot"><button type="button" class="btn btn-primary" id="stop-ok" disabled>Choose this bus stop</button></div>
+  </section>
+
+  <!-- 3c. a bus stop that isn't on the map -->
+  <section class="step" data-step="newstop">
+    <div class="body">
+      <h2 tabindex="-1">Add the bus stop</h2>
+      <p class="hint" id="new-hint"></p>
+      <label class="field-label" for="new-name" style="margin-top:0">Name of the bus stop</label>
+      <input class="inp" id="new-name" maxlength="80" autocomplete="off">
+      <label class="field-label" for="new-towards">Where do its buses go? <span style="font-weight:400;color:var(--muted)">Optional</span></label>
+      <input class="inp" id="new-towards" maxlength="80" autocomplete="off" placeholder="Towards Koti">
+    </div>
+    <div class="foot"><button type="button" class="btn btn-primary" id="new-ok" disabled>Next</button></div>
+  </section>
+
+  <!-- 4. one question a screen -->
+  <section class="step" data-step="q">
+    <div class="body">
+      <span class="tag" id="q-tag"></span>
+      <h2 tabindex="-1" id="q-h"></h2>
+      <p class="hint" id="q-hint"></p>
+      <div class="stack" id="q-opts"></div>
+      <input class="inp" id="q-text" maxlength="80" autocomplete="off" hidden>
+      <p class="msg" id="q-msg" hidden>Tell us at least one thing you know about this place. Go back and change an answer.</p>
+    </div>
+    <div class="foot" id="q-foot" hidden><button type="button" class="btn btn-primary" id="q-next">Next</button></div>
+  </section>
+
+  <!-- 5. photos and a note, then Send -->
+  <section class="step" data-step="photo">
+    <div class="body">
+      <span class="tag" id="p-tag"></span>
+      <h2 tabindex="-1">Add photos? <small>Optional</small></h2>
+      <p class="hint" style="margin-bottom:8px">Up to 6. Photos are public: keep faces and number plates out.</p>
+      <div class="thumbs" id="thumbs"></div>
+      <label class="btn btn-secondary" for="photo-in" id="photo-btn">Take or choose photos</label>
+      <input type="file" accept="image/*" multiple id="photo-in" class="photo-in">
+      <label class="field-label" for="note" id="note-l">Anything to add?</label>
+      <textarea class="inp" id="note" maxlength="300"></textarea>
+      <p class="msg" id="send-msg" hidden></p>
+    </div>
+    <div class="foot">
+      <div id="ts"></div>
+      <input type="text" name="website" id="trap" tabindex="-1" autocomplete="off" aria-hidden="true" class="trap">
+      <button type="button" class="btn btn-primary" id="send">Send</button>
+      <p class="fine" id="p-info">The location stored in a photo is removed.</p>
+    </div>
+  </section>
+
+  <!-- 6. who sent it (Teja, 19 Nov 2026): a name and an email for the group's organisers, after sending. Optional;
+       kept privately on the server, never on the map or in the download. Asked once a visit. -->
+  <section class="step" data-step="who">
+    <div class="body">
+      <h2 tabindex="-1">Sent. Thank you.</h2>
+      <p class="hint">Add your name as a contributor? <span style="color:var(--muted)">Optional</span></p>
+      <label class="field-label" for="who-name" style="margin-top:0">Name</label>
+      <input class="inp" id="who-name" maxlength="80" autocomplete="name">
+      <label class="field-label" for="who-email">Email</label>
+      <input class="inp" id="who-email" type="email" maxlength="254" autocomplete="email" inputmode="email">
+      <p class="fine left">Only the organisers of Let's Un-choke Hyderabad see these. They are never shown on the map or in the download.</p>
+      <p class="msg" id="who-msg" hidden></p>
+    </div>
+    <div class="foot">
+      <div id="ts-who"></div>
+      <div class="btn-row"><button type="button" class="btn btn-primary" id="who-ok" disabled>Save</button><button type="button" class="btn btn-secondary" id="who-skip">Skip</button></div>
+    </div>
+  </section>
+
+  <!-- 7. thank you: what was sent, the group's WhatsApp, then another or done -->
+  <section class="step" data-step="thanks">
+    <div class="body">
+      <h2 tabindex="-1" id="thanks-h">Sent. Thank you.</h2>
+      <ul class="sum" id="sum"></ul>
+    </div>
+    <div class="foot">
+      <a class="btn btn-secondary wa" href="https://chat.whatsapp.com/J3B3mfNJfeYAApV1FKPIEX" target="_blank" rel="noopener">Join the WhatsApp group<small>If you are not in it already</small></a>
+      <div class="btn-row"><button type="button" class="btn btn-primary" id="again">Add another</button><button type="button" class="btn btn-secondary" id="done">Done</button></div>
+      <p class="fine"><a href="map/">See it on the map</a></p>
+    </div>
+  </section>
+
+  <!-- download -->
+  <section class="step" data-step="dl">
+    <div class="body">
+      <h2 tabindex="-1">Download the data</h2>
+      <p class="hint" id="dl-hint">Everything sent through this page. Free to use; updated every hour.</p>
+      <ul class="files">
+        <li><span><b>Answers, as a table</b><small>CSV · opens in Excel or Google Sheets</small></span><a id="dl-csv" download>Download</a></li>
+        <li><span><b>Answers, as a map file</b><small>GeoJSON · for QGIS and other map tools</small></span><a id="dl-geo" download>Download</a></li>
+        <li><span><b>Photos</b><small id="dl-zip-t">One zip · each photo is named in the table</small></span><button type="button" id="dl-zip">Download</button></li>
+        <li><span><b>The questions</b><small>What the survey asks, with the answer choices</small></span><button type="button" id="dl-qs">See</button></li>
+      </ul>
+      <p class="fine left">A name and email, if given, are never published. <a id="dl-readme" target="_blank" rel="noopener">What each column means</a></p>
+    </div>
+    <div class="foot"><a class="btn btn-secondary" href="map/">See the entries on the map</a></div>
+  </section>
+
+  <!-- the questions -->
+  <section class="step" data-step="qs">
+    <div class="body">
+      <h2 tabindex="-1">The questions</h2>
+      <div class="qlist" id="qlist"></div>
+    </div>
+    <div class="foot"><button type="button" class="btn btn-primary" id="qs-go">Start survey</button></div>
+  </section>
+</div>
+
+<script src="../assets/common.js?v=20261120a"></script>
+<script type="module" src="form.js?v=20261119a"></script>
+</body>
+</html>
