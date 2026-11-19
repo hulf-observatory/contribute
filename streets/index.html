@@ -385,6 +385,9 @@
     body.fit .step[data-step="start"] .fit-foot .btn { height: clamp(46px, 6.6vh, 56px); }
     body.fit .step h2.qt { font-size: 26px; }
     body.q-mode .steps .choice.plain { padding: 8px 14px; }
+    body.q-mode .step[data-step="mark"] .hint { margin-bottom: 10px; }
+    body.q-mode .step[data-step="mark"] .mm-box { height: 32vh; min-height: 150px; }
+    body.q-mode .step[data-step="mark"] .mm-hint { margin-top: 8px; font-size: 13px; line-height: 1.4; }
     body.q-mode #choices .choice.plain { min-height: 44px; padding: 6px 14px; }
     body.q-mode #leadlist .answer { min-height: 48px; padding: 7px 14px; font-size: 16px; }
     body.q-mode #leadlist .answer small { font-size: 13px; margin-top: 0; }
@@ -446,7 +449,7 @@
     </section>
 
     <section class="step" data-step="mark">
-      <h2 class="qt">Pick the place</h2>
+      <h2 class="qt" id="mark-h">Pick the place</h2>
       <p class="hint" id="mark-hint">Move the map so the dot is on the place. What you add is marked "from memory".</p>
       <div id="markbox"></div>
     </section>

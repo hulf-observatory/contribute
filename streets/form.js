@@ -209,9 +209,11 @@ $('to-search').onclick = () => toMark('search');
 $('to-mark').onclick = () => toMark('map');
 async function openMark() {
   const search = S.markMode === 'search';
-  const foot = S.want === 'walk' ? ' For a footpath, put the dot on the side of the road you mean.' : '';
-  $('mark-hint').textContent = search ? (S.want === 'stop' ? 'Type an area, a road or a landmark. The map of its bus stops opens next.' : `Type an area, a road or a landmark, then move the map so the dot is on the place.${foot}`)
-    : `Move the map so the dot is on the place.${foot} What you add is marked "from memory".`;
+  // one short line, so the search box and the map fit a small phone without scrolling
+  const walk = S.want === 'walk';
+  $('mark-h').textContent = search ? 'Search for the area' : 'Pick the place';
+  $('mark-hint').textContent = search ? (S.want === 'stop' ? "The map of the area's bus stops opens next." : walk ? 'Then put the dot on the side of the road you mean.' : 'Then move the map so the dot is on the place.')
+    : walk ? 'Put the dot on the side of the road you mean.' : 'Move the map so the dot is on the place.';
   await marker.open();
   if (search && cur === 'mark') marker.focus();
 }
@@ -237,7 +239,7 @@ function openLook() {
   show('look');
 }
 document.querySelectorAll('[data-fakeplace]').forEach(a => a.onclick = (e) => { e.preventDefault(); const [lat, lng] = a.dataset.fakeplace.split(',').map(Number); begin({ lat, lng, acc: 8, memory: false }); });
-const marker = mapMark($('markbox'), { mark: 'dot', onPick: (pl) => markPicked(pl), onChange: ({ lat, lng, ok }) => { S.mark = { lat, lng, ok }; updateNext(); } });
+const marker = mapMark($('markbox'), { mark: 'dot', label: 'Search, or paste a Google Maps link', onPick: (pl) => markPicked(pl), onChange: ({ lat, lng, ok }) => { S.mark = { lat, lng, ok }; updateNext(); } });
 // a laptop: the code that opens this page on a phone, and "add a place you know" on the map
 if (!PHONE) {
   const url = location.origin + location.pathname;
