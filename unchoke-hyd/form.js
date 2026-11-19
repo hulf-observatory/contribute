@@ -314,7 +314,15 @@ $('done').onclick = () => { stack = []; show('start', false); };
 
 // ── download: the hourly files on the data site; the photos are zipped here, in the browser
 let photoList = null;
+// (Teja, 19 Nov 2026) the server writes the files at 20 minutes past each hour, India time (50 past in UTC), and the
+// data site shows them a few minutes later. Shown in the reader's own time.
+function updateTimes(now = new Date()) {
+  const last = new Date(now); last.setUTCMinutes(50, 0, 0); if (last > now) last.setUTCHours(last.getUTCHours() - 1);
+  const next = new Date(last.getTime() + 3600e3), t = (x) => x.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
+  return { last, next, text: `Updated every hour: these files have what was sent up to about ${t(last)}. Next update at ${t(next)}.` };
+}
 async function drawDl() {
+  $('dl-when').textContent = updateTimes().text; $('dl-when').hidden = false;
   $('dl-csv').href = `${DATA}/${SURVEY}-reports.csv`; $('dl-geo').href = `${DATA}/${SURVEY}-reports.geojson`; $('dl-readme').href = `${DATA}/README.md`;
   if (photoList) return;
   $('dl-zip').disabled = true;
@@ -323,10 +331,10 @@ async function drawDl() {
     if (!r.ok) throw new Error(r.status);
     const f = (await r.json()).features || [];
     photoList = f.flatMap(x => x.properties.photos || []);
-    $('dl-hint').textContent = `${f.length} ${f.length === 1 ? 'entry' : 'entries'} sent through this page so far. Free to use; updated every hour.`;
+    $('dl-hint').textContent = `${f.length} ${f.length === 1 ? 'entry' : 'entries'} sent through this page so far. Free to use.`;
     $('dl-zip-t').textContent = photoList.length ? `${photoList.length} photo${photoList.length === 1 ? '' : 's'} in one zip · each is named in the table` : 'No photos yet';
     $('dl-zip').disabled = !photoList.length;
-  } catch { $('dl-hint').textContent = 'Everything sent through this page. Free to use; updated every hour. The first files appear within an hour of the first entry.'; $('dl-zip-t').textContent = 'No photos yet'; }
+  } catch { $('dl-hint').textContent = 'Everything sent through this page. Free to use.'; $('dl-zip-t').textContent = 'No photos yet'; }
 }
 // a plain zip (files stored as they are: JPEGs don't shrink further)
 const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
@@ -373,4 +381,4 @@ function drawQs() {
 if (location.hash === '#questions') show('qs');
 if (location.hash === '#download') show('dl');
 if (location.hash === '#start') show('choose');
-if (LOCAL) window.__unchoke = { S, V, show, item, zip };      // local checks only
+if (LOCAL) window.__unchoke = { S, V, show, item, zip, updateTimes };      // local checks only

@@ -162,6 +162,9 @@
   .sum { margin-bottom: 0; }
   .files li { padding: clamp(8px, 1.8vh, 14px) 0; }
   .btn.wa { flex-direction: column; gap: 1px; }
+  .btn-row .btn { padding-left: 8px; padding-right: 8px; }
+  #dl-hint { margin-bottom: 4px; }
+  #dl-when { font-size: 14px; color: var(--muted); margin-bottom: clamp(10px, 2vh, 18px); }
   /* a message on the photo screen (a photo left out, or it didn't send) takes the place of the small print */
   .step[data-step="photo"]:has(#send-msg:not([hidden])) :is(.hint, #p-info) { display: none; }
 </style>
@@ -192,7 +195,7 @@
     </div>
     <div class="foot">
       <button type="button" class="btn btn-primary" id="go">Start survey</button>
-      <button type="button" class="btn btn-secondary" id="to-dl">Download the data</button>
+      <div class="btn-row"><a class="btn btn-secondary" href="map/">See the entries</a><button type="button" class="btn btn-secondary" id="to-dl">Download the data</button></div>
       <p class="fine">About two minutes. No email or name needed. Answers and photos become open data.</p>
     </div>
   </section>
@@ -321,7 +324,8 @@
   <section class="step" data-step="dl">
     <div class="body">
       <h2 tabindex="-1">Download the data</h2>
-      <p class="hint" id="dl-hint">Everything sent through this page. Free to use; updated every hour.</p>
+      <p class="hint" id="dl-hint">Everything sent through this page. Free to use.</p>
+      <p class="hint" id="dl-when" hidden></p>
       <ul class="files">
         <li><span><b>Answers, as a table</b><small>CSV · opens in Excel or Google Sheets</small></span><a id="dl-csv" download>Download</a></li>
         <li><span><b>Answers, as a map file</b><small>GeoJSON · for QGIS and other map tools</small></span><a id="dl-geo" download>Download</a></li>
@@ -344,6 +348,6 @@
 </div>
 
 <script src="../assets/common.js?v=20261120a"></script>
-<script type="module" src="form.js?v=20261119a"></script>
+<script type="module" src="form.js?v=20261119b"></script>
 </body>
 </html>
