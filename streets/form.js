@@ -58,7 +58,7 @@ const CHOICES = {
 const KIND_NAME = { stop: 'Bus stop', foot: 'Footpath', cross: 'Crossing', problem: 'Problem', request: 'Suggestion' };
 
 // ── state: the place, what's around it, the side of the road, the things added in this entry and the checks ──
-const S = { place: null, near: null, side: null, sideSkipped: false, afterFace: null, choice: null, items: [], checks: [], cur: null, last: null, sent: [], doneIds: new Set(), adds: null };   // items / checks: what the next Send carries; sent / doneIds: what has gone
+const S = { place: null, near: null, side: null, sideSkipped: false, afterFace: null, choice: null, items: [], checks: [], cur: null, last: null, sent: [], doneIds: new Set(), adds: null, picked: { s: [], j: [] } };   // items / checks: what the next Send carries; sent / doneIds: what has gone
 let cur = 'start', stack = [], moving = false, sending = false;
 var DONE = false;                                  // sent: Back can't offer Send again
 const isQ = (s) => s.startsWith('q-');
@@ -166,7 +166,7 @@ $('exit').onclick = leave;
 
 // ── the first screen: Start asks for the phone's location; "not there" and laptops use the map ──
 function begin(place) {
-  Object.assign(S, { place, near: null, side: null, sideSkipped: false, afterFace: null, choice: null, items: [], checks: [], cur: null, last: null, sent: [], doneIds: new Set(), adds: null });
+  Object.assign(S, { place, near: null, side: null, sideSkipped: false, afterFace: null, choice: null, items: [], checks: [], cur: null, last: null, sent: [], doneIds: new Set(), adds: null, picked: { s: [], j: [] } });
   DONE = false; stack = ['start']; cur = 'start';
   loadPlace();
 }
@@ -229,10 +229,38 @@ async function loadPlace() {
     if (!r.ok) throw new Error(r.status);
     S.near = await r.json();
   } catch { S.near = { stretches: [], junctions: [], stops: [], rows: [], profiles: {}, stop_profiles: {}, failed: true }; }
+  seedX();
   if (S.afterLoad) { const f = S.afterLoad; S.afterLoad = null; return f(); }   // a choice was tapped before this arrived
   if (cur === 'choose') drawChoose();
   if (cur === 'near') drawNear();
 }
+// ── beyond the short nearby list (Teja, 20 Nov 2026): the little map loads every bus stop and junction around its middle
+// as it is moved, and any of them can be picked. One picked far away (a stop over 500 m, a junction over 150 m) is saved
+// as "from memory": the person isn't standing there.
+const X = { stops: new Map(), juncs: new Map(), sprof: {}, prof: {}, at: [] };
+const FAR_STOP = 500;
+function seedX() {
+  X.stops.clear(); X.juncs.clear(); X.sprof = {}; X.prof = {}; X.at = [];
+  for (const s of N().stops) X.stops.set(s.id, s);
+  for (const j of N().junctions) X.juncs.set(j.id, j);
+}
+const sprofOf = (id) => N().stop_profiles[id] || X.sprof[id];
+const jprofOf = (id) => N().profiles[id] || X.prof[id];
+async function loadViewAt(lng, lat) {
+  if (X.at.some(c => metres({ lng: c[0], lat: c[1] }, { lng, lat }) < 200)) return false;     // this part is loaded already
+  X.at.push([lng, lat]);
+  try {
+    const r = await fetch(`${C.API}/${SURVEY}/view?lat=${lat.toFixed(4)}&lng=${lng.toFixed(4)}`, { credentials: 'omit', cache: 'no-store' });
+    if (!r.ok) return false;
+    const v = await r.json(), P = S.place;
+    for (const s of v.stops) if (!X.stops.has(s.id)) X.stops.set(s.id, { ...s, d: Math.round(metres(P, s)) });
+    for (const j of v.junctions) if (!X.juncs.has(j.id)) X.juncs.set(j.id, { ...j, d: Math.round(metres(P, { lng: j.c[0], lat: j.c[1] })) });
+    Object.assign(X.sprof, v.stop_profiles); Object.assign(X.prof, v.profiles);
+    return true;
+  } catch { X.at.pop(); return false; }
+}
+const away = (d) => d < 1000 ? `${d} m away` : `${(d / 1000).toFixed(1)} km away`;
+const FAR_SAYS = 'Far from you: saved as “from memory”';
 const rowsOf = (item) => N().rows.filter(r => r.item === item);
 const LIGHT_PROBLEMS = ['light', 'dark'];
 const aboutLight = (r) => (r.item === 'problem' && LIGHT_PROBLEMS.includes(r.problem)) || (r.item === 'request' && r.need === 'lights');
@@ -421,9 +449,9 @@ function row({ col, shape = '', t, tag = '', sub = [], btns, done = false, key =
   return `<li${key ? ` data-key="${esc(key)}"` : ''}><i class="ic ${shape}" style="background:${col}"></i><span class="t">${esc(t)}${tag ? `<em>${tag}</em>` : ''}<small>${sub.filter(Boolean).map(esc).join('<br>')}</small></span><span class="btns">${b}</span></li>`;
 }
 const stopTitle = (st) => st.name + (st.towards ? `, towards ${st.towards}` : '');
-const stopCtx = (st) => ({ stop_id: st.id, name: st.name, towards: st.towards, slat: st.lat, slng: st.lng, d: st.d, title: stopTitle(st) });
+const stopCtx = (st) => ({ stop_id: st.id, name: st.name, towards: st.towards, slat: st.lat, slng: st.lng, d: st.d, title: stopTitle(st), far: st.d > FAR_STOP });
 function startStop(st) {
-  const p = N().stop_profiles[st.id];
+  const p = sprofOf(st.id);
   if (p) return showCheck({ kind: 'stop', stop: st, p, title: stopTitle(st) });
   startThing('stop', stopCtx(st));
 }
@@ -431,10 +459,11 @@ function sideCtx(c, which, word) {
   return { stretch: c.stretch, side: c.side, side_how: SIDE_HOW[S.side.how] || 'map', road_deg: S.side.deg, which, title: `${c.name}, ${word.toLowerCase()}` };
 }
 function listStops() {
-  const n = N(), stops = n.stops.filter(x => x.d <= 300).slice(0, 6).map(st => ({ st, side: stopSide(st) }));
+  const n = N(), near = n.stops.filter(x => x.d <= 300).slice(0, 6), ids = new Set(near.map(s => s.id));
+  const stops = [...near, ...S.picked.s.map(id => X.stops.get(id)).filter(s => s && !ids.has(s.id))].map(st => ({ st, side: stopSide(st) }));   // and those picked on the map
   stops.sort((a, b) => (a.side === 'On your side' ? 0 : 1) - (b.side === 'On your side' ? 0 : 1) || a.st.d - b.st.d);
-  return stops.map(({ st, side }) => { const p = n.stop_profiles[st.id]; return row({ key: 's:' + st.id, col: p ? '#2166AC' : GREY, shape: 'r', t: st.name, tag: side, done: !!p && checked(p.latest),
-    sub: [`${st.d} m away${st.towards ? ' · buses towards ' + st.towards : ''}`, p ? `${people(p.n)} · ${day(p.seen)}` : 'No details yet'], btns: [[p ? 'Check' : 'Describe', () => startStop(st)]] }); }).join('')
+  return stops.map(({ st, side }) => { const p = sprofOf(st.id); return row({ key: 's:' + st.id, col: p ? '#2166AC' : GREY, shape: 'r', t: st.name, tag: side, done: !!p && checked(p.latest),
+    sub: [`${away(st.d)}${st.towards ? ' · buses towards ' + st.towards : ''}`, st.d > FAR_STOP && !S.place.memory ? FAR_SAYS : '', p ? `${people(p.n)} · ${day(p.seen)}` : 'No details yet'], btns: [[p ? 'Check' : 'Describe', () => startStop(st)]] }); }).join('')
     || '<li class="none">No bus stop on our map within 300 m.</li>';
 }
 function listSides() {
@@ -453,20 +482,25 @@ function listSides() {
     btns: [['Check', () => showCheck({ kind: 'spot', row: r, title: 'The footpath here' })]] }));
   return out.join('');
 }
+// a junction picked far away on the map: saved where the junction is, from memory
+const crossCtx = (j) => ({ junction: j.id, title: j.name, ...(j.d > NEAR_JUNCTION_M ? { far: true, lat: j.c[1], lng: j.c[0] } : {}) });
 function listCrossings() {
   const n = N(), out = [];
-  for (const j of junctions()) { const p = n.profiles[j.id], v = p ? crossColor(currentOf(p)) : null;
-    out.push(row({ key: 'j:' + j.id, col: p ? (v ? VIEW_COLORS[v] : '#111827') : GREY, t: j.name, done: !!p && checked(p.latest), sub: [`${j.d} m away`, p ? `${people(p.n)} · ${day(p.seen)}` : 'No details yet'],
-      btns: [[p ? 'Check' : 'Describe', () => p ? showCheck({ kind: 'junction', j, p, title: j.name }) : startThing('cross', { junction: j.id, title: j.name })]] })); }
+  const near = junctions(), ids = new Set(near.map(j => j.id));
+  for (const j of [...near, ...S.picked.j.map(id => X.juncs.get(id)).filter(j => j && !ids.has(j.id))]) { const p = jprofOf(j.id), v = p ? crossColor(currentOf(p)) : null;
+    out.push(row({ key: 'j:' + j.id, col: p ? (v ? VIEW_COLORS[v] : '#111827') : GREY, t: j.name, done: !!p && checked(p.latest),
+      sub: [away(j.d), j.d > NEAR_JUNCTION_M && !S.place.memory ? FAR_SAYS : '', p ? `${people(p.n)} · ${day(p.seen)}` : 'No details yet'],
+      btns: [[p ? 'Check' : 'Describe', () => p ? showCheck({ kind: 'junction', j, p, title: j.name }) : startThing('cross', crossCtx(j))]] })); }
   for (const r of rowsOf('crossing')) out.push(row({ key: 'r:' + r.id, col: '#111827', t: 'A crossing between junctions', sub: [`${r.d} m away · seen ${day(r.seen)}`], done: checked(r.id),
     btns: [['Check', () => showCheck({ kind: 'crossing', row: r, title: 'A crossing between junctions' })]] }));
   return out.join('') || '<li class="none">No junction of main roads within 150 m. A crossing here can still be added, below.</li>';
 }
 const typeBtns = (kind, list) => list.map(p => answerBtn(`data-type="${kind}:${p[0]}"`, `${esc(p[1])}${p[0] === 'other' ? '<small>Say it in your own words</small>' : ''}`, '', ' go')).join('');
-function drawNear() {
+function drawNear(keep = false) {                   // keep: the map stays open (a dot picked on it has joined the list)
   const c = S.choice, L = [], mem = S.place.memory;
   ACTS = [];
-  $('minibox').hidden = true; $('minimap-toggle').textContent = 'Show map'; $('flood-msg').hidden = true;
+  if (!keep) { $('minibox').hidden = true; $('mini-tip').hidden = true; $('minimap-toggle').textContent = 'Show map'; }
+  $('flood-msg').hidden = true;
   if (!S.near) { $('h-near').textContent = 'Looking…'; $('near-hint').textContent = ''; $('nearlists').innerHTML = ''; return; }
   if (c === 'stop') {
     $('h-near').textContent = 'Which bus stop?';
@@ -512,7 +546,9 @@ function drawNear() {
 // the list and the little map go together (Teja, 20 Nov 2026): tap a row or its dot or line, and the other one shows
 // it. Nothing starts from a tap on the map; the row's own button does that.
 let SEL = null, LISTKEYS = new Set(), KEYPOS = {};
+const pickable = (key) => LISTKEYS.has(key) || (S.choice === 'stop' && key.startsWith('s:')) || (S.choice === 'walk' && key.startsWith('j:'));
 function select(key, from) {
+  if (!LISTKEYS.has(key) && pickable(key)) { S.picked[key[0]].push(key.slice(2)); drawNear(true); mini.getSource('m')?.setData(miniGeo()); }   // picked on the map: a new row
   SEL = key;
   let li = null;
   document.querySelectorAll('#nearlists li[data-key]').forEach(x => { const on = x.dataset.key === key; x.classList.toggle('sel', on); if (on) li = x; });
@@ -569,23 +605,39 @@ function miniGeo() {
   }
   KEYPOS = {};
   // what this screen's list holds is drawn full; the rest stays, paler, for bearings
-  const pt = (key, lng, lat, col) => { KEYPOS[key] = [lng, lat]; f.push({ type: 'Feature', properties: { key, col, on: LISTKEYS.has(key) ? 1 : 0 }, geometry: { type: 'Point', coordinates: [lng, lat] } }); };
-  for (const st of n.stops) pt('s:' + st.id, st.lng, st.lat, n.stop_profiles[st.id] ? '#2166AC' : GREY);
-  for (const j of n.junctions) pt('j:' + j.id, j.c[0], j.c[1], n.profiles[j.id] ? '#111827' : '#fff');
+  const pt = (key, lng, lat, col) => { KEYPOS[key] = [lng, lat]; f.push({ type: 'Feature', properties: { key, col, on: pickable(key) ? 1 : 0 }, geometry: { type: 'Point', coordinates: [lng, lat] } }); };
+  for (const st of X.stops.values()) pt('s:' + st.id, st.lng, st.lat, sprofOf(st.id) ? '#2166AC' : GREY);
+  for (const j of X.juncs.values()) pt('j:' + j.id, j.c[0], j.c[1], jprofOf(j.id) ? '#111827' : '#fff');
   for (const r of n.rows) pt('r:' + r.id, r.lng, r.lat, r.item === 'problem' ? '#EF8A62' : r.item === 'request' ? REQUEST_COLOR : '#111827');
   return { type: 'FeatureCollection', features: f };
 }
 // the map opens on the place and everything in the list (a stop can be 300 m away)
+let HOME = null;                                    // the view the map opened with: "Back to where I am" returns to it
 function miniFit() {
   const pts = [...LISTKEYS].map(k => KEYPOS[k]).filter(Boolean);
-  if (!pts.length) return;
-  const b = new maplibregl.LngLatBounds([S.place.lng, S.place.lat], [S.place.lng, S.place.lat]);
-  for (const c of pts) b.extend(c);
-  mini.fitBounds(b, { padding: 28, maxZoom: 17, duration: 0 });
+  if (pts.length) {
+    const b = new maplibregl.LngLatBounds([S.place.lng, S.place.lat], [S.place.lng, S.place.lat]);
+    for (const c of pts) b.extend(c);
+    mini.fitBounds(b, { padding: 28, maxZoom: 17, duration: 0 });
+  }
+  HOME = { center: mini.getCenter(), zoom: mini.getZoom() };
+  $('mini-back').hidden = true;
+}
+$('mini-back').onclick = () => { if (mini && HOME) mini.easeTo({ ...HOME, duration: 400 }); };
+// the map was moved: offer the way back, and load the stops and junctions around its new middle
+async function miniMoved() {
+  if (!HOME) return;
+  const c = mini.getCenter();
+  $('mini-back').hidden = metres({ lat: HOME.center.lat, lng: HOME.center.lng }, { lat: c.lat, lng: c.lng }) < 80 && Math.abs(mini.getZoom() - HOME.zoom) < 1;
+  $('mini-back').textContent = S.place.memory ? 'Back to the place' : 'Back to where I am';
+  if (mini.getZoom() < 13.5 || !['stop', 'walk'].includes(S.choice) || !inHmda(c.lng, c.lat)) return;
+  if (await loadViewAt(c.lng, c.lat)) mini.getSource('m')?.setData(miniGeo());
 }
 $('minimap-toggle').onclick = () => {
   const open = $('minibox').hidden;
   $('minibox').hidden = !open; $('minimap-toggle').textContent = open ? 'Hide map' : 'Show map';
+  $('mini-tip').hidden = !open || !['stop', 'walk'].includes(S.choice);
+  $('mini-tip').textContent = S.choice === 'stop' ? 'Move the map to see more stops. Tap a dot to pick it.' : 'Move the map to see more crossings. Tap a dot to pick it.';
   if (!open) return;
   const at = [S.place.lng, S.place.lat];
   if (!mini) {
@@ -604,10 +656,11 @@ $('minimap-toggle').onclick = () => {
       mini.addLayer({ id: 'm-sel-p', type: 'circle', source: 'm', filter: ['==', ['get', 'key'], '-'],
         paint: { 'circle-radius': 10, 'circle-color': ['get', 'col'], 'circle-stroke-color': '#111827', 'circle-stroke-width': 3.5 } });
       paintSel(); miniFit();
+      mini.on('moveend', miniMoved);
       // a tap: the nearest dot that is in the list (a generous area, for fingers); else the road side under the finger
       mini.on('click', (e) => {
         const p = e.point, far = (k) => { const q = mini.project(KEYPOS[k]); return Math.hypot(q.x - p.x, q.y - p.y); };
-        const dots = mini.queryRenderedFeatures([[p.x - 18, p.y - 18], [p.x + 18, p.y + 18]], { layers: ['m-p'] }).map(x => x.properties.key).filter(k => LISTKEYS.has(k) && KEYPOS[k]);
+        const dots = mini.queryRenderedFeatures([[p.x - 18, p.y - 18], [p.x + 18, p.y + 18]], { layers: ['m-p'] }).map(x => x.properties.key).filter(k => pickable(k) && KEYPOS[k]);
         if (dots.length) return select(dots.sort((a, b) => far(a) - far(b))[0], 'map');
         const at = { lng: e.lngLat.lng, lat: e.lngLat.lat };
         // the nearest road line that has a row; a divided road has one listed side per carriageway, so that one
@@ -640,7 +693,7 @@ function showCheck(x) {
     const ctx = { title: x.title, prefill, check: { survey: surveyId, id: latest } };
     if (x.kind === 'side') return startThing('foot', { ...ctx, ...x.ctx });
     if (x.kind === 'stop') return startThing('stop', { ...ctx, ...stopCtx(x.stop) });
-    if (x.kind === 'junction') return startThing('cross', { ...ctx, junction: x.j.id });
+    if (x.kind === 'junction') return startThing('cross', { ...ctx, ...crossCtx(x.j) });
     startThing(k, { ...ctx, check: null, lat: x.row.lat, lng: x.row.lng, between: x.kind === 'crossing' });   // a new point where that one is
   };
   show('check');
@@ -792,7 +845,7 @@ function drawHub() {
         pinThen(() => show('photo')); }));
     }
   }
-  if (t && S.sent.includes(t)) {
+  if (t && S.sent.includes(t) && !t.far) {
     const lightsOff = (t.k === 'foot' && t.a.lights === 'broken') || (t.k === 'cross' && t.a.x_lit === 'poor') || (t.k === 'stop' && t.a.light_state === 'poor');
     const noLights = (t.k === 'foot' && t.a.lights === 'none') || (t.k === 'cross' && t.a.x_lit === 'no') || (t.k === 'stop' && t.a.light === 'no') || (t.k === 'problem' && t.problem === 'dark');
     if (lightsOff && !S.sent.some(i => i.k === 'problem' && i.problem === 'light'))
@@ -800,7 +853,7 @@ function drawHub() {
     if (noLights && !S.sent.some(i => i.k === 'request' && i.need === 'lights'))
       L.push(lead('Ask for street lights here', 'Others can say they need them too', () => { S.choice = 'light'; pickNeed('lights'); }));
   }
-  if (t && t.k === 'stop') {
+  if (t && t.k === 'stop' && !t.far) {
     const sp = t.missing ? { lat: t.lat, lng: t.lng } : { lat: t.slat, lng: t.slng }, j = junctions().find(x => !checked((N().profiles[x.id] || {}).latest) && !S.sent.some(i => i.junction === x.id));
     if (!has('foot') && sp.lat != null && (S.place.memory || metres(S.place, sp) <= MAX_MOVE))
       L.push(lead('About the footpath at this stop', 'Is there one? Is it broken or blocked?', () => { S.choice = 'walk'; startThing('foot', { lat: sp.lat, lng: sp.lng, side_how: 'stop', lead: 'stop', title: `At the stop: ${t.name}` }); }));
@@ -874,7 +927,7 @@ $('p-go').onclick = async () => {
 
 // ── send: everything at once, with one spam check; if it fails, the answers stay on this phone ──
 function itemPoints(i) {
-  const mem = S.place && S.place.memory, ph = i.photo ? POINTS.photo : 0;
+  const mem = S.place && (S.place.memory || i.far), ph = i.photo ? POINTS.photo : 0;
   if (i.k === 'stop') return (mem ? POINTS.memory : POINTS.stop) + (i.missing ? POINTS.missing : 0) + ph;
   if (i.lead === 'problem' || i.lead === 'footpath') return ph;      // it followed from the person's own report: points once
   if (i.k === 'problem' || i.k === 'request') return POINTS[i.k] + ph;
@@ -885,11 +938,11 @@ const store = Contribute.drafts('obs-walk-unsent');
 // only the questions the person saw: a place's current answers they never looked at aren't theirs
 function answersOf(i) { return Object.fromEntries(allQs(i.k).filter(q => i.seen.has(q.id) && shown(q, i.a) && i.a[q.id] != null).map(q => [q.id, i.a[q.id]])); }
 function itemBody(i) {
-  const P = S.place, mem = !!P.memory, where = i.lat != null ? { lat: i.lat, lng: i.lng } : { lat: P.lat, lng: P.lng };
+  const P = S.place, mem = !!P.memory || !!i.far, where = i.lat != null ? { lat: i.lat, lng: i.lng } : { lat: P.lat, lng: P.lng };   // far: picked on the map, away from the place
   const moved = Math.round(metres(P, where));
   const base = { here: mem ? 'known' : 'yes', observed_at: i.at, accuracy_m: mem ? null : P.acc, lat: +where.lat.toFixed(6), lng: +where.lng.toFixed(6), photo: i.photo || null, prefilled: i.base ? true : null };
   if (i.k === 'stop') return { ...base, item: 'stop', place_type: i.missing ? 'missing' : mem ? 'map' : 'gps', stop_id: i.missing ? null : i.stop_id,
-    dist_m: i.missing ? null : Math.round(metres(P, { lat: i.slat, lng: i.slng })), stop_name: i.missing ? i.name : null, towards: i.missing ? i.towards || null : null,
+    dist_m: i.missing ? null : i.far ? 0 : Math.round(metres(P, { lat: i.slat, lng: i.slng })),   // far: the stop itself is the place remembered stop_name: i.missing ? i.name : null, towards: i.missing ? i.towards || null : null,
     moved_m: i.missing ? moved : null, improve: i.note || null, ...answersOf(i) };
   const w = { ...base, item: ITEM[i.k] || i.k, place_type: mem ? 'map' : 'gps', moved_m: mem ? null : moved, note: i.note || null };
   if (i.k === 'foot') Object.assign(w, { stretch: i.stretch || null, stretch_side: i.side || null, which: i.stretch ? i.which || null : null,
@@ -934,7 +987,7 @@ async function refreshNear() {
   if (!S.place) return;
   try {
     const r = await fetch(`${C.API}/${SURVEY}/around?lat=${S.place.lat.toFixed(5)}&lng=${S.place.lng.toFixed(5)}`, { credentials: 'omit', cache: 'no-store' });
-    if (r.ok) { S.near = await r.json(); if (cur === 'thanks') drawHub(); if (cur === 'near') drawNear(); if (cur === 'choose') drawChoose(); }
+    if (r.ok) { S.near = await r.json(); X.at = []; const t = S.sent[S.sent.length - 1]; if (t && t.far) await loadViewAt(t.slng ?? t.lng, t.slat ?? t.lat); if (cur === 'thanks') drawHub(); if (cur === 'near') drawNear(); if (cur === 'choose') drawChoose(); }
   } catch { /* the old list stays */ }
 }
 async function send() {
