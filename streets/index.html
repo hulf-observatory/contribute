@@ -287,6 +287,9 @@
   .look p { margin: 0 0 6px; font-size: 15px; color: var(--text-2); }
   .step[data-step="start"] .see-data { max-width: none; margin-top: 16px; }
   .step[data-step="start"] .desk { margin-top: 20px; }
+  #to-mark { margin-top: 10px; }
+  #to-mark[hidden] { display: none; }
+  .step[data-step="start"] #gps-msg { margin: 12px 0 0; }
 </style>
 </head>
 <body>
@@ -320,8 +323,9 @@
         <div><p><b>Best on your phone, at the place.</b> Scan the code with your phone's camera.</p><p class="gate-url" id="desk-url"></p></div>
       </div>
       <button type="button" class="btn btn-primary btn-lg start-btn" id="start-go">Start anonymously</button>
-      <p class="start-fine" id="start-fine">Start uses your phone's location to show what's around you. <a href="#" id="to-mark">Not there? Pick the place on a map</a></p>
       <p class="msg" id="gps-msg" hidden></p>
+      <button type="button" class="btn btn-secondary btn-lg start-btn" id="to-mark">Not there? Pick the place on a map</button>
+      <p class="start-fine" id="start-fine">Start uses your phone's location to show what's around you.</p>
       <p class="start-fine">Just looking? <a href="#" id="to-look">See the questions first</a></p>
       <p class="demo" style="margin-top:12px" data-demo hidden>At a desk: <a href="#" data-fakeplace="17.41775,78.44866">pretend I'm on Road No. 1, Banjara Hills</a> · <a href="#" data-fakeplace="17.43701,78.44822">at Ameerpet</a> · <a href="#" data-fakeplace="17.39370,78.43740">at Mehdipatnam</a></p>
       <div class="profile-box" id="play-box">
@@ -517,6 +521,6 @@
 </footer>
 
 <script src="../assets/common.js?v=20261120a"></script>
-<script type="module" src="form.js?v=20261120c"></script>
+<script type="module" src="form.js?v=20261120d"></script>
 </body>
 </html>

@@ -146,10 +146,15 @@ function begin(place) {
   DONE = false; stack = ['start']; cur = 'start';
   loadPlace();
 }
-function gpsFailed(t) { $('start-go').disabled = false; drawPlay(); $('gps-msg').textContent = t; $('gps-msg').hidden = false; }
+// the phone's location didn't come: say why, and make the map the main button (Teja, 20 Nov 2026)
+function gpsFailed(t) {
+  S.gpsFailed = true; $('start-go').disabled = false; drawPlay();
+  $('gps-msg').textContent = t; $('gps-msg').hidden = false;
+}
 $('start-go').onclick = () => {
   if (!PHONE) { S.mark = null; return show('mark'); }
   if (!('geolocation' in navigator)) return gpsFailed('This browser cannot share a location. Pick the place on a map instead.');
+  S.gpsFailed = false; drawPlay();
   $('start-go').disabled = true; $('start-go').textContent = 'Finding where you are…'; $('gps-msg').hidden = true;
   navigator.geolocation.getCurrentPosition((p) => {
     $('start-go').disabled = false; drawPlay();
@@ -157,8 +162,8 @@ $('start-go').onclick = () => {
     if (!inHmda(lng, lat)) return gpsFailed('Your phone places you outside the Hyderabad area (HMDA). This survey is for Hyderabad.');
     begin({ lat, lng, acc: Math.round(accuracy), memory: false });
   }, (err) => gpsFailed(err.code === 1
-      ? "Location is off for this site. Turn it on in your browser's settings for this page, then press Start again. Or pick the place on a map: what you add is then marked “from memory”."
-      : "We couldn't get your location. Try again in a moment, ideally in the open, or pick the place on a map."),
+      ? "Location is off for this site. Pick the place on a map instead (what you add is then marked “from memory”), or turn location on in your browser's settings for this page and try again."
+      : "We couldn't get your location. Pick the place on a map instead, or try again in a moment, ideally in the open."),
   { enableHighAccuracy: true, timeout: 20000, maximumAge: 15000 });
 };
 $('to-mark').onclick = (e) => { e.preventDefault(); S.mark = null; show('mark'); };
@@ -182,7 +187,7 @@ const marker = mapMark($('markbox'), { mark: 'dot', onChange: ({ lat, lng, ok })
 // a laptop: the code that opens this page on a phone, and "add a place you know" on the map
 if (!PHONE) {
   const url = location.origin + location.pathname;
-  $('desk').hidden = false; $('start-fine').hidden = true; $('desk-url').textContent = url.replace(/^https?:\/\//, '');
+  $('desk').hidden = false; $('start-fine').hidden = true; $('to-mark').hidden = true; $('desk-url').textContent = url.replace(/^https?:\/\//, '');
   const s = document.createElement('script');
   s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js';
   s.onload = () => { try { const q = window.qrcode(0, 'M'); q.addData(url); q.make(); $('desk-qr').innerHTML = q.createSvgTag({ cellSize: 5, margin: 2, scalable: true }); } catch { /* the address is shown too */ } };
@@ -685,7 +690,12 @@ const profileUrl = (n) => `../profile/?n=${encodeURIComponent(n)}`;
 function drawPlay() {
   const p = player.get();
   $('play-box').hidden = !!p; $('play-in').hidden = !p;
-  $('start-go').textContent = !PHONE ? 'Add a place you know on the map' : p ? 'Start' : 'Start anonymously';
+  $('start-go').textContent = !PHONE ? 'Add a place you know on the map' : S.gpsFailed ? 'Try my location again' : p ? 'Start' : 'Start anonymously';
+  // after the location failed, the map is the way on: it becomes the main button
+  const fail = PHONE && !!S.gpsFailed;
+  $('to-mark').textContent = fail ? 'Pick the place on a map' : 'Not there? Pick the place on a map';
+  $('to-mark').classList.toggle('btn-primary', fail); $('to-mark').classList.toggle('btn-secondary', !fail);
+  $('start-go').classList.toggle('btn-primary', !fail); $('start-go').classList.toggle('btn-secondary', fail);
   if (p) { $('play-name').textContent = p.nick; $('play-prof').href = profileUrl(p.nick); }
 }
 let pmode = 'create';
