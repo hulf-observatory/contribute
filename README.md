@@ -22,6 +22,7 @@ site feature: this repo has no custom domain). Static, no build step. The answer
 | `assets/config.js` | the API address, the areas file, the Turnstile site key, the WhatsApp link — **settings live only here** |
 | `assets/common.js` | phone menu, the spam check (Cloudflare Turnstile), the browser's random device id, sending JSON |
 | `assets/contribute.css` | house tokens, header, footer, buttons, chips |
+| `assets/map-mark.js` | the map picker (a mark fixed in the centre, the map moves under it); its search box also takes a pasted Google Maps link or coordinates (20 Nov 2026): read in the browser, or for a short share link by `contribute-api` (`/contribute/place`) |
 | `assets/place-search.js` | a copy of `maps/js/place-search.js`: keep it identical (the other copies are in `timeline/` and `access/`) |
 
 Every page loads `https://api.urbanobservatory.in/visits.js`. Local preview: the `contribute` entry in

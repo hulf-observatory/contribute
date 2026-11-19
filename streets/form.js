@@ -7,7 +7,7 @@
 // no north or south: face the road, we work out the side (compass, else the nearest side) and say it with a landmark;
 // the person says yes or no. One thing leads to the next (a broken-footpath report → the footpath's questions, filled
 // in). A laptop sees the code for a phone and can add a place it knows on the map.
-import { mapMark } from '../assets/map-mark.js?v=20261120a';
+import { mapMark } from '../assets/map-mark.js?v=20261120b';
 import { SURVEY, SETS, ITEM, MIN, allQs, shown, real, nAnswered, optLabel, PROBLEMS, BLOCKED_BY, NEEDS, problemName, needName, REQUEST_COLOR,
   POINTS, VIEW_COLORS, footColor, crossColor, metres, angle, outward, bearingNear, inHmda, esc, player, checkPlayer,
   PLAYER_SAYS, currentOf, profileLines } from '../walking/questions.js?v=20261119a';
