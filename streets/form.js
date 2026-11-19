@@ -425,24 +425,24 @@ function spotCtx() {
 function spotItem(side) {                           // side: on "Which side of the road?", where choosing it goes on to the footpath screen
   const d = Math.round(metres(S.place, { lng: S.spot[0], lat: S.spot[1] }));
   return { key: 'x:spot', k: 'Footpath', t: 'On a side street', pos: S.spot, lines: ['At the spot you tapped: saved as a spot, with no side', d > MAX_MOVE && !S.place.memory ? FAR_SAYS : ''],
-    btns: [side ? ['This spot', () => { S.side = null; S.sideSkipped = true; doneFace(); }] : ['Describe', () => startThing('foot', spotCtx())]] };
+    btns: [side ? ['This spot', () => { S.side = null; S.sideSkipped = true; doneFace(); }] : ['Add details', () => startThing('foot', spotCtx())]] };
 }
 function stopItem(st) {
   const p = sprofOf(st.id);
   return { key: 's:' + st.id, k: 'Bus stop', tag: stopSide(st), t: st.name, pos: [st.lng, st.lat], done: !!p && checked(p.latest),
     lines: [S.place.area ? (st.towards ? 'Buses towards ' + st.towards : '') : `${away(st.d)}${st.towards ? ' · buses towards ' + st.towards : ''}`, st.d > FAR_STOP && !S.place.memory ? FAR_SAYS : ''], meta: profLine(p),
-    btns: [[p ? 'Check' : 'Describe', () => startStop(st)]] };
+    btns: [[p ? 'Check' : 'Add details', () => startStop(st)]] };
 }
 function junctionItem(j) {
   const p = jprofOf(j.id);
   return { key: 'j:' + j.id, k: 'Crossing', t: j.name, pos: j.c, done: !!p && checked(p.latest), lines: [away(j.d), j.d > NEAR_JUNCTION_M && !S.place.memory ? FAR_SAYS : ''], meta: profLine(p),
-    btns: [[p ? 'Check' : 'Describe', () => p ? showCheck({ kind: 'junction', j, p, title: j.name }) : startThing('cross', crossCtx(j))]] };
+    btns: [[p ? 'Check' : 'Add details', () => p ? showCheck({ kind: 'junction', j, p, title: j.name }) : startThing('cross', crossCtx(j))]] };
 }
 function footItem(c, word, which) {                 // a side of the road chosen before: its footpath
   const p = jprofOf(`${c.stretch}:${c.side}`), v = p ? footColor(currentOf(p)) : null, lm = landmark(c), ctx = sideCtx(c, which, word);
   return { key: sideKey(c), k: 'Footpath', t: word, line: c, col: p ? (v ? VIEW_COLORS[v] : '#8C8C8C') : '#6B7280', done: !!p && checked(p.latest),
     pos: nearestOn(c.c, { lng: S.side.at[0], lat: S.side.at[1] }).pt, lines: [`${c.name}${lm ? ` · the ${lm.name} bus stop side` : ''}`, S.side.far && !S.place.memory ? FAR_SAYS : ''], meta: profLine(p),
-    btns: [[p ? 'Check' : 'Describe', () => p ? showCheck({ kind: 'side', p, ctx, title: ctx.title }) : startThing('foot', ctx)]] };
+    btns: [[p ? 'Check' : 'Add details', () => p ? showCheck({ kind: 'side', p, ctx, title: ctx.title }) : startThing('foot', ctx)]] };
 }
 function sideItem(c) {                              // "Which side of the road?": one side of one main road
   const lm = landmark(c), mem = S.place.memory, here = c.d <= 80, key = sideKey(c);
@@ -462,7 +462,7 @@ function pkItems() {
     if (S.side) { const [w1, w2] = sideWords(); for (const [c, word, which] of [[S.side.mine, w1, 'mine'], [S.side.other, w2, 'other']]) if (c) out.push(footItem(c, word, which)); }
     if (S.spot) out.push(spotItem(false));
     if (!S.side) out.push({ key: 'here', k: 'Footpath', t: 'The footpath here', pos: [S.place.lng, S.place.lat], lines: [n.stretches.length ? 'Side of the road not chosen' : 'A smaller street: saved as a single spot'],
-      btns: [['Describe', () => startThing('foot', { title: 'The footpath here' })], ...(n.stretches.length ? [['Choose side', () => openSidePick(() => show('near')), true]] : [])] });
+      btns: [['Add details', () => startThing('foot', { title: 'The footpath here' })], ...(n.stretches.length ? [['Choose side', () => openSidePick(() => show('near')), true]] : [])] });
     for (const r of rowsOf('spot')) out.push({ key: 'r:' + r.id, k: 'Footpath', t: 'A footpath spot someone described', pos: [r.lng, r.lat], done: checked(r.id), lines: [`${r.d} m away · seen ${day(r.seen)}`],
       btns: [['Check', () => showCheck({ kind: 'spot', row: r, title: 'The footpath here' })]] });
     const near = junctions(), ids = new Set(near.map(j => j.id));
