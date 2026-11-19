@@ -770,7 +770,7 @@ function thanks(body, r) {
   const pts = body._sum ? body._sum.points : 0, got = (r.checks || []).filter(x => x === false).length;
   $('thanks-text').textContent = 'Your answers are now public.' + (body.nick ? ` ${pts} points to ${body.nick} on the leaderboard.` : '')
     + (got ? ` ${got === 1 ? 'One check was' : got + ' checks were'} already sent from this phone, so not counted again.` : '');
-  $('to-map').href = r.ids && r.ids[0] ? '../walking/map/?r=' + encodeURIComponent(r.ids[0]) : r.stops && r.stops[0] ? '../bus-stops/map/' : '../walking/map/';
+  $('to-map').href = r.ids && r.ids[0] ? '../walking/map/?from=streets&r=' + encodeURIComponent(r.ids[0]) : '../walking/map/?from=streets';
   DONE = true; stack = []; show('thanks', false);
 }
 async function send() {

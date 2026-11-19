@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Walking and bus stops map · Hyderabad Urban Observatory</title>
+<title>What people found: safer streets &amp; bus stops · Hyderabad Urban Observatory</title>
 <meta name="description" content="Bus stops, footpaths, crossings, problems and requests in Hyderabad, as residents found them.">
 <link rel="icon" href="../../favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../../vendor/fonts/lato.css">
@@ -104,8 +104,8 @@
 
 <main class="wrap">
   <div class="top">
-    <p class="eyebrow"><a href="../" style="color:inherit;text-decoration:none">Contribute · Walking and bus stops</a></p>
-    <h1>Results so far</h1>
+    <p class="eyebrow"><a href="../" data-form style="color:inherit;text-decoration:none">Contribute · Safer streets &amp; bus stops</a></p>
+    <h1>What people found</h1>
     <p class="counts" id="counts">Loading…</p>
     <p class="counts loadmsg" id="loadmsg" hidden></p>
   </div>
@@ -115,7 +115,7 @@
   <div id="v-map">
     <div class="layout">
       <div><div class="map-box"><div id="map"></div></div>
-        <p class="note">Each side of a main road is described on its own, junction to junction, and so is crossing at each junction, from what people said there. Grey: no clear answer yet (no answers, or mixed ones). Problems stay until 6 months after they were last seen.</p></div>
+        <p class="note">Each side of a main road is described on its own, junction to junction, and so is crossing at each junction, from what people said there. Thin light lines: no one has described that side yet. Grey: mixed answers, no clear one yet. Problems stay until 6 months after they were last seen.</p></div>
       <aside class="panel" id="panel"><p class="empty">Tap a side of a road, a crossing, a stop or a pin to see what people found there.</p></aside>
     </div>
   </div>
@@ -129,7 +129,7 @@
   <h3>Feedback</h3>
   <div class="fbopts" id="fbopts">
     <button type="button" data-k="confirm">It's still like this</button>
-    <a class="addyours" href="../">Not right? Add what you see<small>Your answers count with everyone else's</small></a>
+    <a class="addyours" href="../" data-form>Not right? Add what you see<small>Your answers count with everyone else's</small></a>
     <button type="button" data-k="photo" id="fb-photo">A problem with the photo<small>A face, a number plate, or not of this place</small></button>
     <button type="button" data-k="spam">Spam or fake</button>
   </div>
@@ -150,6 +150,6 @@
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script src="../../assets/common.js?v=20261119a"></script>
-<script type="module" src="map.js?v=20261119a"></script>
+<script type="module" src="map.js?v=20261120a"></script>
 </body>
 </html>

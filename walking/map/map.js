@@ -9,10 +9,13 @@ import { SURVEY, SETS, allQs, shown, optLabel, real, esc, loadReports, currentOf
 import { loadRatings, loadProfiles as loadStopProfiles } from '../../bus-stops/questions.js?v=20261119a';
 const C = window.CONTRIBUTE;
 const $ = (id) => document.getElementById(id);
-const NONE = '#A9AFB8', MIXED = '#8C8C8C', STOP = '#2166AC';
+const NONE = '#CBD0D7', MIXED = '#8C8C8C', STOP = '#2166AC';     // NONE: sides no one has described yet, thin and faint
 const day = (d) => d ? new Date(d.length > 10 ? d : d + 'T12:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
 const people = (n) => `${n} ${n === 1 ? 'person' : 'people'}`;
 const fmt = (n) => n.toLocaleString('en-IN');
+// the form to add to: the new single entry when the person came from it (until it replaces the walking form for everyone)
+const FORM = new URLSearchParams(location.search).get('from') === 'streets' ? '../../streets/' : '../';
+document.querySelectorAll('[data-form]').forEach(a => { a.href = FORM; });
 
 const [roads, prof, rows, srows, sprof] = await Promise.all([
   fetch('../roads.json').then(r => r.json()).catch(() => null),
@@ -32,7 +35,7 @@ for (const r of srows || []) if (r.stop_id && !STOPS.has(r.stop_id)) STOPS.set(r
 const SPROF = sprof || {};
 
 // ── what to show: one kind at a time, or all ──
-const FILTERS = [['all', 'All'], ['stop', 'Bus stops'], ['foot', 'Footpaths'], ['cross', 'Crossings'], ['problem', 'Problems'], ['request', 'Requests']];
+const FILTERS = [['all', 'All'], ['stop', 'Bus stops'], ['foot', 'Footpaths'], ['cross', 'Crossings'], ['problem', 'Problems'], ['request', 'Suggestions']];
 let filt = 'all';
 const on = (f) => filt === 'all' || filt === f;
 const colour = (v) => v ? VIEW_COLORS[v] : MIXED;
@@ -61,11 +64,11 @@ function pointsGeo() {
 function drawControls() {
   $('chips').innerHTML = FILTERS.map(([v, l]) => `<button type="button" class="chip" aria-pressed="${v === filt}" data-v="${v}">${l}</button>`).join('');
   const L = [];
-  if (on('foot')) L.push(['line', VIEW_COLORS.good, 'Footpath'], ['line', VIEW_COLORS.mid, 'Only in parts'], ['line', VIEW_COLORS.bad, 'No footpath'], ['line', MIXED, 'No clear answer yet']);
+  if (on('foot')) L.push(['line', VIEW_COLORS.good, 'Footpath'], ['line', VIEW_COLORS.mid, 'Only in parts'], ['line', VIEW_COLORS.bad, 'No footpath'], ['line', MIXED, 'No clear answer yet'], ['line', NONE, 'Not described yet']);
   if (on('cross')) L.push(['dot', '#111827', 'Crossing (colour: can people cross)']);
   if (on('stop')) L.push(['sq', STOP, 'Bus stop']);
   if (on('problem')) L.push(['sqo', '#EF8A62', 'Problem']);
-  if (on('request')) L.push(['dot', REQUEST_COLOR, 'Request']);
+  if (on('request')) L.push(['dot', REQUEST_COLOR, 'Suggestion']);
   $('legend').innerHTML = L.map(([k, c, l]) => `<span><i class="k-${k}" style="${k === 'sqo' ? `border-color:${c}` : `background:${c}`}"></i>${esc(l)}</span>`).join('');
 }
 function refresh() { map.getSource('sides')?.setData(sidesGeo()); map.getSource('pts')?.setData(pointsGeo()); }
@@ -83,14 +86,14 @@ map.on('load', () => {
   const off = (s) => ['interpolate', ['exponential', 2], ['zoom'], 12, s * 0.6, 19, s * 9];   // each side drawn beside the road line
   for (const s of ['l', 'r']) map.addLayer({ id: 'side-' + s, type: 'line', source: 'sides', filter: ['==', ['get', 'side'], s],
     layout: { 'line-join': 'round' }, paint: { 'line-color': ['get', 'col'], 'line-offset': off(s === 'l' ? -1 : 1),
-      'line-width': ['interpolate', ['linear'], ['zoom'], 10, ['case', ['==', ['get', 'has'], 1], 2, 1], 16, ['case', ['==', ['get', 'has'], 1], 5, 2.5]],
+      'line-width': ['interpolate', ['linear'], ['zoom'], 10, ['case', ['==', ['get', 'has'], 1], 2.5, 0.4], 14, ['case', ['==', ['get', 'has'], 1], 4, 0.9], 17, ['case', ['==', ['get', 'has'], 1], 6, 2.5]],
       'line-opacity': ['case', ['==', ['get', 'old'], 1], 0.5, 1] } });
   map.addLayer({ id: 'sel', type: 'line', source: 'sides', filter: ['==', ['get', 'id'], selId], paint: { 'line-color': '#111827', 'line-width': 10, 'line-opacity': .22,
     'line-offset': ['case', ['==', ['get', 'side'], 'l'], -6, 6] } }, 'side-l');
   map.addSource('pts', { type: 'geojson', data: pointsGeo() });
   const r = (a, b) => ['interpolate', ['linear'], ['zoom'], 10, a, 17, b];
   map.addLayer({ id: 'pts', type: 'circle', source: 'pts', filter: ['in', ['get', 't'], ['literal', ['junction', 'row', 'spot', 'request']]],
-    paint: { 'circle-radius': ['match', ['get', 't'], 'junction', r(4, 10), 'request', r(4, 9), r(3, 6.5)], 'circle-color': ['match', ['get', 't'], 'request', '#fff', ['get', 'col']],
+    paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, ['match', ['get', 't'], 'junction', 4, 'request', 4, 3], 17, ['match', ['get', 't'], 'junction', 10, 'request', 9, 6.5]], 'circle-color': ['match', ['get', 't'], 'request', '#fff', ['get', 'col']],
       'circle-stroke-color': ['match', ['get', 't'], 'request', REQUEST_COLOR, 'spot', '#fff', '#111827'], 'circle-stroke-width': ['match', ['get', 't'], 'request', 2.5, 'junction', 2, 1.2] } });
   map.addLayer({ id: 'req-n', type: 'symbol', source: 'pts', filter: ['==', ['get', 't'], 'request'], minzoom: 13,
     layout: { 'text-field': ['to-string', ['get', 'n']], 'text-size': 10, 'text-font': ['Noto Sans Bold'], 'text-allow-overlap': true }, paint: { 'text-color': REQUEST_COLOR } });
@@ -120,7 +123,7 @@ function histList(p) {
   return `<p class="sec">${p.n} contribution${p.n > 1 ? 's' : ''}${p.checks ? `, ${p.checks} "still like this" check${p.checks > 1 ? 's' : ''}` : ''}</p>
     <ul class="hist">${p.items.map((h, i) => `<li><b>${h.nick ? esc(h.nick) : 'Someone'}</b> <em>${day(h.at)}</em>${i === p.items.length - 1 && p.n <= 20 ? '<span class="tag">Started it</span>' : h.prefilled ? '<span class="tag">Updated it</span>' : ''}${h.located === 'memory' ? '<span class="tag">From memory</span>' : ''}</li>`).join('')}</ul>`;
 }
-const addYours = (label = 'Not right? Add what you see') => `<a class="btn btn-secondary btn-lg" href="../">${label} ${ARR}</a>`;
+const addYours = (label = 'Not right? Add what you see') => `<a class="btn btn-secondary btn-lg" href="${FORM}">${label} ${ARR}</a>`;
 const buttons = (id, sv = SURVEY) => `<div class="pbtns"><button type="button" class="btn btn-primary btn-lg fbb" data-id="${esc(id)}" data-s="${sv}" data-k="confirm">Still like this</button>
   ${addYours()}<button type="button" class="linkbtn fbb" data-id="${esc(id)}" data-s="${sv}" data-k="spam">Report spam</button></div>`;
 function sideLabel(id) {
@@ -158,7 +161,7 @@ function showRow(rid) {
       <button type="button" class="linkbtn fbb" data-id="${r.id}" data-k="spam">Report spam</button></div>`);
   }
   if (r.item === 'request') {
-    return open(`<p class="eyebrow">Request</p><h2>Needed: ${esc(needName(r.need).toLowerCase())}</h2><p class="ctx">Asked by ${people(1 + (r.metoo || 0))} · first asked ${day(r.observed_at)}${r.nick ? ' by ' + esc(r.nick) : ''}</p>${photo(r)}${noteOf(r)}
+    return open(`<p class="eyebrow">Suggestion</p><h2>Needed: ${esc(needName(r.need).toLowerCase())}</h2><p class="ctx">Asked by ${people(1 + (r.metoo || 0))} · first asked ${day(r.observed_at)}${r.nick ? ' by ' + esc(r.nick) : ''}</p>${photo(r)}${noteOf(r)}
       <div class="pbtns"><button type="button" class="btn btn-primary btn-lg fbb" data-id="${r.id}" data-k="metoo">I need this too</button><button type="button" class="linkbtn fbb" data-id="${r.id}" data-k="spam">Report spam</button></div>`);
   }
   const k = r.item === 'crossing' ? 'cross' : 'foot';
@@ -189,7 +192,7 @@ const keys = Object.keys(PROFILES), sideKeys = keys.filter(k => k.includes(':'))
 const km = sideKeys.reduce((a, k) => a + (STRETCH.get(k.split(':')[0])?.m || 0), 0) / 1000;
 const nw = (n, w) => `${fmt(n)} ${w}${n === 1 ? '' : 's'}`;
 $('counts').innerHTML = [nw(STOPS.size, 'bus stop'), `${nw(sideKeys.length, 'road side')} (${km.toFixed(1)} km)`, nw(keys.length - sideKeys.length + loose.filter(r => r.item === 'crossing').length, 'crossing'),
-  nw(problems.length, 'problem'), nw(requests.length, 'request'), '<a href="../../bus-stops/leaderboard/">Leaderboard</a>', '<a href="../download/">Download</a>'].join(' · ');
+  nw(problems.length, 'problem'), nw(requests.length, 'suggestion'), '<a href="../../bus-stops/leaderboard/">Leaderboard</a>', '<a href="../download/">Download</a>'].join(' · ');
 
 // ── map or list ──
 const many = (n, w) => `${n} ${w}${n > 1 ? 's' : ''}`;
@@ -215,7 +218,7 @@ function listItems() {
   if (on('problem')) for (const r of problems) out.push({ href: '?r=' + encodeURIComponent(r.id), at: r.seen || r.observed_at, name: problemName(r.problem), col: '#EF8A62', facts: r.note || '',
     meta: ['Problem', day(r.seen || r.observed_at), r.confirmed ? `${r.confirmed} said still there` : null] });
   if (on('request')) for (const r of requests) out.push({ href: '?r=' + encodeURIComponent(r.id), at: r.observed_at, name: `Needed: ${needName(r.need).toLowerCase()}`, col: REQUEST_COLOR, facts: r.note || '',
-    meta: ['Request', day(r.observed_at), `${people(1 + (r.metoo || 0))} asked`] });
+    meta: ['Suggestion', day(r.observed_at), `${people(1 + (r.metoo || 0))} asked`] });
   if (on('stop')) for (const s of STOPS.values()) { const p = SPROF[s.id]; out.push({ href: '../../bus-stops/stop/?id=' + encodeURIComponent(s.id), at: p ? p.seen : '', name: s.name || 'Bus stop', col: STOP, facts: '',
     meta: ['Bus stop', s.towards ? 'towards ' + esc(s.towards) : null, p ? many(p.n, 'contribution') : null], stop: true }); }
   return out.sort((a, b) => String(b.at).slice(0, 16).localeCompare(String(a.at).slice(0, 16)));
@@ -262,7 +265,7 @@ if (location.search) openItem(location.search);
 // ── checks and flags: the dialog shows only what fits the entry ──
 let kind = null, target = null, targetSurvey = SURVEY;
 const dlg = $('dlg'), check = Contribute.spamCheck($('ts-fb'));
-const OPTS = { confirm: ["It's still like this", ''], gone: ["It's gone", ''], metoo: ['I need this too', 'Your request counts with the others'], photo: ['A problem with the photo', 'A face, a number plate, or not of this place'], spam: ['Spam or fake', ''] };
+const OPTS = { confirm: ["It's still like this", ''], gone: ["It's gone", ''], metoo: ['I need this too', 'Your voice counts with the others'], photo: ['A problem with the photo', 'A face, a number plate, or not of this place'], spam: ['Spam or fake', ''] };
 document.addEventListener('click', (e) => {
   const b = e.target.closest('.fbb'); if (!b) return;
   target = b.dataset.id; kind = b.dataset.k || null; targetSurvey = b.dataset.s || SURVEY;
