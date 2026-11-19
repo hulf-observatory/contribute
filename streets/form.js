@@ -2,8 +2,8 @@
 // the mock agreed that day (observatory-work/notes/surveys-plan.md, "One entry"). It replaces the separate bus stop and
 // walking forms; the questions, the data and the server calls are the walking survey's (bus stops go into the bus stop
 // data). Start asks for the phone's location (or a place on a map: "from memory") → what to tell us about: a bus stop,
-// a footpath or crossing, a problem, an improvement → what's nearby for that → questions → optional photo → "Anything
-// else here?", which is also where everything is sent, once. The side of the road is asked only for a footpath, with
+// a footpath or crossing, a problem, an improvement → what's nearby for that → questions → optional photo → Send.
+// Each thing is sent on its own; only then "Anything else here?" is asked (Teja, 20 Nov 2026), so it is clear what has gone. The side of the road is asked only for a footpath, with
 // no north or south: face the road, we work out the side (compass, else the nearest side) and say it with a landmark;
 // the person says yes or no. One thing leads to the next (a broken-footpath report → the footpath's questions, filled
 // in). A laptop sees the code for a phone and can add a place it knows on the map.
@@ -54,7 +54,7 @@ const CHOICES = {
 const KIND_NAME = { stop: 'Bus stop', foot: 'Footpath', cross: 'Crossing', problem: 'Problem', request: 'Suggestion' };
 
 // ── state: the place, what's around it, the side of the road, the things added in this entry and the checks ──
-const S = { place: null, near: null, side: null, sideSkipped: false, afterFace: null, choice: null, items: [], checks: [], cur: null, last: null };
+const S = { place: null, near: null, side: null, sideSkipped: false, afterFace: null, choice: null, items: [], checks: [], cur: null, last: null, sent: [], doneIds: new Set() };   // items / checks: what the next Send carries; sent / doneIds: what has gone
 let cur = 'start', stack = [], moving = false, sending = false;
 var DONE = false;                                  // sent: Back can't offer Send again
 const isQ = (s) => s.startsWith('q-');
@@ -71,7 +71,8 @@ function show(s, push = true) {
   const inQ = !['start', 'thanks', 'player'].includes(s);
   document.body.classList.toggle('q-mode', inQ);
   $('progress').hidden = !inQ; $('nav').hidden = !inQ;
-  const n = S.items.length + S.checks.length;
+  const n = S.sent.length + S.doneIds.size;
+  $('sendbox').hidden = !(s === 'photo' || s === 'more'); if (!$('sendbox').hidden) drawSendbox();
   if (isQ(s)) {
     const { k, id, part } = qParts(s), list = qList(k, part, S.cur.a), i = list.findIndex(q => q.id === id);
     // follow-ups appear only after the answer that asks for them, so the count is "question n", not "n of m"
@@ -83,11 +84,11 @@ function show(s, push = true) {
     drawAnswers();
   } else {
     $('bar').style.width = `${BAR[s] ?? 8}%`;
-    $('count').textContent = n ? `${n} added` : '';
+    $('count').textContent = n ? `${n} sent` : '';
   }
   ({ start: drawPlay, mark: () => marker.open(), choose: drawChoose, near: drawNear, face: () => { $('face-ask').hidden = false; $('face-confirm').hidden = true; },
     pin: openPin, photo: drawPhoto, more: drawMore, blockedby: drawBlocked,
-    thanks: () => { const p = S.noNick ? null : player.get(); $('thanks-prof').hidden = !p; if (p) $('thanks-prof-a').href = profileUrl(p.nick); },
+    thanks: () => { const p = S.noNick ? null : player.get(); $('thanks-prof').hidden = !p; if (p) $('thanks-prof-a').href = profileUrl(p.nick); drawHub(); },
     player: () => { S.noNick = false; const p = player.get(); $('p-nick').value = p ? p.nick : $('p-nick').value; $('p-pin').value = ''; $('p-msg').hidden = true; playerReady(); } }[s] || (() => {}))();
   updateNext();
   window.scrollTo({ top: 0 });
@@ -99,7 +100,7 @@ function ready() {
   if (cur === 'stopname') return $('stop-name').value.trim().length >= 2;
   if (cur === 'pin') return !!S.pinOk;
   if (cur === 'other') return $('ot-text').value.trim().length >= 3;
-  if (cur === 'photo') return !few();
+  if (cur === 'photo') return !few() && !sending;
   if (cur === 'more') return !sending && S.items.length + S.checks.length > 0;
   return true;
 }
@@ -108,9 +109,10 @@ function updateNext() {
   const b = $('next');
   b.hidden = TAP_ON.includes(cur) || (isQ(cur) && !allQs(qParts(cur).k).find(q => q.id === qParts(cur).id).multi);
   b.disabled = !ready();
-  if (cur === 'more') { if (!sending) { const n = S.items.length + S.checks.length; b.textContent = n > 1 ? `Send all ${n}` : 'Send'; } return; }
+  if (sending) return;                           // the button says "Sending…"
+  if (cur === 'more') { b.textContent = 'Send'; return; }
   const optional = { photo: !(S.cur && (S.cur.photo || S.cur.note)), blockedby: !(S.cur && S.cur.blocked_by && S.cur.blocked_by.length) };
-  b.textContent = cur === 'mark' ? 'Use this place' : cur === 'pin' ? 'Here' : cur === 'photo' && optional.photo ? 'Skip photo' : optional[cur] ? 'Skip' : 'Next';
+  b.textContent = cur === 'mark' ? 'Use this place' : cur === 'pin' ? 'Here' : cur === 'photo' ? (optional.photo ? 'Send without a photo' : 'Send') : optional[cur] ? 'Skip' : 'Next';
   if (cur === 'photo') {
     const f = few(); $('photo-few').hidden = !f;
     if (f) $('photo-few').textContent = `Answer at least ${MIN[S.cur.k]} question${MIN[S.cur.k] > 1 ? 's' : ''} about the ${SETS[S.cur.k].name.toLowerCase()} ("Don't know" doesn't count). Press Back to change an answer.`;
@@ -120,7 +122,7 @@ function next() {
   if (isQ(cur)) {
     const { k, id, part } = qParts(cur), list = qList(k, part, S.cur.a), i = list.findIndex(q => q.id === id);
     if (list[i + 1]) return show(`q-${k}-${list[i + 1].id}`);
-    if (part === 'more') { S.cur.more = true; return show('more'); }
+    if (part === 'more') { S.cur.more = true; return show('photo'); }   // the extra questions were asked from the photo screen: back to it, then Send
     return show('photo');
   }
   if (cur === 'mark') { S.place = { lat: S.mark.lat, lng: S.mark.lng, acc: null, memory: true }; return loadPlace(); }
@@ -145,7 +147,7 @@ $('exit').onclick = leave;
 
 // ── the first screen: Start asks for the phone's location; "not there" and laptops use the map ──
 function begin(place) {
-  Object.assign(S, { place, near: null, side: null, sideSkipped: false, afterFace: null, choice: null, items: [], checks: [], cur: null, last: null });
+  Object.assign(S, { place, near: null, side: null, sideSkipped: false, afterFace: null, choice: null, items: [], checks: [], cur: null, last: null, sent: [], doneIds: new Set() });
   DONE = false; stack = ['start']; cur = 'start';
   loadPlace();
 }
@@ -342,7 +344,7 @@ function drawConfirm() {
 }
 
 // ── what's nearby, for the choice ──
-const checked = (id) => S.checks.some(c => c.id === id);
+const checked = (id) => S.doneIds.has(id);          // already checked and sent in this visit
 let ACTS = [];
 function row({ col, shape = '', t, tag = '', sub = [], btns, done = false }) {
   const b = done ? '<button type="button" disabled>Added</button>' : btns.map(([label, fn]) => { ACTS.push(fn); return `<button type="button" data-act="${ACTS.length - 1}">${esc(label)}</button>`; }).join('');
@@ -361,7 +363,7 @@ function sideCtx(c, which, word) {
 function listStops() {
   const n = N(), stops = n.stops.filter(x => x.d <= 300).slice(0, 6).map(st => ({ st, side: stopSide(st) }));
   stops.sort((a, b) => (a.side === 'On your side' ? 0 : 1) - (b.side === 'On your side' ? 0 : 1) || a.st.d - b.st.d);
-  return stops.map(({ st, side }) => { const p = n.stop_profiles[st.id]; return row({ col: p ? '#2166AC' : GREY, shape: 'r', t: st.name, tag: side,
+  return stops.map(({ st, side }) => { const p = n.stop_profiles[st.id]; return row({ col: p ? '#2166AC' : GREY, shape: 'r', t: st.name, tag: side, done: !!p && checked(p.latest),
     sub: [`${st.d} m away${st.towards ? ' · buses towards ' + st.towards : ''}`, p ? `${people(p.n)} · ${day(p.seen)}` : 'No details yet'], btns: [[p ? 'Check' : 'Describe', () => startStop(st)]] }); }).join('')
     || '<li class="none">No bus stop on our map within 300 m.</li>';
 }
@@ -372,7 +374,7 @@ function listSides() {
     for (const [c, word, which] of [[S.side.mine, w1, 'mine'], [S.side.other, w2, 'other']]) {
       if (!c) continue;
       const p = n.profiles[`${c.stretch}:${c.side}`], v = p ? footColor(currentOf(p)) : null, lm = landmark(c), ctx = sideCtx(c, which, word);
-      out.push(row({ col: p ? (v ? VIEW_COLORS[v] : '#8C8C8C') : GREY, shape: 'ln', t: word, sub: [`${c.name}${lm ? ` · the ${lm.name} bus stop side` : ''}`, p ? `${people(p.n)} · ${day(p.seen)}` : 'No details yet'],
+      out.push(row({ col: p ? (v ? VIEW_COLORS[v] : '#8C8C8C') : GREY, shape: 'ln', t: word, done: !!p && checked(p.latest), sub: [`${c.name}${lm ? ` · the ${lm.name} bus stop side` : ''}`, p ? `${people(p.n)} · ${day(p.seen)}` : 'No details yet'],
         btns: [[p ? 'Check' : 'Describe', () => p ? showCheck({ kind: 'side', p, ctx, title: ctx.title }) : startThing('foot', ctx)]] }));
     }
   } else out.push(row({ col: GREY, shape: 'ln', t: 'The footpath here', sub: [n.stretches.length ? 'Side of the road not set' : 'Not on a main road: kept as a single point'], btns: [['Describe', () => startThing('foot', { title: 'The footpath here' })]] }));
@@ -383,7 +385,7 @@ function listSides() {
 function listCrossings() {
   const n = N(), out = [];
   for (const j of junctions()) { const p = n.profiles[j.id], v = p ? crossColor(currentOf(p)) : null;
-    out.push(row({ col: p ? (v ? VIEW_COLORS[v] : '#111827') : GREY, t: j.name, sub: [`${j.d} m away`, p ? `${people(p.n)} · ${day(p.seen)}` : 'No details yet'],
+    out.push(row({ col: p ? (v ? VIEW_COLORS[v] : '#111827') : GREY, t: j.name, done: !!p && checked(p.latest), sub: [`${j.d} m away`, p ? `${people(p.n)} · ${day(p.seen)}` : 'No details yet'],
       btns: [[p ? 'Check' : 'Describe', () => p ? showCheck({ kind: 'junction', j, p, title: j.name }) : startThing('cross', { junction: j.id, title: j.name })]] })); }
   for (const r of rowsOf('crossing')) out.push(row({ col: '#111827', t: 'A crossing between junctions', sub: [`${r.d} m away · seen ${day(r.seen)}`], done: checked(r.id),
     btns: [['Check', () => showCheck({ kind: 'crossing', row: r, title: 'A crossing between junctions' })]] }));
@@ -424,7 +426,7 @@ function drawNear() {
   }
   $('nearlists').innerHTML = L.join('');
 }
-function quickCheck(r, kind, title) { addCheck({ survey: SURVEY, id: r.id, kind, title }); S.last = null; show('more'); }
+function quickCheck(r, kind, title) { S.items = []; S.checks = [{ survey: SURVEY, id: r.id, kind, title }]; S.last = null; show('more'); }
 $('nearlists').addEventListener('click', (e) => {
   const a = e.target.closest('[data-act]'); if (a && !a.disabled) return ACTS[+a.dataset.act]();
   const nw = e.target.closest('[data-new]');
@@ -505,7 +507,7 @@ function showCheck(x) {
   $('check-m').textContent = x.p ? `${people(x.p.n)} · last seen ${day(x.p.seen)}` : `Seen ${day(x.row.seen)}`;
   $('check-a').innerHTML = lines.map(([a, b, c]) => `<li><span>${esc(a)}</span><b>${esc(b)}</b>${c ? `<small>${esc(c)}</small>` : ''}</li>`).join('');
   $('check-a').hidden = !lines.length;
-  $('check-same').onclick = () => { addCheck({ survey: surveyId, id: latest, kind: 'confirm', title: `Still the same: ${x.title}` }); S.last = x.kind === 'stop' ? { k: 'stop', ...stopCtx(x.stop), more: true } : null; show('more'); };
+  $('check-same').onclick = () => { S.items = []; S.checks = [{ survey: surveyId, id: latest, kind: 'confirm', title: `Still the same: ${x.title}` }]; S.last = x.kind === 'stop' ? { k: 'stop', ...stopCtx(x.stop), more: true } : null; show('more'); };
   $('check-change').onclick = () => {
     const ctx = { title: x.title, prefill, check: { survey: surveyId, id: latest } };
     if (x.kind === 'side') return startThing('foot', { ...ctx, ...x.ctx });
@@ -515,7 +517,6 @@ function showCheck(x) {
   };
   show('check');
 }
-function addCheck(c) { if (!S.checks.some(x => x.id === c.id && x.kind === c.kind)) S.checks.push(c); }
 
 // ── things: a bus stop, footpath or crossing (core questions, photo, then more), a problem or a suggestion ──
 function newThing(k, ctx = {}) { return { k, a: {}, seen: new Set(), more: false, at: new Date().toISOString(), photo: null, note: '', ...ctx }; }
@@ -537,11 +538,10 @@ function firstQ() { const q = qList(S.cur.k, 'core', S.cur.a)[0]; show(`q-${S.cu
 function finishThing() {
   const t = S.cur;
   t.note = t.said || $('note').value.trim();
-  if (t.base && t.check && snap(t.a, t.seen) === snap(t.baseA, t.seen) && !t.photo && !t.note) {
-    addCheck({ ...t.check, kind: 'confirm', title: `Still the same: ${t.title}` }); S.items = S.items.filter(x => x !== t);
-  } else if (!S.items.includes(t)) S.items.push(t);
+  if (t.base && t.check && snap(t.a, t.seen) === snap(t.baseA, t.seen) && !t.photo && !t.note) { S.items = []; S.checks = [{ ...t.check, kind: 'confirm', title: `Still the same: ${t.title}` }]; }
+  else { S.items = [t]; S.checks = []; }
   S.last = t;
-  show('more');
+  send();
 }
 // answers: one tap chooses and moves on; ticks toggle
 $('topics').addEventListener('click', (e) => {
@@ -615,7 +615,11 @@ function drawPhoto() {
   $('movedot').hidden = !pin;
   if (pin) $('movedot').firstChild.textContent = t.lat != null ? 'The dot is on the spot. ' : S.place.memory ? 'Placed where you put the dot. ' : "Placed where you're standing. Not exactly there? ";
   $('movedot-go').textContent = t.lat != null ? 'Move it again' : 'Move the dot to the spot';
+  // a bus stop, footpath or crossing has a few more questions: offered here, before sending
+  const mq = !!SETS[t.k] && !t.more && qList(t.k, 'more', t.a).length > 0;
+  $('more-q').hidden = !mq; if (mq) $('more-q').textContent = `A few more questions about this ${SETS[t.k].name.toLowerCase()} (optional)`;
 }
+$('more-q').onclick = () => { const t = S.cur; t.note = $('note').value.trim(); show(`q-${t.k}-${qList(t.k, 'more', t.a)[0].id}`); };
 $('movedot-go').onclick = (e) => { e.preventDefault(); S.cur.note = $('note').value.trim(); pinThen(() => { stack.pop(); stack.pop(); show('photo'); }); };
 $('note').addEventListener('input', () => { if (S.cur) S.cur.note = $('note').value.trim(); updateNext(); });
 $('photo-in').addEventListener('change', async (e) => {
@@ -627,66 +631,55 @@ $('photo-in').addEventListener('change', async (e) => {
   e.target.value = ''; updateNext();
 });
 
-// ── anything else here? one thing leads to the next; everything is sent from here ──
+// ── "Send this?" for a check; and after every send, "Anything else here?": one thing leads to the next ──
 const PRE = { broken: { footpath: 'yes', broken: 'places' }, blocked: { footpath: 'yes', blocked: 'places' }, nofoot: { footpath: 'no' } };
-const itemLine = (i) => i.k === 'problem' || i.k === 'request' ? i.title : i.title || KIND_NAME[i.k];
 const WORN = ['places', 'mostly'];
 let LEADS = [];
 function drawMore() {
-  const has = (k) => S.items.some(i => i.k === k), t = S.last, n = S.items.length + S.checks.length;
-  const sub = (i) => {
-    if (i.k === 'problem') return [i.blocked_by && i.blocked_by.length && 'Blocked by ' + i.blocked_by.map(v => BLOCKED_BY.find(o => o[0] === v)[1].toLowerCase()).join(', '), i.photo && 'photo', !i.said && i.note && `“${i.note}”`];
-    if (i.k === 'request') return [i.photo && 'photo', !i.said && i.note && `“${i.note}”`];
-    const c = nAnswered(i.k, answersOf(i));
-    return [`${c} answer${c === 1 ? '' : 's'}${i.more ? ', with more' : ''}`, i.missing && 'a new stop', i.photo && 'photo', i.note && `“${i.note}”`];
-  };
-  $('sum').innerHTML = S.items.map((i, x) => `<li><span>${KIND_NAME[i.k]}</span><b>${esc(itemLine(i))}<small>${esc(sub(i).filter(Boolean).join(' · '))}</small></b><button type="button" data-del="i${x}">Remove</button></li>`).join('')
-    + S.checks.map((c, x) => `<li><span>Check</span><b>${esc(c.title)}</b><button type="button" data-del="c${x}">Remove</button></li>`).join('')
-    || '<li><span>Nothing added yet</span></li>';
-  // what goes with the thing just added
+  $('sum').innerHTML = S.checks.map(c => `<li><span>Check</span><b>${esc(c.title)}</b></li>`).join('') || '<li><span>Nothing to send</span></li>';
+  updateNext();
+}
+function drawSendbox() {
+  const p = player.get();
+  $('anon').hidden = !!(p && !S.noNick);
+  $('accuracy').textContent = S.place && S.place.memory ? 'By sending, you confirm this is what you know of this place, to the best of your knowledge.'
+    : 'By sending, you confirm this is what you saw, to the best of your knowledge.';
+  if (!sending) $('send-msg').hidden = true;
+}
+function drawHub() {
+  $('hub').hidden = !S.place;                      // an unsent entry sent from the first screen: no place to add to
+  if (!S.place) return;
+  const has = (k) => S.sent.some(i => i.k === k), t = S.last;
   LEADS = [];
   const lead = (label, s, fn) => { LEADS.push(fn); return answerBtn(`data-lead="${LEADS.length - 1}"`, `${esc(label)}${s ? `<small>${esc(s)}</small>` : ''}`, '', ' go'); };
   const L = [];
-  if (t && S.items.includes(t)) {
+  if (t && S.sent.includes(t)) {
     if (t.k === 'problem' && PRE[t.problem] && !has('foot'))
       L.push(lead('Tell us more about this footpath', 'Your report is filled in already; a few quick questions', () => { S.choice = 'walk'; askSide(() => footHere({ mine: PRE[t.problem], lead: 'problem' })); }));
-    if (t.k === 'foot' && (WORN.includes(t.a.broken) || WORN.includes(t.a.blocked)) && !S.items.some(i => i.k === 'problem' && ['broken', 'blocked'].includes(i.problem))) {
+    if (t.k === 'foot' && (WORN.includes(t.a.broken) || WORN.includes(t.a.blocked)) && !S.sent.some(i => i.k === 'problem' && ['broken', 'blocked'].includes(i.problem))) {
       const blocked = WORN.includes(t.a.blocked);
       L.push(lead(`Mark the exact spot where it's ${blocked ? 'blocked' : 'broken'}`, 'Adds it as a problem others can confirm', () => {
         S.choice = 'problem'; S.cur = newThing('problem', { problem: blocked ? 'blocked' : 'broken', title: problemName(blocked ? 'blocked' : 'broken'), lead: 'footpath', blocked_by: blocked ? t.a.blocked_by || [] : null });
         pinThen(() => show('photo')); }));
     }
-    if (SETS[t.k] && !t.more) L.push(lead(`More about this ${SETS[t.k].name.toLowerCase()}`, SETS[t.k].moreSays, () => { S.cur = t; const q = qList(t.k, 'more', t.a)[0]; show(`q-${t.k}-${q.id}`); }));
   }
   if (t && t.k === 'stop') {
-    const sp = t.missing ? { lat: t.lat, lng: t.lng } : { lat: t.slat, lng: t.slng }, j = junctions().find(x => !checked((N().profiles[x.id] || {}).latest) && !S.items.some(i => i.junction === x.id));
+    const sp = t.missing ? { lat: t.lat, lng: t.lng } : { lat: t.slat, lng: t.slng }, j = junctions().find(x => !checked((N().profiles[x.id] || {}).latest) && !S.sent.some(i => i.junction === x.id));
     if (!has('foot') && sp.lat != null && (S.place.memory || metres(S.place, sp) <= MAX_MOVE))
       L.push(lead('The footpath at this stop', 'Is there one, its height, broken or blocked', () => { S.choice = 'walk'; startThing('foot', { lat: sp.lat, lng: sp.lng, side_how: 'stop', lead: 'stop', title: `At the stop: ${t.name}` }); }));
     if (j && !has('cross')) L.push(lead('The crossing near this stop', `${j.name} · ${j.d} m away`, () => { S.choice = 'walk'; const p = N().profiles[j.id]; p ? showCheck({ kind: 'junction', j, p, title: j.name }) : startThing('cross', { junction: j.id, title: j.name }); }));
   }
   $('lead-h').hidden = !L.length; $('leadlist').innerHTML = L.join('');
-  $('more-h').textContent = L.length ? 'Or something else here' : 'Add something else here';
   $('morelist').innerHTML = Object.entries(CHOICES).map(([k, c]) => answerBtn(`data-add="${k}"`, k === S.choice ? c.again : c.name, '', ' go')).join('');
-  const p = player.get();
-  $('anon').hidden = !!(p && !S.noNick) || !n;
-  $('accuracy').textContent = S.place && S.place.memory ? 'By sending, you confirm this is what you know of this place, to the best of your knowledge.'
-    : 'By sending, you confirm this is what you saw, to the best of your knowledge.';
-  $('notsent').innerHTML = n ? `Not sent yet. <span>${n === 1 ? '1 thing is' : n + ' things are'} waiting: add more below, or press Send.</span>` : 'Nothing added yet. <span>Add something below.</span>';
-  if (!sending) $('send-msg').hidden = true;
-  updateNext();
 }
+// from "Anything else here?": the next thing starts with nothing waiting, and Back comes back here
+const onward = (fn) => { DONE = false; S.items = []; S.checks = []; S.cur = null; fn(); };
 function footHere(extra) {                          // the footpath where the person is: their side if known, else a single point
   if (S.side) return startThing('foot', { ...sideCtx(S.side.mine, 'mine', sideWords()[0]), ...extra });
   startThing('foot', { title: 'The footpath here', ...extra });
 }
-$('leadlist').addEventListener('click', (e) => { const b = e.target.closest('[data-lead]'); if (b) LEADS[+b.dataset.lead](); });
-$('morelist').addEventListener('click', (e) => { const b = e.target.closest('[data-add]'); if (b) openChoice(b.dataset.add); });
-$('sum').addEventListener('click', (e) => {
-  const b = e.target.closest('[data-del]'); if (!b) return;
-  const [t, x] = [b.dataset.del[0], +b.dataset.del.slice(1)];
-  if (t === 'i') { const [it] = S.items.splice(x, 1); if (it === S.last) S.last = null; } else S.checks.splice(x, 1);
-  drawMore();
-});
+$('leadlist').addEventListener('click', (e) => { const b = e.target.closest('[data-lead]'); if (b) onward(LEADS[+b.dataset.lead]); });
+$('morelist').addEventListener('click', (e) => { const b = e.target.closest('[data-add]'); if (b) onward(() => openChoice(b.dataset.add)); });
 
 // ── the player: nickname + 4-digit PIN, checked with the server ──
 const cleanNick = (v) => v.trim().replace(/\s+/g, ' ');
@@ -783,10 +776,21 @@ async function postIt(body, sc = spam) {
 }
 function thanks(body, r) {
   const pts = body._sum ? body._sum.points : 0, got = (r.checks || []).filter(x => x === false).length;
-  $('thanks-text').textContent = 'Your answers are now public.' + (body.nick ? ` ${pts} points to ${body.nick} on the leaderboard.` : '')
+  $('thanks-text').textContent = 'Sent. Your answers are now public.' + (body.nick ? ` ${pts} points to ${body.nick} on the leaderboard.` : '')
     + (got ? ` ${got === 1 ? 'One check was' : got + ' checks were'} already sent from this phone, so not counted again.` : '');
   $('to-map').href = r.ids && r.ids[0] ? '../walking/map/?from=streets&r=' + encodeURIComponent(r.ids[0]) : '../walking/map/?from=streets';
+  S.sent.push(...S.items); for (const c of S.checks) S.doneIds.add(c.id);
+  S.items = []; S.checks = []; S.cur = null;
   DONE = true; stack = []; show('thanks', false);
+  refreshNear();
+}
+// after a send, what's nearby has changed (the thing just described now has answers): load it again, quietly
+async function refreshNear() {
+  if (!S.place) return;
+  try {
+    const r = await fetch(`${C.API}/${SURVEY}/around?lat=${S.place.lat.toFixed(5)}&lng=${S.place.lng.toFixed(5)}`, { credentials: 'omit', cache: 'no-store' });
+    if (r.ok) { S.near = await r.json(); if (cur === 'thanks') drawHub(); if (cur === 'near') drawNear(); if (cur === 'choose') drawChoose(); }
+  } catch { /* the old list stays */ }
 }
 async function send() {
   if (sending || !(S.items.length + S.checks.length)) return;
@@ -802,7 +806,7 @@ async function send() {
       : err.server && err.status === 429 ? 'Too many sends from this connection just now. Please wait a minute.'
       : "We couldn't send this; the signal may be weak.";
     $('send-msg').textContent = `Not sent. ${why} ${kept ? 'Your answers are saved on this phone, so nothing is lost.' : ''}`; $('send-msg').hidden = false;
-    document.querySelector('.step[data-step="more"]').scrollTop = 0; window.scrollTo({ top: 0 });   // the message and the spam check sit at the top
+    $('sendbox').scrollIntoView({ block: 'nearest' });
   }
 }
 // entries that didn't go through: offer the oldest on the start screen, with its own spam check
@@ -827,10 +831,10 @@ function showDraft() {
   $('draft-drop').onclick = () => { store.drop(d.id); showDraft(); };
 }
 showDraft();
-// add more after sending: the same place, back to "what do you want to tell us about?"
+// Done: back to the first screen, a fresh start
 $('again').onclick = () => {
-  DONE = false; Object.assign(S, { items: [], checks: [], cur: null, last: null, choice: null }); stack = ['start'];
-  if (S.place) show('choose', false); else show('start', false);
+  DONE = false; Object.assign(S, { place: null, near: null, side: null, items: [], checks: [], cur: null, last: null, choice: null, sent: [], doneIds: new Set() }); stack = [];
+  show('start', false);
 };
 
 // ── first screen: who is logged in, links that open the nickname screen, counts, top contributors ──

@@ -290,12 +290,13 @@
   #to-mark { margin-top: 10px; }
   #to-mark[hidden] { display: none; }
   .step[data-step="start"] #gps-msg { margin: 12px 0 0; }
-  /* "Anything else here?": nothing has been sent yet (Teja, 20 Nov 2026) */
-  .notsent { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; padding: 10px 12px; border: 1px solid var(--ink); border-radius: var(--r-card); font: 700 15px/1.35 var(--font-ui); color: var(--ink); background: var(--band); }
-  .notsent::before { content: ''; flex: none; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--ink); }
-  .notsent span { font-weight: 400; color: var(--text-2); }
-  .step[data-step="more"] .sum { margin-bottom: 14px; }
-  .step[data-step="more"] #send-msg { margin: 0 0 14px; }
+  /* what sending means, under the screen that sends */
+  #sendbox[hidden] { display: none; }
+  #sendbox { max-width: var(--measure); margin: 14px auto 0; }
+  #sendbox .small, #sendbox .anon { margin: 8px 0 0; }
+  #sendbox #send-msg { margin: 0 0 8px; }
+  #hub[hidden], #more-q[hidden] { display: none; }
+  @media (max-width: 767px) { body.q-mode #sendbox { flex: none; margin: 0; padding: 4px 0 6px; border-top: 1px solid var(--border); } body.q-mode #sendbox .small { font-size: 12.5px; } }
 </style>
 </head>
 <body>
@@ -460,25 +461,15 @@
         <label class="field-label" for="note" id="note-l">Anything to add? (optional)</label>
         <textarea class="inp" id="note" maxlength="300" placeholder="For example: cars parked on the footpath every evening"></textarea>
       </div>
+      <button type="button" class="btn btn-secondary btn-lg wide" id="more-q" style="margin-top:14px" hidden>A few more questions (optional)</button>
       <p class="movedot" id="movedot" hidden>Not exactly where you're standing? <a href="#" id="movedot-go">Move the dot to the spot</a></p>
       <p class="msg" id="photo-few" hidden></p>
     </section>
 
-    <!-- anything else here? and send, on one screen. Nothing is sent until Send: said at the top, and Send stays at the bottom -->
+    <!-- a check of something already there ("Still there", "Gone", "Me too", "Still the same"): one screen, then Send -->
     <section class="step" data-step="more">
-      <p class="notsent" id="notsent"></p>
-      <h2 class="qt">Anything else here?</h2>
+      <h2 class="qt">Send this?</h2>
       <ul class="sum" id="sum"></ul>
-      <div class="ts" id="ts-review"></div>
-      <input type="text" name="website" id="trap" tabindex="-1" autocomplete="off" aria-hidden="true" class="trap">
-      <p class="msg" id="send-msg" hidden></p>
-      <p class="lead-h" id="lead-h" hidden>Goes with what you just added</p>
-      <div class="answers" id="leadlist"></div>
-      <p class="lead-h" id="more-h">Add something else here</p>
-      <div class="answers" id="morelist"></div>
-      <p class="anon" id="anon" hidden>Sending anonymously. <a href="#" id="anon-create">Create a profile</a> or <a href="#" id="anon-login">log in</a> to get points for this.</p>
-      <p class="small" id="review-fine">Shared as open data (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>), with photos. No names, no email, no IP addresses. We keep the places you describe, not your route.</p>
-      <p class="accuracy" id="accuracy">By sending, you confirm this is what you saw, to the best of your knowledge.</p>
     </section>
 
     <section class="step" data-step="player">
@@ -500,16 +491,31 @@
     </section>
 
     <section class="step" data-step="thanks">
-      <p class="eyebrow">Received</p>
+      <p class="eyebrow">Sent</p>
       <h2 class="qt">Thank you</h2>
       <p class="hint" id="thanks-text">Your answers are now public.</p>
-      <p class="small" id="thanks-prof" hidden><a href="../profile/" id="thanks-prof-a">See your profile</a></p>
+      <p class="small" id="thanks-prof" style="margin:-12px 0 16px" hidden><a href="../profile/" id="thanks-prof-a">See your profile</a></p>
+      <div id="hub">
+        <p class="lead-h" id="lead-h" hidden>Goes with what you just sent</p>
+        <div class="answers" id="leadlist"></div>
+        <p class="lead-h" id="more-h">Anything else here?</p>
+        <div class="answers" id="morelist"></div>
+      </div>
       <div class="stack" style="margin-top:16px">
-        <a class="btn btn-primary btn-lg" id="to-map" href="../walking/map/?from=streets">See it on the map <svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
-        <button type="button" class="btn btn-secondary btn-lg" id="again">Add more here</button>
+        <a class="btn btn-secondary btn-lg" id="to-map" href="../walking/map/?from=streets">See it on the map <svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+        <button type="button" class="btn btn-secondary btn-lg" id="again">Done</button>
       </div>
       <p class="small" style="margin-top:22px">Hear about new surveys on <a href="https://chat.whatsapp.com/GJUFWd2UJyEImsmgxbEKlg" target="_blank" rel="noopener" id="wa">WhatsApp</a></p>
     </section>
+
+    <!-- what sending means, the spam check and any error: under the screen that sends (the photo screen, or "Send this?") -->
+    <div id="sendbox" hidden>
+      <div class="ts" id="ts-review"></div>
+      <input type="text" name="website" id="trap" tabindex="-1" autocomplete="off" aria-hidden="true" class="trap">
+      <p class="msg" id="send-msg" hidden></p>
+      <p class="anon" id="anon" hidden>Sending anonymously. <a href="#" id="anon-create">Create a profile</a> or <a href="#" id="anon-login">log in</a> to get points for this.</p>
+      <p class="small" id="review-fine">Shared as open data (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>), with photos. No names, email or IP addresses. <span id="accuracy">By sending, you confirm this is what you saw, to the best of your knowledge.</span></p>
+    </div>
 
     <div class="nav" id="nav" hidden>
       <button type="button" class="btn btn-secondary btn-lg" id="back">Back</button>
@@ -527,6 +533,6 @@
 </footer>
 
 <script src="../assets/common.js?v=20261120a"></script>
-<script type="module" src="form.js?v=20261120f"></script>
+<script type="module" src="form.js?v=20261120i"></script>
 </body>
 </html>
