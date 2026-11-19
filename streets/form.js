@@ -622,7 +622,7 @@ function drawNear(keep = false) {                   // keep: the map stays open 
   if (!keep) { $('minibox').hidden = true; $('mini-tip').hidden = true; $('minimap-toggle').textContent = 'Show map'; }
   $('flood-msg').hidden = true;
   if (!S.near) { $('h-near').textContent = 'Looking…'; $('near-hint').textContent = ''; $('nearlists').innerHTML = ''; return; }
-  if (c === 'light') {  } else if (c === 'light') {
+  if (c === 'light') {
     $('h-near').textContent = 'What about the street lights here?';
     $('near-hint').textContent = 'Pick one. If someone has already reported it here, tell us whether it is still so.';
     const lr = lightRows();
@@ -1053,7 +1053,8 @@ function itemBody(i) {
   const moved = Math.round(metres(P, where));
   const base = { here: mem ? 'known' : 'yes', observed_at: i.at, accuracy_m: mem ? null : P.acc, lat: +where.lat.toFixed(6), lng: +where.lng.toFixed(6), photo: i.photo || null, prefilled: i.base ? true : null };
   if (i.k === 'stop') return { ...base, item: 'stop', place_type: i.missing ? 'missing' : mem ? 'map' : 'gps', stop_id: i.missing ? null : i.stop_id,
-    dist_m: i.missing ? null : i.far ? 0 : Math.round(metres(P, { lat: i.slat, lng: i.slng })),   // far: the stop itself is the place remembered stop_name: i.missing ? i.name : null, towards: i.missing ? i.towards || null : null,
+    dist_m: i.missing ? null : i.far ? 0 : Math.round(metres(P, { lat: i.slat, lng: i.slng })),   // far: the stop itself is the place remembered
+    stop_name: i.missing ? i.name : null, towards: i.missing ? i.towards || null : null,
     moved_m: i.missing ? moved : null, improve: i.note || null, ...answersOf(i) };
   const w = { ...base, item: ITEM[i.k] || i.k, place_type: mem ? 'map' : 'gps', moved_m: mem ? null : moved, note: i.note || null };
   if (i.k === 'foot') Object.assign(w, { stretch: i.stretch || null, stretch_side: i.side || null, which: i.stretch ? i.which || null : null,
