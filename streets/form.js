@@ -60,7 +60,7 @@ const CHOICES = {
 const KIND_NAME = { stop: 'Bus stop', foot: 'Footpath', cross: 'Crossing', problem: 'Problem', request: 'Suggestion' };
 
 // ── state: the place, what's around it, the side of the road, the things added in this entry and the checks ──
-const S = { place: null, near: null, side: null, sideSkipped: false, afterFace: null, choice: null, items: [], checks: [], cur: null, last: null, sent: [], doneIds: new Set(), adds: null, picked: { s: [], j: [], l: [] } };   // items / checks: what the next Send carries; sent / doneIds: what has gone
+const S = { place: null, near: null, side: null, sideSkipped: false, afterFace: null, choice: null, items: [], checks: [], cur: null, last: null, sent: [], doneIds: new Set(), adds: null, picked: { s: [], j: [], l: [] }, spot: null };   // items / checks: what the next Send carries; sent / doneIds: what has gone
 let cur = 'start', stack = [], moving = false, sending = false;
 var DONE = false;                                  // sent: Back can't offer Send again
 const isQ = (s) => s.startsWith('q-');
@@ -168,7 +168,7 @@ $('exit').onclick = leave;
 
 // ── the first screen: Start asks for the phone's location; "not there" and laptops use the map ──
 function begin(place) {
-  Object.assign(S, { place, near: null, side: null, sideSkipped: false, afterFace: null, choice: null, items: [], checks: [], cur: null, last: null, sent: [], doneIds: new Set(), adds: null, picked: { s: [], j: [], l: [] } });
+  Object.assign(S, { place, near: null, side: null, sideSkipped: false, afterFace: null, choice: null, items: [], checks: [], cur: null, last: null, sent: [], doneIds: new Set(), adds: null, picked: { s: [], j: [], l: [] }, spot: null });
   DONE = false; stack = ['start']; cur = 'start';
   loadPlace();
 }
@@ -376,6 +376,19 @@ const PK = { map: null, me: null, items: [], sel: null, home: null, acts: [], ta
 const pkMode = () => cur === 'sidepick' ? 'side' : S.choice;           // side | stop | walk
 const sideKey = (c) => `l:${c.stretch}:${c.side}`;
 const profLine = (p) => p ? `${people(p.n)} · ${day(p.seen)}` : 'No details yet';
+// a footpath that isn't on a main road (Teja, 20 Nov 2026): a tap on a side street drops a dot there, and the footpath is
+// saved as a single spot with no side; without a tap it is the place itself. Over 100 m from the person: from memory.
+const SPOT_CLEAR_M = 35;                            // nearer a main road than this, a spot would join that road's side
+function spotCtx() {
+  if (!S.spot) return { title: 'The footpath here' };
+  const [lng, lat] = S.spot;
+  return { title: 'The footpath on a side street', lng, lat, ...(metres(S.place, { lng, lat }) > MAX_MOVE ? { far: true } : {}) };
+}
+function spotItem(side) {                           // side: on "Which side of the road?", where choosing it goes on to the footpath screen
+  const d = Math.round(metres(S.place, { lng: S.spot[0], lat: S.spot[1] }));
+  return { key: 'x:spot', k: 'Footpath', t: 'On a side street', pos: S.spot, lines: ['At the spot you tapped: saved as a spot, with no side', d > MAX_MOVE && !S.place.memory ? FAR_SAYS : ''],
+    btns: [side ? ['This spot', () => { S.side = null; S.sideSkipped = true; doneFace(); }] : ['Describe', () => startThing('foot', spotCtx())]] };
+}
 function stopItem(st) {
   const p = sprofOf(st.id);
   return { key: 's:' + st.id, k: 'Bus stop', tag: stopSide(st), t: st.name, pos: [st.lng, st.lat], done: !!p && checked(p.latest),
@@ -409,7 +422,8 @@ function pkItems() {
     add('Not here?', "My stop isn't on the map", 'Put it on the map and describe it', 'Add a stop', () => { $('stop-name').value = ''; $('stop-towards').value = ''; S.cur = newThing('stop', { missing: true }); show('stopname'); });
   } else if (mode === 'walk') {
     if (S.side) { const [w1, w2] = sideWords(); for (const [c, word, which] of [[S.side.mine, w1, 'mine'], [S.side.other, w2, 'other']]) if (c) out.push(footItem(c, word, which)); }
-    else out.push({ key: 'here', k: 'Footpath', t: 'The footpath here', pos: [S.place.lng, S.place.lat], lines: [n.stretches.length ? 'Side of the road not chosen' : 'A smaller street: saved as a single spot'],
+    if (S.spot) out.push(spotItem(false));
+    if (!S.side) out.push({ key: 'here', k: 'Footpath', t: 'The footpath here', pos: [S.place.lng, S.place.lat], lines: [n.stretches.length ? 'Side of the road not chosen' : 'A smaller street: saved as a single spot'],
       btns: [['Describe', () => startThing('foot', { title: 'The footpath here' })], ...(n.stretches.length ? [['Choose side', () => openSidePick(() => show('near')), true]] : [])] });
     for (const r of rowsOf('spot')) out.push({ key: 'r:' + r.id, k: 'Footpath', t: 'A footpath spot someone described', pos: [r.lng, r.lat], done: checked(r.id), lines: [`${r.d} m away · seen ${day(r.seen)}`],
       btns: [['Check', () => showCheck({ kind: 'spot', row: r, title: 'The footpath here' })]] });
@@ -422,7 +436,8 @@ function pkItems() {
     const first = S.side ? S.side.mine : guessSide(), cs = cands().slice(0, 6), keys = new Set();
     const order = [first, first && opposite(first), ...cs, ...S.picked.l.map(k => { const [id, side] = k.split(':'), r = X.roads.get(id); return r ? candOf(r, side) : null; })];
     for (const c of order) if (c && !keys.has(sideKey(c))) { keys.add(sideKey(c)); out.push(sideItem(c)); }
-    add('Not sure?', "I'm not sure which side", 'The footpath is then saved as a single spot, with no side', 'Go on without a side', () => { S.side = null; S.sideSkipped = true; doneFace(); });
+    if (S.spot) out.push(spotItem(true));
+    add('Not a main road?', 'A side street, or not sure of the side?', 'The footpath is saved as a spot, with no side. Tap the street on the map to place it.', 'Go on without a side', () => { S.side = null; S.sideSkipped = true; doneFace(); });
   }
   return out;
 }
@@ -445,15 +460,17 @@ function pkGeo() {
   for (const st of X.stops.values()) pt('s:' + st.id, [st.lng, st.lat], sprofOf(st.id) ? '#2166AC' : GREY, mode === 'stop');
   for (const j of X.juncs.values()) pt('j:' + j.id, j.c, jprofOf(j.id) ? '#111827' : '#fff', mode === 'walk');
   if (mode === 'walk') for (const r of N().rows) if (has.has('r:' + r.id)) pt('r:' + r.id, [r.lng, r.lat], '#111827', true);
+  if (S.spot && mode !== 'stop') pt('x:spot', S.spot, '#111827', true);
   return { type: 'FeatureCollection', features: f };
 }
 const pkPaint = () => PK.map && PK.map.getSource('k') && PK.map.getSource('k').setData(pkGeo());
 function pkToCard(key, now = false) {
   const box = $('pk-cards'), el = [...box.children].find(x => x.dataset.key === key);
+  PK.quiet = Date.now() + (now ? 200 : 800);         // the cards it slides past on the way are not picks
   if (el) box.scrollTo({ left: el.offsetLeft - (box.clientWidth - el.offsetWidth) / 2, behavior: now ? 'instant' : 'smooth' });
 }
 function pkSelect(key, from) {
-  if (!PK.items.some(i => i.key === key)) { S.picked[key[0]].push(key.slice(2)); PK.sel = key; pkDraw(true); }   // picked on the map: a new card
+  if (!PK.items.some(i => i.key === key)) { if (key !== 'x:spot') S.picked[key[0]].push(key.slice(2)); PK.sel = key; pkDraw(true); }   // picked on the map: a new card
   PK.sel = key;
   [...$('pk-cards').children].forEach(c => c.classList.toggle('on', c.dataset.key === key));
   pkPaint();
@@ -464,10 +481,11 @@ function pkSelect(key, from) {
 }
 let pkTimer = 0;
 $('pk-cards').addEventListener('scroll', () => { clearTimeout(pkTimer); pkTimer = setTimeout(() => {        // swiping: the card in the middle is the one picked
+  if (Date.now() < (PK.quiet || 0)) return;          // the form is sliding the cards itself
   const box = $('pk-cards').getBoundingClientRect(), mid = box.left + box.width / 2; let best = null;
   for (const c of $('pk-cards').children) { const r = c.getBoundingClientRect(), d = Math.abs(r.left + r.width / 2 - mid); if (!best || d < best.d) best = { d, key: c.dataset.key }; }
   if (best && best.key !== 'add' && best.key !== PK.sel) pkSelect(best.key, 'card');
-}, 140); });
+}, Math.max(140, (PK.quiet || 0) - Date.now() + 60)); });
 $('pk-cards').addEventListener('click', (e) => {
   const b = e.target.closest('[data-pk]'); if (b && !b.disabled) return PK.acts[+b.dataset.pk]();
   const c = e.target.closest('.pk-card'); if (c && c.dataset.key !== 'add') pkSelect(c.dataset.key, 'card');
@@ -491,8 +509,8 @@ function openPick() {
   const mode = pkMode();
   $('pk-h').textContent = !S.near ? 'Looking…' : mode === 'stop' ? 'Which bus stop?' : mode === 'walk' ? 'Which footpath or crossing?' : 'Which side of the road?';
   $('pk-hint').innerHTML = !S.near ? '' : mode === 'stop' ? 'Swipe the card, or tap a dot. Move the map to see more.'
-    : mode === 'side' ? 'Tap the side you mean on the map, or swipe the card.'
-    : S.side ? `On ${esc(S.side.mine.name)}. <a href="#" id="chg-side" style="color:var(--ink)">Not the right side? Change it</a>` : 'Swipe the card, or tap a dot. Move the map to see more.';
+    : mode === 'side' ? 'Tap the side you mean on the map, or swipe the card. For a side street, tap the street.'
+    : S.side ? `On ${esc(S.side.mine.name)}. <a href="#" id="chg-side" style="color:var(--ink)">Not the right side? Change it</a>` : 'Swipe the card, or tap a dot. Tap a side street to describe its footpath.';
   $('pk-home').textContent = S.place.memory ? 'Back to the place' : 'Back to where I am';
   if (!S.near) { $('pk-cards').innerHTML = ''; return; }
   const was = `${mode}|${S.place.lat}|${S.place.lng}`;
@@ -521,16 +539,22 @@ function openPick() {
         const tap = { lng: e.lngLat.lng, lat: e.lngLat.lat }, has = new Set(PK.items.map(i => i.key));
         // a divided road has one side per carriageway: then that one
         const road = [...X.roads.values()].map(s => ({ s, ...nearestOn(s.c, tap), ks: s.sides.map(x => `l:${s.id}:${x}`).filter(k => m === 'side' || has.has(k)) })).filter(x => x.ks.length).sort((a, b) => a.d - b.d)[0];
-        if (!road || road.d > 45) return;
-        const key = road.ks.includes(`l:${road.s.id}:${road.side}`) ? `l:${road.s.id}:${road.side}` : road.ks[0];
-        if (m === 'side') PK.tap[key] = road.pt;
-        pkSelect(key, 'map');
+        if (road && road.d <= 45) {
+          const key = road.ks.includes(`l:${road.s.id}:${road.side}`) ? `l:${road.s.id}:${road.side}` : road.ks[0];
+          if (m === 'side') PK.tap[key] = road.pt;
+          return pkSelect(key, 'map');
+        }
+        // not on a main road: a side street. The dot goes where the finger was, once the map is close enough to mean a street
+        const main = Math.min(1e9, ...[...X.roads.values()].map(s => nearestOn(s.c, tap).d));
+        if (main <= SPOT_CLEAR_M || PK.map.getZoom() < 15.5 || !inHmda(tap.lng, tap.lat)) return;
+        S.spot = [+tap.lng.toFixed(6), +tap.lat.toFixed(6)];
+        pkDraw(true); pkSelect('x:spot', 'map');
       });
       pkFit();
     });
   } else { PK.map.resize(); pkPaint(); pkFit(); }
-  if (S.place.memory) { if (PK.me) { PK.me.remove(); PK.me = null; } }
-  else if (!PK.me) PK.me = new maplibregl.Marker({ element: mkEl('me') }).setLngLat(at).addTo(PK.map); else PK.me.setLngLat(at);
+  if (!PK.me) PK.me = new maplibregl.Marker({ element: mkEl('me') }).setLngLat(at).addTo(PK.map); else PK.me.setLngLat(at);
+  PK.me.getElement().classList.toggle('placed', !!S.place.memory);
 }
 $('cf-yes').onclick = () => doneFace();
 $('cf-no').onclick = () => { setSide(S.side.other, 'switched', S.side.deg); doneFace(); };
@@ -955,7 +979,7 @@ function tellMore(t) { S.cur = t; S.adds = t; t.addSeen = new Set(); show(`q-${t
 $('thanks-text').addEventListener('click', (e) => { if (e.target.closest('#thanks-join')) { e.preventDefault(); onward(() => { setPMode('create'); show('player'); }); } });
 function footHere(extra) {                          // the footpath where the person is: their side if known, else a single point
   if (S.side) return startThing('foot', { ...sideCtx(S.side.mine, 'mine', sideWords()[0]), ...extra });
-  startThing('foot', { title: 'The footpath here', ...extra });
+  startThing('foot', { ...spotCtx(), ...extra });
 }
 $('leadlist').addEventListener('click', (e) => { const b = e.target.closest('[data-lead]'); if (b) onward(LEADS[+b.dataset.lead]); });
 $('morelist').addEventListener('click', (e) => { const b = e.target.closest('[data-add]'); if (b) onward(() => openChoice(b.dataset.add)); });
@@ -1065,6 +1089,7 @@ function thanks(body, r) {
     + (got ? ` ${got === 1 ? 'One check was' : got + ' checks were'} already sent from this phone, so not counted again.` : '');
   $('to-map').href = r.ids && r.ids[0] ? '../walking/map/?from=streets&r=' + encodeURIComponent(r.ids[0]) : '../walking/map/?from=streets';
   S.sent.push(...S.items); for (const c of S.checks) S.doneIds.add(c.id);
+  if (S.items.some(i => i.k === 'foot' && !i.stretch)) S.spot = null;   // the spot tapped on a side street has been used
   S.items = []; S.checks = []; S.cur = null; S.adds = null;
   DONE = true; stack = []; show('thanks', false);
   refreshNear();
