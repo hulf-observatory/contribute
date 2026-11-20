@@ -25,7 +25,7 @@ const FOOT = {
   ],
   more: [
     { id: 'shade', s: 'Shade', q: 'Is there shade?', hint: 'From trees or buildings', opts: [['most', 'Most of the way'], ['some', 'Some'], ['none', 'None']] },
-    { id: 'lights', s: 'Street lights', q: 'Are there street lights?', opts: [['working', 'Yes, working'], ['broken', 'Yes, not working'], ['none', 'No lights']] },
+    { id: 'lights', s: 'Street lights', q: 'Are there street lights?', opts: [['working', 'Yes, working'], ['broken', 'There but not working'], ['dim', 'Working but dim'], ['none', 'No street light']] },
     { id: 'safe_day', s: 'Safe by day', q: 'Does it feel safe to walk here by day?', opts: [['safe', 'Safe'], ['somewhat', 'Somewhat'], ['unsafe', 'Unsafe']] },
     { id: 'safe_night', s: 'Safe after dark', q: 'Does it feel safe after dark?', opts: [['safe', 'Safe'], ['somewhat', 'Somewhat'], ['unsafe', 'Unsafe'], ['dk', "Haven't been here after dark"]] },
   ],
@@ -71,7 +71,7 @@ export const qById = (k, id) => allQs(k).find(q => q.id === id);
 // problems and requests: pins (colours as on the map)
 export const PROBLEMS = [['broken', 'Broken footpath', '#B2182B'], ['blocked', 'Blocked footpath', '#B2182B'], ['nofoot', 'No footpath here', '#B2182B'],
   ['drain', 'Open drain or manhole', '#B2182B'], ['water', 'Waterlogging', '#EF8A62'], ['waste', 'Garbage or waste', '#EF8A62'],
-  ['smell', 'Bad smell', '#EF8A62'], ['light', 'Street light not working', '#EF8A62'], ['dark', 'Dark spot, no street lights', '#EF8A62'], ['other', 'Something else', '#6B7280']];
+  ['smell', 'Bad smell', '#EF8A62'], ['light', 'Street light there but not working', '#EF8A62'], ['dim', 'Street light working but dim', '#EF8A62'], ['dark', 'No street light', '#EF8A62'], ['other', 'Something else', '#6B7280']];
 export const BLOCKED_BY = FOOT.core.find(q => q.id === 'blocked_by').opts;
 export const NEEDS = [['crossing', 'A crossing'], ['footpath', 'A footpath'], ['stop', 'A bus stop'], ['lights', 'Street lights'], ['other', 'Something else']];
 export const problemName = (v) => (PROBLEMS.find(p => p[0] === v) || [, 'A problem'])[1];

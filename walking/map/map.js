@@ -6,7 +6,7 @@
 // (stop / walk / light / problem / request); ?p=<profile> or ?r=<row id> opens one thing, in its section.
 // Data: ../roads.json, /walking/profiles.json, /walking/reports.json, /bus-stops/reports.json and profiles.json.
 import { SURVEY, SETS, allQs, shown, optLabel, real, esc, loadReports, currentOf, profileLines, PROBLEMS, BLOCKED_BY, problemName, needName,
-  REQUEST_COLOR, VIEW_COLORS, footColor, crossColor, compass8, outward } from '../questions.js?v=20261120a';
+  REQUEST_COLOR, VIEW_COLORS, footColor, crossColor, compass8, outward } from '../questions.js?v=20261120c';
 import { loadRatings, loadProfiles as loadStopProfiles } from '../../bus-stops/questions.js?v=20261119a';
 const C = window.CONTRIBUTE;
 const $ = (id) => document.getElementById(id);
@@ -40,12 +40,12 @@ const FILTERS = [['stop', 'Bus stops'], ['walk', 'Footpaths and crossings'], ['l
 const asked = new URLSearchParams(location.search).get('show');
 let filt = FILTERS.some(f => f[0] === asked) ? asked : 'stop';
 const on = (f) => f === 'foot' || f === 'cross' ? filt === 'walk' : filt === f;
-const isLight = (r) => (r.item === 'problem' && ['light', 'dark'].includes(r.problem)) || (r.item === 'request' && r.need === 'lights');
+const isLight = (r) => (r.item === 'problem' && ['light', 'dim', 'dark'].includes(r.problem)) || (r.item === 'request' && r.need === 'lights');
 const sectionOf = (r) => isLight(r) ? 'light' : r.item === 'problem' ? 'problem' : r.item === 'request' ? 'request' : 'walk';
 const probs = () => filt === 'light' ? problems.filter(isLight) : filt === 'problem' ? problems.filter(r => !isLight(r)) : [];
 const reqs = () => filt === 'light' ? requests.filter(isLight) : filt === 'request' ? requests.filter(r => !isLight(r)) : [];
 const NOTES = { walk: 'Each side of a main road is described on its own, junction to junction, and so is crossing at each junction, from what people said there. Thin light lines: no one has described that side yet. Grey: mixed answers, no clear one yet.',
-  light: 'Street lights reported as not working, dark places, and places where people asked for lights. Reports stay until 6 months after they were last seen.',
+  light: 'Street lights reported as not working or dim, places with no street light, and (before 20 Nov 2026) places where people asked for lights. Reports stay until 6 months after they were last seen.',
   problem: 'Problems stay until 6 months after they were last seen.' };
 const colour = (v) => v ? VIEW_COLORS[v] : MIXED;
 function sidesGeo() {
@@ -78,7 +78,7 @@ function drawControls() {
   if (on('stop')) L.push(['sq', STOP, 'Bus stop']);
   if (filt === 'problem') L.push(['sqo', '#EF8A62', 'Problem']);
   if (filt === 'request') L.push(['dot', REQUEST_COLOR, 'Suggestion']);
-  if (filt === 'light') L.push(['sqo', '#EF8A62', 'Not working, or dark'], ['dot', REQUEST_COLOR, 'Street lights asked for']);
+  if (filt === 'light') L.push(['sqo', '#EF8A62', 'Not working, dim, or none'], ['dot', REQUEST_COLOR, 'Street lights asked for']);
   $('legend').innerHTML = L.map(([k, c, l]) => `<span><i class="k-${k}" style="${k === 'sqo' ? `border-color:${c}` : `background:${c}`}"></i>${esc(l)}</span>`).join('');
   $('note').textContent = NOTES[filt] || ''; $('note').hidden = !NOTES[filt];
 }

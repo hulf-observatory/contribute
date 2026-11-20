@@ -14,7 +14,7 @@
 import { mapMark } from '../assets/map-mark.js?v=20261124a';
 import { SURVEY, SETS, ITEM, MIN, allQs, shown, real, nAnswered, optLabel, PROBLEMS, BLOCKED_BY, NEEDS, problemName, needName, REQUEST_COLOR,
   POINTS, VIEW_COLORS, footColor, crossColor, metres, angle, outward, bearingNear, inHmda, esc, player, checkPlayer,
-  PLAYER_SAYS, currentOf, profileLines } from '../walking/questions.js?v=20261120a';
+  PLAYER_SAYS, currentOf, profileLines } from '../walking/questions.js?v=20261120c';
 
 const C = window.CONTRIBUTE;
 const $ = (id) => document.getElementById(id);
@@ -53,7 +53,7 @@ const GLYPH = {
 const CHOICES = {
   stop: { name: 'A bus stop', again: 'Another bus stop', blurb: 'Shelter, seats, how buses stop' },
   walk: { name: 'A footpath or crossing', again: 'Another footpath or crossing', blurb: 'Broken, blocked, hard to cross' },
-  light: { name: 'Street lights', again: 'More about street lights', blurb: "Not working, or none where it's dark" },
+  light: { name: 'Street lights', again: 'More about street lights', blurb: 'Not working, dim, or none' },
   problem: { name: 'Report a problem', again: 'Report another problem', blurb: 'Garbage, an open drain, waterlogging' },
   improve: { name: 'Suggest an improvement', again: 'Suggest another improvement', blurb: 'A crossing, a footpath, a bus stop' },
 };
@@ -238,7 +238,7 @@ function openLook() {
       <li>What's already nearby<small>Check something others described, or describe something new</small></li>
       <li>A few questions, then a photo if you like, and Send</li><li>After sending<small>More details about the same place if you have a minute, adding it to a profile, or something else here</small></li></ol>`
     + thing('stop', 'A bus stop') + thing('foot', 'A footpath') + '<p style="margin-top:8px">On a main road we first ask which side you are on: face the road, and say yes or no to the side we show.</p>' + thing('cross', 'A crossing')
-    + `<h3>Street lights</h3><ul><li>A street light isn't working</li><li>It's dark here, no street lights</li><li>Ask for street lights here</li></ul>`
+    + `<h3>Street lights</h3><ul><li>Street light there but not working</li><li>Street light working but dim</li><li>No street light</li></ul>`
     + `<h3>Report a problem</h3><ul>${PROBLEMS.filter(p => !LIGHT_PROBLEMS.includes(p[0])).map(p => `<li>${esc(p[0] === 'other' ? 'Something else, in your own words' : p[1])}</li>`).join('')}<li>Flooding<small>Opens the separate flood report</small></li></ul>`
     + `<h3>Suggest an improvement</h3><ul>${NEEDS.filter(p => p[0] !== 'lights').map(p => `<li>${esc(p[0] === 'other' ? 'Something else, in your own words' : p[1])}</li>`).join('')}</ul>`;
   show('look');
@@ -305,7 +305,7 @@ async function loadViewAt(lng, lat, wide = false) {
 const away = (d) => d < 1000 ? `${d} m away` : `${(d / 1000).toFixed(1)} km away`;
 const FAR_SAYS = 'Far from you: saved as “from memory”';
 const rowsOf = (item) => N().rows.filter(r => r.item === item);
-const LIGHT_PROBLEMS = ['light', 'dark'];
+const LIGHT_PROBLEMS = ['light', 'dim', 'dark'];
 const aboutLight = (r) => (r.item === 'problem' && LIGHT_PROBLEMS.includes(r.problem)) || (r.item === 'request' && r.need === 'lights');
 const lightRows = () => N().rows.filter(aboutLight);
 const junctions = () => N().junctions.filter(j => j.d <= NEAR_JUNCTION_M);
@@ -710,7 +710,8 @@ function drawNear(keep = false) {                   // keep: the map stays open 
       : row({ key: 'r:' + r.id, col: '#EF8A62', shape: 'r', t: problemName(r.problem), done: checked(r.id),
         sub: [[`${r.d} m away`, `seen ${day(r.seen)}`, r.still && `${r.still} said still there`].filter(Boolean).join(' · ')],
         btns: [['Still there', () => quickCheck(r, 'confirm', `Still there: ${problemName(r.problem)}`)], ['Gone', () => quickCheck(r, 'gone', `Gone: ${problemName(r.problem)}`)]] })).join('')}</ul><p class="what-h">Report a new one</p>`);
-    L.push(`<div class="answers" style="gap:8px">${answerBtn('data-type="problem:light"', "A street light isn't working", '', ' go')}${answerBtn('data-type="problem:dark"', "It's dark here, no street lights", '', ' go')}${answerBtn('data-type="request:lights"', 'Ask for street lights here<small>Others can say they need them too</small>', '', ' go')}</div>`);
+    // three choices since 20 Nov 2026 (Teja); "ask for street lights" is no longer offered, old asks still show
+    L.push(`<div class="answers" style="gap:8px">${typeBtns('problem', LIGHT_PROBLEMS.map(v => PROBLEMS.find(p => p[0] === v)))}</div>`);
   } else if (c === 'problem') {
     $('h-near').textContent = "What's the problem?";
     $('near-hint').textContent = 'Pick one. If someone has already reported it here, tell us whether it is still there.';
@@ -1036,11 +1037,15 @@ function drawHub() {
   }
   if (t && S.sent.includes(t) && !t.far) {
     const lightsOff = (t.k === 'foot' && t.a.lights === 'broken') || (t.k === 'cross' && t.a.x_lit === 'poor') || (t.k === 'stop' && t.a.light_state === 'poor');
-    const noLights = (t.k === 'foot' && t.a.lights === 'none') || (t.k === 'cross' && t.a.x_lit === 'no') || (t.k === 'stop' && t.a.light === 'no') || (t.k === 'problem' && t.problem === 'dark');
-    if (lightsOff && !S.sent.some(i => i.k === 'problem' && i.problem === 'light'))
+    const dim = t.k === 'foot' && t.a.lights === 'dim';
+    const noLights = (t.k === 'foot' && t.a.lights === 'none') || (t.k === 'cross' && t.a.x_lit === 'no') || (t.k === 'stop' && t.a.light === 'no');
+    const sentProblem = (v) => S.sent.some(i => i.k === 'problem' && i.problem === v);
+    if (lightsOff && !sentProblem('light'))
       L.push(lead("Report the street light that isn't working", 'Others can then say if it is still not working', () => { S.choice = 'light'; pickProblem('light'); }));
-    if (noLights && !S.sent.some(i => i.k === 'request' && i.need === 'lights'))
-      L.push(lead('Ask for street lights here', 'Others can say they need them too', () => { S.choice = 'light'; pickNeed('lights'); }));
+    if (dim && !sentProblem('dim'))
+      L.push(lead('Report the dim street light', 'Others can then say if it is still dim', () => { S.choice = 'light'; pickProblem('dim'); }));
+    if (noLights && !sentProblem('dark'))
+      L.push(lead('Report that there is no street light here', 'Others can then say if it is still so', () => { S.choice = 'light'; pickProblem('dark'); }));
   }
   if (t && t.k === 'stop' && !t.far) {
     const sp = t.missing ? { lat: t.lat, lng: t.lng } : { lat: t.slat, lng: t.slng }, j = junctions().find(x => !checked((N().profiles[x.id] || {}).latest) && !S.sent.some(i => i.junction === x.id));
