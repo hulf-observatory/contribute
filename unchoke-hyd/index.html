@@ -164,7 +164,7 @@
   .btn.wa { flex-direction: column; gap: 1px; }
   .field-label .opt { font-weight: 400; color: var(--muted); }
   .field-label .req { color: #C2413B; font-weight: 700; }   /* the usual red mark for a field that is needed (Teja, 20 Nov 2026) */
-  .step[data-step="who"] .hint { margin-bottom: clamp(8px, 1.8vh, 16px); }
+  .step[data-step="who"]:has(#who-msg:not([hidden])) #who-fine { display: none; }   /* a message takes the small print's place */
   .step[data-step="who"] .field-label { margin-top: clamp(6px, 1.6vh, 16px); }
   .step[data-step="who"] .inp { height: clamp(42px, 6.2vh, 48px); }
   .btn-row .btn { padding-left: 8px; padding-right: 8px; }
@@ -201,7 +201,7 @@
     <div class="foot">
       <button type="button" class="btn btn-primary" id="go">Start survey</button>
       <div class="btn-row"><a class="btn btn-secondary" href="map/">See the entries</a><button type="button" class="btn btn-secondary" id="to-dl">Download the data</button></div>
-      <p class="fine">About two minutes. No email or name needed. Answers and photos become open data.</p>
+      <p class="fine">About two minutes. Your name is asked at the end and kept private. Answers and photos become open data.</p>
     </div>
   </section>
 
@@ -286,32 +286,30 @@
       <p class="msg" id="send-msg" hidden></p>
     </div>
     <div class="foot">
-      <div id="ts"></div>
-      <input type="text" name="website" id="trap" tabindex="-1" autocomplete="off" aria-hidden="true" class="trap">
-      <button type="button" class="btn btn-primary" id="send">Send</button>
+      <button type="button" class="btn btn-primary" id="photo-next">Next</button>
       <p class="fine" id="p-info">The location stored in a photo is removed.</p>
     </div>
   </section>
 
-  <!-- 6. who sent it (Teja, 19 and 20 Nov 2026): after sending, a name (needed to save), and an email and a phone
-       number (optional). Private and internal: kept on the server for Teja only, never on the map or in the download.
-       Asked once a visit; Skip leaves it out. -->
+  <!-- 6. who is sending it (Teja, 20 Nov 2026): the last screen before Send. A name is needed (no entry is saved
+       without one); an email and a phone number are optional. Private and internal: kept on the server for Teja only,
+       for a while, to ask about the entry; never on the map or in the download. Kept filled in for "Add another". -->
   <section class="step" data-step="who">
     <div class="body">
-      <h2 tabindex="-1">Sent. Thank you.</h2>
-      <p class="hint">Add yourself as a contributor?</p>
+      <h2 tabindex="-1">Who is sending this?</h2>
       <label class="field-label" for="who-name" style="margin-top:0">Name <span class="req" title="Needed">*</span></label>
       <input class="inp" id="who-name" maxlength="80" autocomplete="name" required aria-required="true">
       <label class="field-label" for="who-email">Email <span class="opt">Optional</span></label>
       <input class="inp" id="who-email" type="email" maxlength="254" autocomplete="email" inputmode="email">
       <label class="field-label" for="who-phone">Phone number <span class="opt">Optional</span></label>
       <input class="inp" id="who-phone" type="tel" maxlength="24" autocomplete="tel" inputmode="tel">
-      <p class="fine left">These are kept private. They are never shown on the map or in the download.</p>
+      <p class="fine left" id="who-fine">Your contact details are stored for a while, only so we can reach you if we have questions about what you sent. They are kept private: never shown on the map or in the download.</p>
       <p class="msg" id="who-msg" hidden></p>
     </div>
     <div class="foot">
-      <div id="ts-who"></div>
-      <div class="btn-row"><button type="button" class="btn btn-primary" id="who-ok" disabled>Save</button><button type="button" class="btn btn-secondary" id="who-skip">Skip</button></div>
+      <div id="ts"></div>
+      <input type="text" name="website" id="trap" tabindex="-1" autocomplete="off" aria-hidden="true" class="trap">
+      <button type="button" class="btn btn-primary" id="send" disabled>Send</button>
     </div>
   </section>
 
@@ -356,6 +354,6 @@
 </div>
 
 <script src="../assets/common.js?v=20261120a"></script>
-<script type="module" src="form.js?v=20261120a"></script>
+<script type="module" src="form.js?v=20261120b"></script>
 </body>
 </html>

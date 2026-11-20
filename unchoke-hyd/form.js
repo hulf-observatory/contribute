@@ -45,8 +45,8 @@ const NEAR_M = 100, STOP_M = 500;                // further than this from the p
 
 // S.here: the phone's location (when given). S.place: the place the entry is about. S.memory: not there now.
 const S = { choice: null, here: null, place: null, memory: false, stop: null, a: {}, qi: 0, photos: [] };
-// this visit: the entry just sent (its id and key), and the name and email once given (or skipped)
-const V = { sent: null, contact: null, asked: false };
+// this visit: the sender's name, email and phone once given, kept in the boxes for "Add another"
+const V = { contact: null };
 let cur = 'start', stack = [];
 const metres = (a, b) => Math.hypot((a.lng - b.lng) * Math.cos(a.lat * Math.PI / 180) * 111320, (a.lat - b.lat) * 110540);
 const inside = (p) => p.lng >= C.HMDA[0] && p.lng <= C.HMDA[2] && p.lat >= C.HMDA[1] && p.lat <= C.HMDA[3];
@@ -55,16 +55,16 @@ const label = (q, v) => (q.opts.find(o => o[0] === v) || [, v])[1];
 
 function progress(s) {
   if (s === 'q') return 40 + 35 * (S.qi / live().length);
-  return { choose: 5, where: 12, mark: 25, stop: 28, newstop: 34, photo: 82, who: 94, thanks: 100 }[s] || 0;
+  return { choose: 5, where: 12, mark: 25, stop: 28, newstop: 34, photo: 80, who: 92, thanks: 100 }[s] || 0;
 }
 function show(s, push = true) {
   if (push) stack.push(cur === 'q' ? 'q:' + S.qi : cur);
   cur = s;
   document.querySelectorAll('.step').forEach(e => e.classList.toggle('on', e.dataset.step === s));
   document.body.classList.toggle('in', s !== 'start');
-  $('back').hidden = s === 'thanks' || s === 'who'; $('prog').hidden = s === 'dl' || s === 'qs';
+  $('back').hidden = s === 'thanks'; $('prog').hidden = s === 'dl' || s === 'qs';
   $('bar').style.width = progress(s) + '%';
-  ({ mark: openMark, stop: openStop, q: drawQ, photo: drawPhoto, thanks: drawThanks, dl: drawDl, qs: drawQs, newstop: drawNew }[s] || (() => {}))();
+  ({ mark: openMark, stop: openStop, q: drawQ, photo: drawPhoto, who: () => whoCheck(), thanks: drawThanks, dl: drawDl, qs: drawQs, newstop: drawNew }[s] || (() => {}))();
   const h = document.querySelector('.step.on h2'); if (h && s !== 'mark') h.focus({ preventScroll: true });
 }
 $('back').onclick = () => {
@@ -80,7 +80,7 @@ $('choices').innerHTML = ORDER.map(k => `<button type="button" class="choice go"
 $('choices').onclick = (e) => {
   const b = e.target.closest('.choice'); if (!b) return;
   Object.assign(S, { choice: b.dataset.k, here: null, place: null, stop: null, a: {}, qi: 0, photos: [], memory: false });
-  $('note').value = ''; $('send-msg').hidden = true;
+  $('note').value = ''; $('send-msg').hidden = true; $('who-msg').hidden = true;
   $('where-for').textContent = CHOICES[S.choice].name; $('loc-msg').hidden = true;
   show('where');
 };
@@ -261,49 +261,36 @@ function item() {
   return { about: CHOICES[S.choice].about, here: mem ? 'known' : 'yes', place_type: mem ? 'map' : 'gps', observed_at: new Date().toISOString(),
     accuracy_m: mem ? null : S.here.acc, moved_m: mem ? null : Math.round(metres(S.here, at)), lat: +at.lat.toFixed(6), lng: +at.lng.toFixed(6),
     ...(S.stop ? S.stop.missing ? { stop_new: true, stop_name: S.stop.name, towards: S.stop.towards || null } : { stop_id: S.stop.id } : {}),
-    ...S.a, note: $('note').value.trim() || null, photos: S.photos.map(p => p.data) };
+    ...S.a, note: $('note').value.trim() || null, photos: S.photos.map(p => p.data), contact: whoNow() };
 }
+$('photo-next').onclick = () => show('who');
+
+// ── who is sending it, then Send (Teja, 20 Nov 2026): a name is needed, so no entry goes without one; an email and a
+// phone number are optional. Private and internal, kept for a while to ask about the entry. Sent with the entry.
+const EMAIL = /^[^@\s]{1,64}@[^@\s]{1,190}\.[A-Za-z]{2,}$/;
+const PHONE = /^\+?\d{7,15}$/;                 // after spaces, dashes and brackets are taken out
+const whoNow = () => ({ name: $('who-name').value.trim() || null, email: $('who-email').value.trim() || null,
+  phone: $('who-phone').value.replace(/[\s().-]/g, '') || null });
+const whoOk = () => { const c = whoNow(); return !!c.name && (!c.email || EMAIL.test(c.email)) && (!c.phone || PHONE.test(c.phone)); };
+const whoCheck = () => { $('send').disabled = !whoOk(); };
+$('who-name').oninput = $('who-email').oninput = $('who-phone').oninput = () => { $('who-msg').hidden = true; whoCheck(); };
 const spam = Contribute.spamCheck($('ts'));
 $('send').onclick = async () => {
-  const b = $('send'), say = (t) => { $('send-msg').textContent = t; $('send-msg').hidden = !t; };
+  if (!whoOk()) return;
+  const b = $('send'), say = (t) => { $('who-msg').textContent = t; $('who-msg').hidden = !t; };
   b.disabled = true; b.textContent = 'Sending…'; say('');
   try {
     const token = await spam.token();
     if (token === null) throw Object.assign(new Error('spam check'), { server: true, status: 403 });
-    const r = await Contribute.post(`/${SURVEY}/reports`, { ...item(), token, website: $('trap').value });
-    V.sent = { id: r.id, key: r.key }; stack = [];
-    if (V.contact) saveContact(V.contact).catch(() => {});        // given earlier in this visit: goes with this entry too
-    show(V.asked || !r.key ? 'thanks' : 'who', false);
+    await Contribute.post(`/${SURVEY}/reports`, { ...item(), token, website: $('trap').value });
+    V.contact = whoNow(); stack = []; show('thanks', false);
   } catch (e) {
     say(!e.server ? "It didn't go: check your connection and press Send again. Your answers are still here."
       : e.status === 403 ? "We couldn't check that you are a person. Wait a moment and press Send again."
       : e.status === 429 ? 'Too many entries just now. Wait a minute and press Send again.'
       : `It didn't go (${e.message}). Go back to change it, or try again.`);
-  } finally { spam.reset(); b.disabled = false; b.textContent = 'Send'; }
+  } finally { spam.reset(); b.textContent = 'Send'; whoCheck(); }
 };
-
-// ── who sent it: a name (needed to save), an email and a phone number (optional). Private and internal; asked once a
-// visit, and Skip leaves it out
-const whoSpam = Contribute.spamCheck($('ts-who'));
-const EMAIL = /^[^@\s]{1,64}@[^@\s]{1,190}\.[A-Za-z]{2,}$/;
-async function saveContact(c) {
-  const token = await whoSpam.token();
-  if (token === null) throw Object.assign(new Error('spam check'), { server: true, status: 403 });
-  try { await Contribute.post(`/${SURVEY}/contact`, { ...V.sent, ...c, token, website: $('trap').value }); } finally { whoSpam.reset(); }
-}
-const PHONE = /^\+?\d{7,15}$/;                 // after spaces, dashes and brackets are taken out
-const whoNow = () => ({ name: $('who-name').value.trim() || null, email: $('who-email').value.trim() || null,
-  phone: $('who-phone').value.replace(/[\s().-]/g, '') || null });
-const whoCheck = () => { const c = whoNow(); $('who-ok').disabled = !c.name || (!!c.email && !EMAIL.test(c.email)) || (!!c.phone && !PHONE.test(c.phone)); };
-$('who-name').oninput = $('who-email').oninput = $('who-phone').oninput = () => { $('who-msg').hidden = true; whoCheck(); };
-$('who-ok').onclick = async () => {
-  const b = $('who-ok'), c = whoNow();
-  b.disabled = true; b.textContent = 'Saving…'; $('who-msg').hidden = true;
-  try { await saveContact(c); V.contact = c; V.asked = true; show('thanks', false); }
-  catch (e) { $('who-msg').textContent = e.server && e.status === 400 ? "That didn't save. Check the email address and phone number, or skip." : "That didn't save. Check your connection and try again, or skip."; $('who-msg').hidden = false; }
-  b.textContent = 'Save'; whoCheck();
-};
-$('who-skip').onclick = () => { V.asked = true; show('thanks', false); };
 
 // ── thank you
 function drawThanks() {
@@ -379,7 +366,8 @@ $('dl-qs').onclick = () => show('qs');
 function drawQs() {
   $('qlist').innerHTML = ORDER.map(k => { const c = CHOICES[k]; return `<h3>${esc(c.name)}</h3>` + (c.place === 'stop' ? '<p>Which bus stop? <span>Picked on a map</span></p>' : '<p>Where is it? <span>The phone\'s location, or a place on a map</span></p>')
     + c.qs.map(q => `<p>${esc(q.q)} <span>${q.text != null ? 'In your words' : esc(q.opts.map(o => o[1]).join(' · '))}${q.multi ? ' (all that apply)' : ''}</span></p>`).join('')
-    + `<p>${esc(c.note)} <span>Optional, in your words</span></p><p>Photos <span>Optional, up to 6</span></p>`; }).join('');
+    + `<p>${esc(c.note)} <span>Optional, in your words</span></p><p>Photos <span>Optional, up to 6</span></p>`; }).join('')
+    + '<h3>For every entry</h3><p>Your name <span>Needed; kept private</span></p><p>Email, phone number <span>Optional; kept private</span></p>';
 }
 if (location.hash === '#questions') show('qs');
 if (location.hash === '#download') show('dl');
