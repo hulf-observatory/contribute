@@ -282,7 +282,8 @@ $('send').onclick = async () => {
   } finally { spam.reset(); b.disabled = false; b.textContent = 'Send'; }
 };
 
-// ── who sent it: a name and an email for the organisers. Optional, private, asked once a visit
+// ── who sent it: a name (needed to save), an email and a phone number (optional). Private and internal; asked once a
+// visit, and Skip leaves it out
 const whoSpam = Contribute.spamCheck($('ts-who'));
 const EMAIL = /^[^@\s]{1,64}@[^@\s]{1,190}\.[A-Za-z]{2,}$/;
 async function saveContact(c) {
@@ -290,14 +291,16 @@ async function saveContact(c) {
   if (token === null) throw Object.assign(new Error('spam check'), { server: true, status: 403 });
   try { await Contribute.post(`/${SURVEY}/contact`, { ...V.sent, ...c, token, website: $('trap').value }); } finally { whoSpam.reset(); }
 }
-const whoNow = () => ({ name: $('who-name').value.trim() || null, email: $('who-email').value.trim() || null });
-const whoCheck = () => { const c = whoNow(); $('who-ok').disabled = !(c.name || c.email) || (!!c.email && !EMAIL.test(c.email)); };
-$('who-name').oninput = $('who-email').oninput = () => { $('who-msg').hidden = true; whoCheck(); };
+const PHONE = /^\+?\d{7,15}$/;                 // after spaces, dashes and brackets are taken out
+const whoNow = () => ({ name: $('who-name').value.trim() || null, email: $('who-email').value.trim() || null,
+  phone: $('who-phone').value.replace(/[\s().-]/g, '') || null });
+const whoCheck = () => { const c = whoNow(); $('who-ok').disabled = !c.name || (!!c.email && !EMAIL.test(c.email)) || (!!c.phone && !PHONE.test(c.phone)); };
+$('who-name').oninput = $('who-email').oninput = $('who-phone').oninput = () => { $('who-msg').hidden = true; whoCheck(); };
 $('who-ok').onclick = async () => {
   const b = $('who-ok'), c = whoNow();
   b.disabled = true; b.textContent = 'Saving…'; $('who-msg').hidden = true;
   try { await saveContact(c); V.contact = c; V.asked = true; show('thanks', false); }
-  catch (e) { $('who-msg').textContent = e.server && e.status === 400 ? "That didn't save. Check the email address, or skip." : "That didn't save. Check your connection and try again, or skip."; $('who-msg').hidden = false; }
+  catch (e) { $('who-msg').textContent = e.server && e.status === 400 ? "That didn't save. Check the email address and phone number, or skip." : "That didn't save. Check your connection and try again, or skip."; $('who-msg').hidden = false; }
   b.textContent = 'Save'; whoCheck();
 };
 $('who-skip').onclick = () => { V.asked = true; show('thanks', false); };

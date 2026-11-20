@@ -162,6 +162,10 @@
   .sum { margin-bottom: 0; }
   .files li { padding: clamp(8px, 1.8vh, 14px) 0; }
   .btn.wa { flex-direction: column; gap: 1px; }
+  .field-label .opt { font-weight: 400; color: var(--muted); }
+  .step[data-step="who"] .hint { margin-bottom: clamp(8px, 1.8vh, 16px); }
+  .step[data-step="who"] .field-label { margin-top: clamp(6px, 1.6vh, 16px); }
+  .step[data-step="who"] .inp { height: clamp(42px, 6.2vh, 48px); }
   .btn-row .btn { padding-left: 8px; padding-right: 8px; }
   #dl-hint { margin-bottom: 4px; }
   #dl-when { font-size: 14px; color: var(--muted); margin-bottom: clamp(10px, 2vh, 18px); }
@@ -288,17 +292,20 @@
     </div>
   </section>
 
-  <!-- 6. who sent it (Teja, 19 Nov 2026): a name and an email for the group's organisers, after sending. Optional;
-       kept privately on the server, never on the map or in the download. Asked once a visit. -->
+  <!-- 6. who sent it (Teja, 19 and 20 Nov 2026): after sending, a name (needed to save), and an email and a phone
+       number (optional). Private and internal: kept on the server for Teja only, never on the map or in the download.
+       Asked once a visit; Skip leaves it out. -->
   <section class="step" data-step="who">
     <div class="body">
       <h2 tabindex="-1">Sent. Thank you.</h2>
-      <p class="hint">Add your name as a contributor? <span style="color:var(--muted)">Optional</span></p>
+      <p class="hint">Add yourself as a contributor?</p>
       <label class="field-label" for="who-name" style="margin-top:0">Name</label>
       <input class="inp" id="who-name" maxlength="80" autocomplete="name">
-      <label class="field-label" for="who-email">Email</label>
+      <label class="field-label" for="who-email">Email <span class="opt">Optional</span></label>
       <input class="inp" id="who-email" type="email" maxlength="254" autocomplete="email" inputmode="email">
-      <p class="fine left">Only the organisers of Let's Un-choke Hyderabad see these. They are never shown on the map or in the download.</p>
+      <label class="field-label" for="who-phone">Phone number <span class="opt">Optional</span></label>
+      <input class="inp" id="who-phone" type="tel" maxlength="24" autocomplete="tel" inputmode="tel">
+      <p class="fine left">These are kept private. They are never shown on the map or in the download.</p>
       <p class="msg" id="who-msg" hidden></p>
     </div>
     <div class="foot">
@@ -332,7 +339,7 @@
         <li><span><b>Photos</b><small id="dl-zip-t">One zip · each photo is named in the table</small></span><button type="button" id="dl-zip">Download</button></li>
         <li><span><b>The questions</b><small>What the survey asks, with the answer choices</small></span><button type="button" id="dl-qs">See</button></li>
       </ul>
-      <p class="fine left">A name and email, if given, are never published. <a id="dl-readme" target="_blank" rel="noopener">What each column means</a></p>
+      <p class="fine left">Contributors' names, emails and phone numbers are private and not in these files. <a id="dl-readme" target="_blank" rel="noopener">What each column means</a></p>
     </div>
     <div class="foot"><a class="btn btn-secondary" href="map/">See the entries on the map</a></div>
   </section>
@@ -348,6 +355,6 @@
 </div>
 
 <script src="../assets/common.js?v=20261120a"></script>
-<script type="module" src="form.js?v=20261119b"></script>
+<script type="module" src="form.js?v=20261120a"></script>
 </body>
 </html>
