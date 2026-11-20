@@ -163,6 +163,7 @@
   .files li { padding: clamp(8px, 1.8vh, 14px) 0; }
   .btn.wa { flex-direction: column; gap: 1px; }
   .field-label .opt { font-weight: 400; color: var(--muted); }
+  .field-label .req { color: #C2413B; font-weight: 700; }   /* the usual red mark for a field that is needed (Teja, 20 Nov 2026) */
   .step[data-step="who"] .hint { margin-bottom: clamp(8px, 1.8vh, 16px); }
   .step[data-step="who"] .field-label { margin-top: clamp(6px, 1.6vh, 16px); }
   .step[data-step="who"] .inp { height: clamp(42px, 6.2vh, 48px); }
@@ -299,8 +300,8 @@
     <div class="body">
       <h2 tabindex="-1">Sent. Thank you.</h2>
       <p class="hint">Add yourself as a contributor?</p>
-      <label class="field-label" for="who-name" style="margin-top:0">Name</label>
-      <input class="inp" id="who-name" maxlength="80" autocomplete="name">
+      <label class="field-label" for="who-name" style="margin-top:0">Name <span class="req" title="Needed">*</span></label>
+      <input class="inp" id="who-name" maxlength="80" autocomplete="name" required aria-required="true">
       <label class="field-label" for="who-email">Email <span class="opt">Optional</span></label>
       <input class="inp" id="who-email" type="email" maxlength="254" autocomplete="email" inputmode="email">
       <label class="field-label" for="who-phone">Phone number <span class="opt">Optional</span></label>
