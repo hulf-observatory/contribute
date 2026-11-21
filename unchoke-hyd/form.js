@@ -387,7 +387,7 @@ $('send').onclick = async () => {
   try {
     const token = await spam.token();
     if (token === null) throw Object.assign(new Error('spam check'), { server: true, status: 403 });
-    await Contribute.post(`/${SURVEY}/reports`, { ...item(), token, website: $('trap').value });
+    await Contribute.post(`/${SURVEY}/reports`, { ...item(), token, website: $('trap').value }, spam);
     V.contact = whoNow(); stack = []; show('thanks', false);
   } catch (e) {
     say(!e.server ? "It didn't go: check your connection and press Send again. Your answers are still here."

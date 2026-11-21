@@ -7,8 +7,8 @@ window.CONTRIBUTE = {
   // Cloudflare Turnstile site key (public by design; widget "Contribute", hostname hyderabad.urbanobservatory.in,
   // created by Teja 15 Nov 2026). The secret is only on the server, in /etc/obs/contribute.env.
   TURNSTILE_SITEKEY: '0x4AAAAAAGCDpOWPxc3IldJy',
-  // the WhatsApp community (Teja, 15 Nov 2026)
-  WHATSAPP: 'https://chat.whatsapp.com/GJUFWd2UJyEImsmgxbEKlg',
+  // the WhatsApp community (Teja, 15 Nov 2026; new link 21 Nov 2026)
+  WHATSAPP: 'https://chat.whatsapp.com/DKRCCufOwSd7IrWLv9BgLh',
   // the HMDA box: phone locations and map pins outside it are refused
   HMDA: [78.00, 16.96, 79.05, 17.90],
 };

@@ -294,7 +294,7 @@ const spam = Contribute.spamCheck($('ts-review'));
 async function post(body, sc = spam) {
   const token = await sc.token();
   if (token === null) { const e = new Error('spam check'); e.server = true; e.status = 403; throw e; }
-  try { return await Contribute.post('/tankers/reports', { ...body, token, website: $('trap').value }); }
+  try { return await Contribute.post('/tankers/reports', { ...body, token, website: $('trap').value }, sc); }
   finally { sc.reset(); }
 }
 let sending = false, kept = null;

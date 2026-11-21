@@ -25,19 +25,27 @@ window.Contribute = (() => {
     });
     return tsReady;
   }
-  // returns { token(): Promise<string|null>, reset() } for a widget in `el`
+  // returns { token(): Promise<string|null>, reset() } for a widget in `el`.
+  // A pass lasts 5 minutes, and a phone that leaves the page (the camera, another app) may not renew it in time,
+  // so one older than 4 minutes is renewed before it is used (21 Nov 2026: an Un-choke entry was refused that way).
+  const FRESH_MS = 4 * 60 * 1000;
   function spamCheck(el) {
-    let id = null, tok = null, waiters = [];
+    let id = null, tok = null, at = 0, waiters = [];
+    const reset = () => { tok = null; if (id != null && window.turnstile) window.turnstile.reset(id); };
     loadTurnstile().then((ts) => {
       if (!ts) return;
       id = ts.render(el, { sitekey: C.TURNSTILE_SITEKEY, appearance: 'interaction-only', size: 'flexible',
-        callback: (t) => { tok = t; waiters.forEach((w) => w(t)); waiters = []; },
+        callback: (t) => { tok = t; at = Date.now(); waiters.forEach((w) => w(t)); waiters = []; },
         'expired-callback': () => { tok = null; }, 'error-callback': () => { tok = null; } });
     }).catch(() => {});
     return {
-      token: () => !C.TURNSTILE_SITEKEY ? Promise.resolve('') : tok ? Promise.resolve(tok)
-        : new Promise((ok) => { waiters.push(ok); setTimeout(() => ok(null), 20000); }),
-      reset: () => { tok = null; if (id != null && window.turnstile) window.turnstile.reset(id); },
+      token: () => {
+        if (!C.TURNSTILE_SITEKEY) return Promise.resolve('');
+        if (tok && Date.now() - at < FRESH_MS) return Promise.resolve(tok);
+        if (tok) reset();
+        return new Promise((ok) => { waiters.push(ok); setTimeout(() => ok(null), 20000); });
+      },
+      reset,
     };
   }
 
@@ -50,11 +58,18 @@ window.Contribute = (() => {
     } catch { return 'nostorage-' + Math.random().toString(36).slice(2, 18); }
   }
 
-  async function post(path, body) {
+  // `check` (a spamCheck): if the server turns the pass down (403), get a new one and send once more on its own,
+  // so the person sees the message only when the second try fails too
+  async function post(path, body, check) {
     const r = await fetch(`${C.API}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body), credentials: 'omit', referrerPolicy: 'no-referrer' });
     let data = {};
     try { data = await r.json(); } catch { /* empty */ }
+    if (r.status === 403 && check) {
+      check.reset();
+      const token = await check.token();
+      if (token !== null) return post(path, { ...body, token });
+    }
     if (!r.ok) { const e = new Error(data.error || `HTTP ${r.status}`); e.status = r.status; e.server = true; throw e; }
     return data;
   }

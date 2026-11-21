@@ -301,7 +301,7 @@ $('fb-send').onclick = async () => {
   try {
     const token = await check.token();
     if (token === null) throw Object.assign(new Error('The spam check did not finish. Please try again.'), { server: true });
-    const r = await Contribute.post(`/${targetSurvey}/reports/${target}/feedback`, { kind, note: $('fb-note').value.trim() || null, device: Contribute.device(), token, website: $('fb-trap').value });
+    const r = await Contribute.post(`/${targetSurvey}/reports/${target}/feedback`, { kind, note: $('fb-note').value.trim() || null, device: Contribute.device(), token, website: $('fb-trap').value }, check);
     $('fb-msg').textContent = !r.accepted ? 'You already sent this from this phone. Thank you.' : ['confirm', 'gone', 'metoo'].includes(kind) ? 'Thanks, it’s added.' : 'Thank you. We look at every flag; three spam or photo flags hide it until we check.';
     $('fb-msg').hidden = false; $('fb-send').textContent = 'Sent'; setTimeout(() => dlg.close(), 1800);
   } catch (err) {

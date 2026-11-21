@@ -56,7 +56,7 @@ const who = () => { const p = player.get(); return p ? { nick: p.nick, nick_pin:
 async function feedback(rid, kind, note, check, trap) {
   const token = await check.token();
   if (token === null) throw Object.assign(new Error('The spam check did not finish. Please try again.'), { server: true });
-  try { return await Contribute.post(`/${SURVEY}/reports/${rid}/feedback`, { kind, note: note || null, device: Contribute.device(), ...who(), token, website: trap }); }
+  try { return await Contribute.post(`/${SURVEY}/reports/${rid}/feedback`, { kind, note: note || null, device: Contribute.device(), ...who(), token, website: trap }, check); }
   finally { check.reset(); }
 }
 const why = (err) => err.status === 429 ? 'Too many tries from this connection just now. Please wait a minute.'

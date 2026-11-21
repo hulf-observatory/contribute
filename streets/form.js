@@ -1185,7 +1185,7 @@ async function postIt(body, sc = spam) {
   const token = await sc.token();
   if (token === null) { const e = new Error('spam check'); e.server = true; e.status = 403; throw e; }
   const { _sum, ...b } = body;
-  try { return await Contribute.post(`/${SURVEY}/reports`, { ...b, token, website: $('trap').value }); }
+  try { return await Contribute.post(`/${SURVEY}/reports`, { ...b, token, website: $('trap').value }, sc); }
   finally { sc.reset(); }
 }
 function thanks(body, r) {
