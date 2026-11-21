@@ -246,6 +246,16 @@
     <div class="foot"><button type="button" class="btn btn-primary" id="stop-ok" disabled>Choose this bus stop</button></div>
   </section>
 
+  <!-- 3b. a main road: a footpath's side, or a street as a whole (20 Nov 2026) -->
+  <section class="step" data-step="road">
+    <h2 tabindex="-1" id="road-h">Which road?</h2>
+    <p class="hint" style="margin-bottom:8px" id="road-hint">Tap the road on the map, or its card.</p>
+    <div class="mapbox"><div class="m" id="road-map"></div></div>
+    <div class="cards" id="road-cards"></div>
+    <p class="under" style="margin-top:2px"><button type="button" class="linkbtn" id="no-road">It's not on a main road</button></p>
+    <div class="foot"><button type="button" class="btn btn-primary" id="road-ok" disabled>Choose this road</button></div>
+  </section>
+
   <!-- 3c. a bus stop that isn't on the map -->
   <section class="step" data-step="newstop">
     <div class="body">
@@ -354,6 +364,6 @@
 </div>
 
 <script src="../assets/common.js?v=20261120a"></script>
-<script type="module" src="form.js?v=20261120c"></script>
+<script type="module" src="form.js?v=20261121e"></script>
 </body>
 </html>

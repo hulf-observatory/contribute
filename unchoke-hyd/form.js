@@ -27,7 +27,7 @@ const CHOICES = {
     qs: [{ k: 'cycle_stand', q: 'Is there a cycle stand at this bus stop now?', opts: YND },
          { k: 'cycle_space', q: 'Is there space for a cycle stand?', hint: 'Without blocking the footpath.', opts: [['yes', 'Yes'], ['little', 'A little'], ['no', 'No'], DK] },
          { k: 'cycle_room', q: 'How many cycles could be parked?', when: a => a.cycle_space !== 'no', opts: [['upto5', 'Up to 5'], ['6to10', '6 to 10'], ['over10', 'More than 10'], DK] }] },
-  foot: { about: 'footpath', name: 'A footpath', blurb: 'Missing, broken or blocked', place: 'mark', markH: 'Where is the footpath?', note: 'Anything to add?', real: true,
+  foot: { about: 'footpath', name: 'A footpath', blurb: 'Missing, broken or blocked', place: 'mark', road: 'side', markH: 'Where is the footpath?', note: 'Anything to add?', real: true,
     qs: [{ k: 'footpath', q: 'Is there a footpath here?', opts: [['yes', 'Yes, most of the way'], ['parts', 'Only in parts'], ['no', 'No'], DK] },
          { k: 'broken', q: 'Is the footpath broken?', when: hasFootpath, opts: LEVEL },
          { k: 'blocked', q: 'Is the footpath blocked?', when: hasFootpath, opts: LEVEL },
@@ -35,7 +35,7 @@ const CHOICES = {
            opts: [['parked', 'Parked vehicles'], ['vendors', 'Vendors or shops'], ['works', 'Construction or debris'], ['poles', 'Poles, trees or transformers'], ['garbage', 'Garbage']] }] },
   light: { about: 'lights', name: 'Street lights', blurb: 'Not working, dim, or none', place: 'mark', markH: 'Where are the street lights needed?', note: 'Anything to add?',
     qs: [{ k: 'street_lights', q: 'What about the street lights here?', opts: [['not_working', 'Street light there but not working'], ['dim', 'Street light working but dim'], ['none', 'No street light']] }] },
-  vfree: { about: 'vehicle_free', name: 'A street to make vehicle-free', blurb: 'A market or busy street for walking only', place: 'mark', markH: 'Where is the street or market?', note: 'Describe the area', noteHint: 'Landmarks, how busy it gets',
+  vfree: { about: 'vehicle_free', name: 'A street to make vehicle-free', blurb: 'A market or busy street for walking only', place: 'mark', road: 'whole', markH: 'Where is the street or market?', note: 'Describe the area', noteHint: 'Landmarks, how busy it gets',
     qs: [{ k: 'vf_name', q: 'Name of the street or market', text: 'Sultan Bazar', hint: 'As people call it.' },
          { k: 'vf_hours', q: 'When should it be vehicle-free?', opts: [['all_day', 'All day'], ['hours', 'Certain hours'], ['market_days', 'Market days only'], DK] }] },
 };
@@ -44,7 +44,7 @@ const MAX = 6;                                   // photos for one entry
 const NEAR_M = 100, STOP_M = 500;                // further than this from the phone's location: saved as "from memory"
 
 // S.here: the phone's location (when given). S.place: the place the entry is about. S.memory: not there now.
-const S = { choice: null, here: null, place: null, memory: false, stop: null, a: {}, qi: 0, photos: [] };
+const S = { choice: null, here: null, place: null, memory: false, stop: null, road: null, a: {}, qi: 0, photos: [] };
 // this visit: the sender's name, email and phone once given, kept in the boxes for "Add another"
 const V = { contact: null };
 let cur = 'start', stack = [];
@@ -55,7 +55,7 @@ const label = (q, v) => (q.opts.find(o => o[0] === v) || [, v])[1];
 
 function progress(s) {
   if (s === 'q') return 40 + 35 * (S.qi / live().length);
-  return { choose: 5, where: 12, mark: 25, stop: 28, newstop: 34, photo: 80, who: 92, thanks: 100 }[s] || 0;
+  return { choose: 5, where: 12, mark: 25, stop: 28, road: 30, newstop: 34, photo: 80, who: 92, thanks: 100 }[s] || 0;
 }
 function show(s, push = true) {
   if (push) stack.push(cur === 'q' ? 'q:' + S.qi : cur);
@@ -64,7 +64,7 @@ function show(s, push = true) {
   document.body.classList.toggle('in', s !== 'start');
   $('back').hidden = s === 'thanks'; $('prog').hidden = s === 'dl' || s === 'qs';
   $('bar').style.width = progress(s) + '%';
-  ({ mark: openMark, stop: openStop, q: drawQ, photo: drawPhoto, who: () => whoCheck(), thanks: drawThanks, dl: drawDl, qs: drawQs, newstop: drawNew }[s] || (() => {}))();
+  ({ mark: openMark, stop: openStop, road: openRoad, q: drawQ, photo: drawPhoto, who: () => whoCheck(), thanks: drawThanks, dl: drawDl, qs: drawQs, newstop: drawNew }[s] || (() => {}))();
   const h = document.querySelector('.step.on h2'); if (h && s !== 'mark') h.focus({ preventScroll: true });
 }
 $('back').onclick = () => {
@@ -79,7 +79,7 @@ $('to-dl').onclick = () => show('dl');
 $('choices').innerHTML = ORDER.map(k => `<button type="button" class="choice go" data-k="${k}"><span><b>${esc(CHOICES[k].name)}</b><small>${esc(CHOICES[k].blurb)}</small></span><i class="tick"></i></button>`).join('');
 $('choices').onclick = (e) => {
   const b = e.target.closest('.choice'); if (!b) return;
-  Object.assign(S, { choice: b.dataset.k, here: null, place: null, stop: null, a: {}, qi: 0, photos: [], memory: false });
+  Object.assign(S, { choice: b.dataset.k, here: null, place: null, stop: null, road: null, a: {}, qi: 0, photos: [], memory: false });
   $('note').value = ''; $('send-msg').hidden = true; $('who-msg').hidden = true;
   $('where-for').textContent = CHOICES[S.choice].name; $('loc-msg').hidden = true;
   show('where');
@@ -122,8 +122,111 @@ $('mark-ok').onclick = () => {
   const p = { lat: markAt.lat, lng: markAt.lng, name: S.picked || null };
   if (CHOICES[S.choice].place === 'stop') { S.place = p; return show('stop'); }
   if (S.here && metres(S.here, p) > NEAR_M) S.memory = true;      // moved away from where they stand: from memory
-  S.place = p; S.qi = 0; show('q');
+  S.place = p; S.road = null; S.qi = 0;
+  show(CHOICES[S.choice].road ? 'road' : 'q');
 };
+
+// ── which main road (Teja, 20 Nov 2026), as on the streets form: a footpath is one side of a road stretch, a street to
+// make vehicle-free the stretch as a whole. The main roads around come from our server; off a main road the dot stays.
+let roadMap = null, roads = new Map(), roadAt = null, roadSel = null;
+const K = Math.PI / 180, COMPASS = ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west'];
+function nearestOn(c, p) {                        // metres from the line, the nearest point on it, the road's bearing there
+  const cos = Math.cos(p.lat * K), M = 111320;
+  let best = null;
+  for (let i = 0; i < c.length - 1; i++) {
+    const ax = c[i][0] * cos * M, ay = c[i][1] * 110540, bx = c[i + 1][0] * cos * M, by = c[i + 1][1] * 110540, px = p.lng * cos * M, py = p.lat * 110540;
+    const dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy || 1e-9, t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / L2));
+    const d = Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+    if (!best || d < best.d) best = { d, side: dx * (py - ay) - dy * (px - ax) > 0 ? 'l' : 'r', pt: [(ax + t * dx) / (cos * M), (ay + t * dy) / 110540], brg: (Math.atan2(dx, dy) / K + 360) % 360 };
+  }
+  return best;
+}
+const sideWord = (brg, side) => { const w = COMPASS[Math.round((((side === 'l' ? brg - 90 : brg + 90) % 360 + 360) % 360) / 45) % 8]; return w[0].toUpperCase() + w.slice(1) + ' side'; };
+const bySide = () => CHOICES[S.choice].road === 'side';
+async function loadRoads(c) {
+  if (roadAt && metres(roadAt, c) < 250) return;
+  roadAt = { lat: c.lat, lng: c.lng };
+  try {
+    const r = await fetch(`${C.API}/walking/view?lat=${c.lat.toFixed(4)}&lng=${c.lng.toFixed(4)}`, { credentials: 'omit', cache: 'no-store' });
+    if (!r.ok) throw new Error(r.status);
+    for (const s of (await r.json()).stretches || []) roads.set(s.id, { id: s.id, name: s.name || 'Main road with no name', sides: s.sides, c: s.c });
+  } catch { roadAt = null; }
+  if (roadMap && roadMap.getSource('roads')) roadMap.getSource('roads').setData(roadsGeo());
+  drawRoadCards();
+}
+// one line a stretch (a street), or one a side (a footpath), drawn beside the middle line
+const roadsGeo = () => ({ type: 'FeatureCollection', features: [...roads.values()].flatMap(s => (bySide() ? s.sides : ['w']).map(side =>
+  ({ type: 'Feature', properties: { key: `${s.id}:${side}`, side }, geometry: { type: 'LineString', coordinates: s.c } }))) });
+function roadPick(id, side, p) {                  // p: where on the road (a tap); else the point nearest the dot
+  const s = roads.get(id); if (!s) return;
+  const n = nearestOn(s.c, p || S.place);
+  roadSel = { stretch: id, side: bySide() ? side : null, name: s.name, word: bySide() ? sideWord(n.brg, side) : '', lng: n.pt[0], lat: n.pt[1] };
+  if (!p && roadMap) roadMap.easeTo({ center: n.pt, zoom: Math.max(roadMap.getZoom(), 16), duration: 300 });   // picked from a card: show it
+  drawRoadCards();
+}
+function roadCands() {                            // the nearest roads (and sides) to the map's middle
+  const c = roadMap ? roadMap.getCenter() : S.place, out = [];
+  for (const s of roads.values()) {
+    const n = nearestOn(s.c, { lat: c.lat, lng: c.lng });
+    if (n.d > 400) continue;
+    for (const side of bySide() ? s.sides : [null]) out.push({ id: s.id, side, name: s.name, word: side ? sideWord(n.brg, side) : '', d: n.d + (side && side !== n.side ? 1 : 0) });
+  }
+  const seen = new Set();                         // one card per road and side: the stretch nearest the middle
+  return out.sort((a, b) => a.d - b.d).filter(x => !seen.has(x.name + x.word) && seen.add(x.name + x.word)).slice(0, 8);
+}
+const roadKey = (x) => `${x.stretch || x.id}:${bySide() ? x.side : 'w'}`;
+function drawRoadCards() {
+  if (!roadMap) return;
+  const list = roadCands();
+  if (roadSel && !list.some(x => roadKey(x) === roadKey(roadSel))) list.unshift({ id: roadSel.stretch, side: roadSel.side, name: roadSel.name, word: roadSel.word });
+  $('road-cards').innerHTML = list.map(x => `<button type="button" class="card" data-id="${esc(x.id)}" data-side="${x.side || ''}" aria-checked="${!!roadSel && roadKey(roadSel) === roadKey(x)}"><b>${esc(x.name)}</b><small>${x.word ? esc(x.word) : 'The stretch shown on the map'}</small></button>`).join('')
+    || `<div class="card none">${roadAt ? 'No main roads here. Move the map, or go on without one.' : 'Loading main roads…'}</div>`;
+  if (roadMap.getLayer('road-sel')) roadMap.setFilter('road-sel', ['==', ['get', 'key'], roadSel ? roadKey(roadSel) : '']);
+  $('road-ok').disabled = !roadSel;
+}
+function openRoad() {
+  const side = bySide(), at = [S.place.lng, S.place.lat];
+  $('road-h').textContent = side ? 'Which side of which road?' : 'Which road is it?';
+  $('road-hint').textContent = side ? 'If the footpath is along a main road, tap its side on the map, or its card.' : 'If the street is a main road, tap it on the map, or its card.';
+  roadSel = null; roads.clear(); roadAt = null;
+  if (!roadMap) {
+    roadMap = new maplibregl.Map({ container: 'road-map', style: STYLE, center: at, zoom: 15.8, minZoom: 12, maxZoom: 19, maxBounds: [77.6, 16.6, 79.5, 18.3], attributionControl: { compact: true } });
+    roadMap.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+    roadMap.on('load', () => {
+      roadMap.getContainer().querySelectorAll('.maplibregl-compact-show').forEach(x => x.classList.remove('maplibregl-compact-show'));
+      const off = ['interpolate', ['exponential', 2], ['zoom'], 12, ['match', ['get', 'side'], 'l', -0.8, 'r', 0.8, 0], 19, ['match', ['get', 'side'], 'l', -14, 'r', 14, 0]];   // zoom on the outside: maplibre's rule
+      roadMap.addSource('roads', { type: 'geojson', data: roadsGeo() });
+      roadMap.addSource('dot', { type: 'geojson', data: { type: 'Point', coordinates: [S.place.lng, S.place.lat] } });
+      roadMap.addLayer({ id: 'road-sel', type: 'line', source: 'roads', filter: ['==', ['get', 'key'], ''], layout: { 'line-cap': 'round' }, paint: { 'line-color': '#111827', 'line-width': 11, 'line-offset': off } });
+      roadMap.addLayer({ id: 'roads', type: 'line', source: 'roads', layout: { 'line-cap': 'round' }, paint: { 'line-color': '#2E8B7A', 'line-width': 5, 'line-offset': off } });
+      roadMap.addLayer({ id: 'dot', type: 'circle', source: 'dot', paint: { 'circle-radius': 6, 'circle-color': '#111827', 'circle-stroke-color': '#fff', 'circle-stroke-width': 2 } });
+      roadMap.on('click', (e) => {
+        const p = e.point, f = roadMap.queryRenderedFeatures([[p.x - 14, p.y - 14], [p.x + 14, p.y + 14]], { layers: ['roads'] });
+        if (!f.length) return;
+        const at = { lng: e.lngLat.lng, lat: e.lngLat.lat };       // the nearest line to the tap, of those under the finger
+        const best = f.map(x => { const [id, side] = x.properties.key.split(':'), s = roads.get(id), n = s && nearestOn(s.c, at); return n && { id, side, d: n.d + (side !== 'w' && side !== n.side ? 3 : 0) }; })
+          .filter(Boolean).sort((a, b) => a.d - b.d)[0];
+        if (best) roadPick(best.id, best.side === 'w' ? null : best.side, at);
+      });
+      drawRoadCards();
+    });
+    roadMap.on('moveend', () => { const c = roadMap.getCenter(); loadRoads({ lat: c.lat, lng: c.lng }); drawRoadCards(); });
+    if (LOCAL) window.__roadMap = roadMap;                              // local checks only
+  } else {
+    roadMap.resize(); roadMap.jumpTo({ center: at, zoom: 15.8 });
+    if (roadMap.getSource('dot')) roadMap.getSource('dot').setData({ type: 'Point', coordinates: at });
+    if (roadMap.getSource('roads')) roadMap.getSource('roads').setData(roadsGeo());
+  }
+  loadRoads(S.place); drawRoadCards();
+}
+$('road-cards').onclick = (e) => { const c = e.target.closest('.card[data-id]'); if (c) roadPick(c.dataset.id, c.dataset.side || null); };
+$('road-ok').onclick = () => {
+  if (!roadSel) return;
+  S.road = roadSel;
+  if (S.here && metres(S.here, roadSel) > NEAR_M) S.memory = true;
+  S.qi = 0; show('q');
+};
+$('no-road').onclick = () => { S.road = null; S.qi = 0; show('q'); };
 
 // ── which bus stop: the stops around the place, from our server
 let stopMap = null, stops = new Map(), fetched = null, meMark = null;
@@ -191,6 +294,7 @@ $('new-ok').onclick = () => {
 // ── the questions, one a screen
 function placeTag() {
   if (S.stop) return S.stop.name + (S.stop.towards ? ' · towards ' + S.stop.towards : '');
+  if (S.road) return (S.memory ? 'From memory · ' : '') + S.road.name + (S.road.word ? ', ' + S.road.word.toLowerCase() : '');
   return (S.memory ? 'From memory · ' : '') + (S.place.name || `${S.place.lat.toFixed(4)}, ${S.place.lng.toFixed(4)}`);
 }
 function drawQ() {
@@ -255,12 +359,13 @@ $('thumbs').onclick = (e) => { const b = e.target.closest('[data-x]'); if (b) { 
 
 // ── sending: one entry
 function item() {
-  const at = S.stop || S.place;                   // a bus stop choice is about the stop: the entry sits there
+  const at = S.stop || S.road || S.place;         // a bus stop or a road picked: the entry sits there
   // standing there: within 100 m of the phone's location (500 m for a bus stop picked from the map); otherwise from memory
   const mem = S.memory || !S.here || metres(S.here, at) > (S.stop ? STOP_M : NEAR_M);
   return { about: CHOICES[S.choice].about, here: mem ? 'known' : 'yes', place_type: mem ? 'map' : 'gps', observed_at: new Date().toISOString(),
     accuracy_m: mem ? null : S.here.acc, moved_m: mem ? null : Math.round(metres(S.here, at)), lat: +at.lat.toFixed(6), lng: +at.lng.toFixed(6),
     ...(S.stop ? S.stop.missing ? { stop_new: true, stop_name: S.stop.name, towards: S.stop.towards || null } : { stop_id: S.stop.id } : {}),
+    ...(S.road ? { stretch: S.road.stretch, stretch_side: S.road.side } : {}),
     ...S.a, note: $('note').value.trim() || null, photos: S.photos.map(p => p.data), contact: whoNow() };
 }
 $('photo-next').onclick = () => show('who');
@@ -365,6 +470,7 @@ $('dl-zip').onclick = async () => {
 $('dl-qs').onclick = () => show('qs');
 function drawQs() {
   $('qlist').innerHTML = ORDER.map(k => { const c = CHOICES[k]; return `<h3>${esc(c.name)}</h3>` + (c.place === 'stop' ? '<p>Which bus stop? <span>Picked on a map</span></p>' : '<p>Where is it? <span>The phone\'s location, or a place on a map</span></p>')
+    + (c.road === 'side' ? '<p>Which side of which road? <span>On a main road: picked on a map</span></p>' : c.road ? '<p>Which road is it? <span>On a main road: picked on a map</span></p>' : '')
     + c.qs.map(q => `<p>${esc(q.q)} <span>${q.text != null ? 'In your words' : esc(q.opts.map(o => o[1]).join(' · '))}${q.multi ? ' (all that apply)' : ''}</span></p>`).join('')
     + `<p>${esc(c.note)} <span>Optional, in your words</span></p><p>Photos <span>Optional, up to 6</span></p>`; }).join('')
     + '<h3>For every entry</h3><p>Your name <span>Needed; kept private</span></p><p>Email, phone number <span>Optional; kept private</span></p>';
@@ -372,4 +478,4 @@ function drawQs() {
 if (location.hash === '#questions') show('qs');
 if (location.hash === '#download') show('dl');
 if (location.hash === '#start') show('choose');
-if (LOCAL) window.__unchoke = { S, V, show, item, zip, updateTimes };      // local checks only
+if (LOCAL) window.__unchoke = { S, V, show, item, zip, updateTimes, roads };      // local checks only

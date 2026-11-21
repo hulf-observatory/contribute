@@ -99,7 +99,7 @@ const BY = { parked: 'parked vehicles', vendors: 'vendors or shops', works: 'con
 const FACTS = { zebra: ['crossing', 'crossing_marked', 'crossing_can'], cycle: ['cycle_stand', 'cycle_space', 'cycle_room'], footpath: ['footpath', 'broken', 'blocked'], lights: ['street_lights'], vehicle_free: ['vf_hours'] };
 
 let rows = [], filt = 'all', map = null, sel = null;
-const title = (p) => p.stop_name ? p.stop_name + (p.towards ? `, towards ${p.towards}` : '') : p.vf_name || [p.ward, p.zone && p.zone + ' zone'].filter(Boolean).join(', ') || 'Hyderabad';
+const title = (p) => p.stop_name ? p.stop_name + (p.towards ? `, towards ${p.towards}` : '') : p.vf_name || (p.road && p.road + (p.side ? `, ${p.side} side` : '')) || [p.ward, p.zone && p.zone + ' zone'].filter(Boolean).join(', ') || 'Hyderabad';
 function facts(p) {
   const out = FACTS[p.about].map(k => (SAY[k] || {})[p[k]]).filter(Boolean);
   if (p.blocked_by && p.blocked_by.length) out.push('by ' + p.blocked_by.map(b => BY[b] || b).join(', '));
@@ -125,6 +125,10 @@ function draw() {
   $('empty').innerHTML = rows.length ? 'Nothing of this kind yet.' : 'Nothing has been sent yet. <a href="../#start" style="color:var(--ink)">Add the first place</a>.';
   if (map && map.getSource('pts')) {
     map.getSource('pts').setData({ type: 'FeatureCollection', features: list.filter(r => r.geometry) });
+    // a main road picked on the form (20 Nov 2026): its stretch as a line, a footpath's beside the road on its side
+    map.getSource('lines').setData({ type: 'FeatureCollection', features: list.filter(r => r.properties.line).map(r => ({ type: 'Feature',
+      properties: { id: r.properties.id, about: r.properties.about, side: r.properties.stretch_side || 'w' }, geometry: { type: 'LineString', coordinates: r.properties.line } })) });
+    map.setFilter('line-sel', ['==', ['get', 'id'], sel || '']);
     map.setFilter('sel', ['==', ['get', 'id'], sel || '']);
   }
 }
@@ -157,10 +161,14 @@ map.on('load', () => {
   map.getContainer().querySelectorAll('.maplibregl-compact-show').forEach(x => x.classList.remove('maplibregl-compact-show'));
   map.addSource('pts', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
   const colour = ['match', ['get', 'about'], ...Object.entries(ABOUT).flatMap(([k, v]) => [k, v[1]]), '#B8BDC6'];
+  map.addSource('lines', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+  const off = ['interpolate', ['exponential', 2], ['zoom'], 12, ['match', ['get', 'side'], 'l', -0.8, 'r', 0.8, 0], 19, ['match', ['get', 'side'], 'l', -14, 'r', 14, 0]];   // zoom on the outside: maplibre's rule
+  map.addLayer({ id: 'line-sel', type: 'line', source: 'lines', filter: ['==', ['get', 'id'], ''], layout: { 'line-cap': 'round' }, paint: { 'line-color': '#111827', 'line-width': 10, 'line-offset': off } });
+  map.addLayer({ id: 'lines', type: 'line', source: 'lines', layout: { 'line-cap': 'round' }, paint: { 'line-color': colour, 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 2.5, 16, 6], 'line-offset': off } });
   map.addLayer({ id: 'pts', type: 'circle', source: 'pts', paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 5, 15, 8], 'circle-color': colour, 'circle-stroke-color': '#fff', 'circle-stroke-width': 1.5 } });
   map.addLayer({ id: 'sel', type: 'circle', source: 'pts', filter: ['==', ['get', 'id'], ''], paint: { 'circle-radius': 13, 'circle-color': colour, 'circle-stroke-color': '#111827', 'circle-stroke-width': 3 } });
-  map.on('click', (e) => { const p = e.point, f = map.queryRenderedFeatures([[p.x - 12, p.y - 12], [p.x + 12, p.y + 12]], { layers: ['pts'] })[0]; if (f) pick(f.properties.id, false); });
-  map.on('mousemove', (e) => { map.getCanvas().style.cursor = map.queryRenderedFeatures(e.point, { layers: ['pts'] }).length ? 'pointer' : ''; });
+  map.on('click', (e) => { const p = e.point, f = map.queryRenderedFeatures([[p.x - 12, p.y - 12], [p.x + 12, p.y + 12]], { layers: ['pts', 'lines'] })[0]; if (f) pick(f.properties.id, false); });
+  map.on('mousemove', (e) => { map.getCanvas().style.cursor = map.queryRenderedFeatures(e.point, { layers: ['pts', 'lines'] }).length ? 'pointer' : ''; });
   draw(); fit();
 });
 function fit() {
